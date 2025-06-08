@@ -8,6 +8,33 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import logging
+
+# Configurar formatação personalizada
+class EmojiFormatter(logging.Formatter):
+    """Formatter personalizado com emojis"""
+    
+    emoji_mapping = {
+        'DEBUG': '🔍',
+        'INFO': 'ℹ️',
+        'WARNING': '⚠️',
+        'ERROR': '❌',
+        'CRITICAL': '🚨'
+    }
+    
+    def format(self, record):
+        emoji = self.emoji_mapping.get(record.levelname, 'ℹ️')
+        return f"{emoji} {record.getMessage()}"
+
+# Aplicar o formatter personalizado
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+handler.setFormatter(EmojiFormatter())
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Remover handlers padrão para evitar duplicação
+logger.handlers = [handler]
 
 # Configuração global para fundo transparente
 plt.rcParams['figure.facecolor'] = 'none'
@@ -20,19 +47,19 @@ plt.rcParams['savefig.facecolor'] = 'none'
 df = pd.read_csv('4-Carateristicas_salario.csv')
 df = df.drop_duplicates()
 
-print("\nResumo dos dados:")
-print(df.info())
-print("\nDescrição estatística:")
-print(df.describe())
-print("\nValores ausentes por coluna:")
-print(df.isnull().sum())
+logging.info("\nResumo dos dados:")
+logging.info(df.info())
+logging.info("\nDescrição estatística:")
+logging.info(df.describe())
+logging.info("\nValores ausentes por coluna:")
+logging.info(df.isnull().sum())
 
 # ================================================
 # 2.1. LIMPEZA E TIPAGEM DOS DADOS
 # ================================================
-print("\n" + "="*60)
-print("LIMPEZA E TIPAGEM DOS DADOS")
-print("="*60)
+logging.info("\n" + "="*60)
+logging.info("LIMPEZA E TIPAGEM DOS DADOS")
+logging.info("="*60)
 
 def limpar_e_tipar_dados(df):
     """Limpar dados e aplicar tipagem correta às colunas"""
@@ -47,7 +74,7 @@ def limpar_e_tipar_dados(df):
     # Tratar valores '?' como NaN
     df_clean = df_clean.replace('?', pd.NA)
     
-    print("🔧 Aplicando tipagem correta às colunas...")
+    logging.info("🔧 Aplicando tipagem correta às colunas...")
     
     # ===== TIPAGEM DAS VARIÁVEIS NUMÉRICAS =====
     numerical_columns_types = {
@@ -65,9 +92,9 @@ def limpar_e_tipar_dados(df):
                 # Converter para numérico primeiro, depois para o tipo específico
                 df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
                 df_clean[col] = df_clean[col].astype(dtype)
-                print(f"✅ {col}: convertido para {dtype}")
+                logging.info(f"✅ {col}: convertido para {dtype}")
             except Exception as e:
-                print(f"⚠️ Erro ao converter {col}: {e}")
+                logging.warning(f"⚠️ Erro ao converter {col}: {e}")
     
     # ===== TIPAGEM DAS VARIÁVEIS CATEGÓRICAS =====
     categorical_columns = [
@@ -80,43 +107,43 @@ def limpar_e_tipar_dados(df):
             try:
                 # Converter para categoria para economizar memória
                 df_clean[col] = df_clean[col].astype('category')
-                print(f"✅ {col}: convertido para category")
+                logging.info(f"✅ {col}: convertido para category")
             except Exception as e:
-                print(f"⚠️ Erro ao converter {col}: {e}")
+                logging.warning(f"⚠️ Erro ao converter {col}: {e}")
     
     # ===== VALIDAÇÃO DE RANGES =====
-    print("\n🔍 Validando ranges das variáveis...")
+    logging.info("\n🔍 Validando ranges das variáveis...")
     
     # Validar idade
     if 'age' in df_clean.columns:
         invalid_age = (df_clean['age'] < 17) | (df_clean['age'] > 100)
         if invalid_age.any():
-            print(f"⚠️ Encontradas {invalid_age.sum()} idades inválidas (fora de 17-100)")
+            logging.warning(f"⚠️ Encontradas {invalid_age.sum()} idades inválidas (fora de 17-100)")
             df_clean.loc[invalid_age, 'age'] = pd.NA
-    
+
     # Validar anos de educação
     if 'education-num' in df_clean.columns:
         invalid_edu = (df_clean['education-num'] < 1) | (df_clean['education-num'] > 16)
         if invalid_edu.any():
-            print(f"⚠️ Encontrados {invalid_edu.sum()} anos de educação inválidos (fora de 1-16)")
+            logging.warning(f"⚠️ Encontrados {invalid_edu.sum()} anos de educação inválidos (fora de 1-16)")
             df_clean.loc[invalid_edu, 'education-num'] = pd.NA
-    
+
     # Validar horas por semana
     if 'hours-per-week' in df_clean.columns:
         invalid_hours = (df_clean['hours-per-week'] < 1) | (df_clean['hours-per-week'] > 99)
         if invalid_hours.any():
-            print(f"⚠️ Encontradas {invalid_hours.sum()} horas/semana inválidas (fora de 1-99)")
+            logging.warning(f"⚠️ Encontradas {invalid_hours.sum()} horas/semana inválidas (fora de 1-99)")
             df_clean.loc[invalid_hours, 'hours-per-week'] = pd.NA
-    
+
     # Validar ganhos/perdas de capital (não podem ser negativos)
     for col in ['capital-gain', 'capital-loss']:
         if col in df_clean.columns:
             invalid_capital = df_clean[col] < 0
             if invalid_capital.any():
-                print(f"⚠️ Encontrados {invalid_capital.sum()} valores negativos em {col}")
+                logging.warning(f"⚠️ Encontrados {invalid_capital.sum()} valores negativos em {col}")
                 df_clean.loc[invalid_capital, col] = 0
     
-    return df_clean
+    return df_clean, numerical_columns_types, categorical_columns
 
 def get_memory_usage(df):
     """Calcular uso de memória do DataFrame"""
@@ -125,25 +152,90 @@ def get_memory_usage(df):
 
 # Mostrar uso de memória antes da otimização
 memory_before = get_memory_usage(df)
-print(f"💾 Uso de memória antes da otimização: {memory_before:.2f} MB")
+logging.info(f"💾 Uso de memória antes da otimização: {memory_before:.2f} MB")
 
 # Aplicar limpeza e tipagem
-df = limpar_e_tipar_dados(df)
+df, numerical_columns_types, categorical_columns = limpar_e_tipar_dados(df)
 
 # Mostrar uso de memória após otimização
 memory_after = get_memory_usage(df)
-print(f"💾 Uso de memória após otimização: {memory_after:.2f} MB")
-print(f"📉 Redução: {((memory_before - memory_after) / memory_before * 100):.1f}%")
+logging.info(f"💾 Uso de memória após otimização: {memory_after:.2f} MB")
+logging.info(f"📉 Redução: {((memory_before - memory_after) / memory_before * 100):.1f}%")
 
-print("\n✅ Dados limpos e tipados com sucesso!")
-print("\nInfo dos tipos de dados:")
-print(df.dtypes)
+logging.info("\n✅ Dados limpos e tipados com sucesso!")
+logging.info("\nInfo dos tipos de dados:")
+logging.info(df.dtypes)
 
 # Verificar valores ausentes após limpeza
 missing_values = df.isnull().sum()
 if missing_values.any():
-    print(f"\n⚠️ Valores ausentes após limpeza:")
-    print(missing_values[missing_values > 0])
+    logging.warning(f"\n⚠️ Valores ausentes após limpeza:")
+    logging.warning(missing_values[missing_values > 0])
+
+# Agora podemos usar numerical_columns_types.keys() sem erro
+numerical_columns = list(numerical_columns_types.keys())
+
+# ================================================
+# Remover outliers com base no Z-score
+# ================================================
+from scipy.stats import zscore
+
+def remover_outliers(df, columns, threshold=3):
+    """Remove outliers com base no Z-score"""
+    df_filtered = df.copy()
+    outliers_removed = 0
+    
+    for col in columns:
+        if col in df_filtered.columns and pd.api.types.is_numeric_dtype(df_filtered[col]):
+            # Calcular Z-scores apenas para valores não nulos
+            valid_mask = df_filtered[col].notna()
+            if valid_mask.sum() > 0:  # Se há valores válidos
+                z_scores = np.abs(zscore(df_filtered.loc[valid_mask, col]))
+                outlier_mask = z_scores > threshold
+                
+                # Contar outliers antes de remover
+                outliers_count = outlier_mask.sum()
+                outliers_removed += outliers_count
+                
+                # Remover outliers
+                outlier_indices = df_filtered.loc[valid_mask].index[outlier_mask]
+                df_filtered = df_filtered.drop(outlier_indices)
+                
+                logging.info(f"🔍 {col}: {outliers_count} outliers removidos (Z-score > {threshold})")
+    
+    logging.info(f"📊 Total de registros removidos: {outliers_removed}")
+    logging.info(f"📊 Registros restantes: {len(df_filtered)} de {len(df)} originais")
+    
+    return df_filtered
+
+# Definir colunas numéricas no escopo principal
+numerical_columns = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+
+# Aplicar remoção de outliers após limpeza de dados
+logging.info("\n" + "="*60)
+logging.info("REMOÇÃO DE OUTLIERS")
+logging.info("="*60)
+
+# Verificar quais colunas numéricas existem no DataFrame
+existing_numerical_cols = [col for col in numerical_columns if col in df.columns]
+logging.info(f"Colunas numéricas encontradas: {existing_numerical_cols}")
+
+if existing_numerical_cols:
+    df_before_outliers = len(df)
+    df = remover_outliers(df, existing_numerical_cols)
+    df_after_outliers = len(df)
+    
+    reduction_percent = ((df_before_outliers - df_after_outliers) / df_before_outliers) * 100
+    logging.info(f"📉 Redução do dataset: {reduction_percent:.1f}%")
+    
+    # Verificar se ainda temos dados suficientes
+    if len(df) < 1000:
+        logging.warning("⚠️ ATENÇÃO: Dataset muito pequeno após remoção de outliers!")
+        logging.warning("Considere usar um threshold maior ou métodos alternativos.")
+    else:
+        logging.info("✅ Outliers removidos com sucesso")
+else:
+    logging.warning("⚠️ Nenhuma coluna numérica encontrada para remoção de outliers")
 
 # ================================================
 # 3. ANÁLISE EXPLORATÓRIA DE DADOS (EDA)
@@ -194,7 +286,7 @@ for col in categorical_cols:
     plt.savefig(f'imagens/bar_{col}.png', transparent=True, bbox_inches='tight')
     plt.close()
 
-print("\nGráficos salvos na pasta 'imagens'")
+logging.info("\nGráficos salvos na pasta 'imagens'")
 
 # ================================================
 # 4. PRÉ-PROCESSAMENTO
@@ -210,24 +302,23 @@ categorical_features = ['workclass', 'education', 'marital-status', 'occupation'
                         'relationship', 'race', 'sex', 'native-country']
 
 # DIAGNÓSTICO DETALHADO DOS DADOS
-print("\n" + "="*60)
-print("DIAGNÓSTICO DETALHADO DOS DADOS")
-print("="*60)
+logging.info("\n" + "="*60)
+logging.info("DIAGNÓSTICO DETALHADO DOS DADOS")
+logging.info("="*60)
 
-# Verificar distribuição original antes da codificação
-print("\nDistribuição original de salary:")
-print(df['salary'].value_counts())
-print("Valores únicos originais:", df['salary'].unique())
+logging.info("\nDistribuição original de salary:")
+logging.info(df['salary'].value_counts())
+logging.info(f"Valores únicos originais: {df['salary'].unique()}")
 
 # Verificar se há espaços ou caracteres especiais
-print("\nAnálise detalhada dos valores de salary:")
+logging.info("\nAnálise detalhada dos valores de salary:")
 for valor in df['salary'].unique():
-    print(f"'{valor}' (tipo: {type(valor)}, comprimento: {len(str(valor))})")
+    logging.info(f"'{valor}' (tipo: {type(valor)}, comprimento: {len(str(valor))})")
 
 # Limpar valores de salary primeiro
 df['salary'] = df['salary'].astype(str).str.strip()
-print("\nApós limpeza de espaços:")
-print(df['salary'].value_counts())
+logging.info("\nApós limpeza de espaços:")
+logging.info(df['salary'].value_counts())
 
 # Codificar variável-alvo com verificação mais robusta
 def codificar_salary(valor):
@@ -237,66 +328,66 @@ def codificar_salary(valor):
     elif '<=50k' in valor or valor == '<=50k':
         return 0
     else:
-        print(f"⚠️ Valor não reconhecido: '{valor}'")
+        logging.warning(f"⚠️ Valor não reconhecido: '{valor}'")
         return 0
 
 df['salary'] = df['salary'].apply(codificar_salary)
 
 # Verificar distribuição após codificação
-print("\nDistribuição após codificação:")
-print(df['salary'].value_counts())
-print("Percentual de cada classe:")
-print(df['salary'].value_counts(normalize=True) * 100)
+logging.info("\nDistribuição após codificação:")
+logging.info(df['salary'].value_counts())
+logging.info("Percentual de cada classe:")
+logging.info(df['salary'].value_counts(normalize=True) * 100)
 
 # Verificar se há ambas as classes
 if df['salary'].nunique() < 2:
-    print("⚠️ ERRO: Apenas uma classe encontrada nos dados!")
-    print("Valores únicos em salary:", df['salary'].unique())
+    logging.warning("⚠️ ERRO: Apenas uma classe encontrada nos dados!")
+    logging.warning(f"Valores únicos em salary: {df['salary'].unique()}")
     
     # Investigar mais a fundo
     df_original = pd.read_csv('4-Carateristicas_salario.csv')
-    print("\nValores únicos no arquivo original:")
+    logging.info("\nValores únicos no arquivo original:")
     for valor in df_original['salary'].unique():
-        print(f"'{valor}' (aparece {(df_original['salary'] == valor).sum()} vezes)")
+        logging.info(f"'{valor}' (aparece {(df_original['salary'] == valor).sum()} vezes)")
     
     # Tentar uma codificação diferente
-    print("\nTentando codificação alternativa...")
+    logging.info("\nTentando codificação alternativa...")
     df['salary'] = df_original['salary'].apply(lambda x: 1 if '>' in str(x) else 0)
-    print("Nova distribuição:")
-    print(df['salary'].value_counts())
+    logging.info("Nova distribuição:")
+    logging.info(df['salary'].value_counts())
 
 else:
-    print("✅ Ambas as classes presentes nos dados")
+    logging.info("✅ Ambas as classes presentes nos dados")
 
 # Separar X e y
 X = df[numerical_features + categorical_features]
 y = df['salary']
 
 # Verificar valores ausentes
-print(f"\nValores ausentes em X: {X.isnull().sum().sum()}")
-print(f"Valores ausentes em y: {y.isnull().sum()}")
+logging.info(f"\nValores ausentes em X: {X.isnull().sum().sum()}")
+logging.info(f"Valores ausentes em y: {y.isnull().sum()}")
 
 # Tratar valores '?' como NaN primeiro
 X = X.replace('?', pd.NA)
-print(f"Valores ausentes após tratar '?': {X.isnull().sum().sum()}")
+logging.info(f"Valores ausentes após tratar '?': {X.isnull().sum().sum()}")
 
 # Remover registros com valores ausentes se necessário
 if X.isnull().sum().sum() > 0:
-    print("Removendo registros com valores ausentes...")
+    logging.info("Removendo registros com valores ausentes...")
     mask = ~(X.isnull().any(axis=1) | y.isnull())
     X = X[mask]
     y = y[mask]
-    print(f"Registros restantes: {len(X)}")
+    logging.info(f"Registros restantes: {len(X)}")
 
 # Verificar distribuição final antes da divisão
-print(f"\nDistribuição final de y antes da divisão:")
-print(y.value_counts())
-print("Classes únicas:", y.unique())
+logging.info(f"\nDistribuição final de y antes da divisão:")
+logging.info(y.value_counts())
+logging.info(f"Classes únicas: {y.unique()}")
 
 # PARAR SE NÃO HÁ AMBAS AS CLASSES
 if y.nunique() < 2:
-    print("\n❌ ERRO CRÍTICO: Impossível continuar com apenas uma classe!")
-    print("Verifique os dados originais e a codificação da variável 'salary'")
+    logging.error("\n❌ ERRO CRÍTICO: Impossível continuar com apenas uma classe!")
+    logging.error("Verifique os dados originais e a codificação da variável 'salary'")
     exit()
 
 # Pré-processador para colunas (OneHot para categóricas, StandardScaler para numéricas)
@@ -315,10 +406,10 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # Verificar distribuição nas partições
-print(f"\nDistribuição em y_train:")
-print(y_train.value_counts())
-print(f"\nDistribuição em y_test:")
-print(y_test.value_counts())
+logging.info(f"\nDistribuição em y_train:")
+logging.info(y_train.value_counts())
+logging.info(f"\nDistribuição em y_test:")
+logging.info(y_test.value_counts())
 
 # Ajustar transformações
 X_train_processed = preprocessor.fit_transform(X_train)
@@ -327,27 +418,27 @@ X_test_processed = preprocessor.transform(X_test)
 # Novo: Garantir que X_test_processed é do tipo float
 X_test_processed = X_test_processed.astype(float)
 
-print("\nPré-processamento completo. Formato final dos dados:")
-print("X_train:", X_train_processed.shape)
-print("X_test:", X_test_processed.shape)
-print("y_train classes únicas:", y_train.unique())
-print("y_test classes únicas:", y_test.unique())
+logging.info("\nPré-processamento completo. Formato final dos dados:")
+logging.info(f"X_train: {X_train_processed.shape}")
+logging.info(f"X_test: {X_test_processed.shape}")
+logging.info(f"y_train classes únicas: {y_train.unique()}")
+logging.info(f"y_test classes únicas: {y_test.unique()}")
 
 # ================================================
 # 5. BALANCEAMENTO DOS DADOS (SMOTE) - CONDICIONAL
 # ================================================
-print("\n" + "="*60)
-print("BALANCEAMENTO DOS DADOS")
-print("="*60)
+logging.info("\n" + "="*60)
+logging.info("BALANCEAMENTO DOS DADOS")
+logging.info("="*60)
 
 # Verificar se precisa de balanceamento
 class_counts = y_train.value_counts()
 minority_ratio = min(class_counts) / max(class_counts)
 
-print(f"Proporção da classe minoritária: {minority_ratio:.2f}")
+logging.info(f"Proporção da classe minoritária: {minority_ratio:.2f}")
 
 if minority_ratio < 0.3:  # Se a classe minoritária representa menos de 30%
-    print("Dataset desbalanceado. Aplicando SMOTE...")
+    logging.info("Dataset desbalanceado. Aplicando SMOTE...")
     from imblearn.over_sampling import SMOTE
     
     # Verificar se há pelo menos 2 classes antes do SMOTE
@@ -355,13 +446,13 @@ if minority_ratio < 0.3:  # Se a classe minoritária representa menos de 30%
         sm = SMOTE(random_state=42)
         X_train_processed, y_train = sm.fit_resample(X_train_processed, y_train)
         
-        print("✅ SMOTE aplicado com sucesso")
-        print("Distribuição após SMOTE:")
-        print(y_train.value_counts())
+        logging.info("✅ SMOTE aplicado com sucesso")
+        logging.info("Distribuição após SMOTE:")
+        logging.info(y_train.value_counts())
     else:
-        print("⚠️ Impossível aplicar SMOTE: apenas uma classe nos dados de treino")
+        logging.warning("⚠️ Impossível aplicar SMOTE: apenas uma classe nos dados de treino")
 else:
-    print("Dataset já balanceado. SMOTE não necessário.")
+    logging.info("Dataset já balanceado. SMOTE não necessário.")
 
 # ================================================
 # 6. MODELAGEM PREDITIVA
@@ -374,25 +465,44 @@ import joblib
 
 # Função para treinar e avaliar modelos
 def avaliar_modelo(nome, modelo, X_train, y_train, X_test, y_test):
+    """
+    Treina e avalia um modelo de classificação.
+
+    Parâmetros:
+    - nome: str, nome do modelo
+    - modelo: instância do classificador
+    - X_train, y_train: dados de treino
+    - X_test, y_test: dados de teste
+
+    Retorna:
+    - modelo treinado ou None se erro ocorrer
+    """
     # Verificar se há pelo menos 2 classes nos dados de treino
     if len(y_train.unique()) < 2:
-        print(f"\n⚠️ {nome}: Impossível treinar - apenas uma classe nos dados de treino")
-        print(f"Classes em y_train: {y_train.unique()}")
+        logging.warning(f"\n⚠️ {nome}: Impossível treinar - apenas uma classe nos dados de treino")
+        logging.warning(f"Classes em y_train: {y_train.unique()}")
         return None
     
     try:
         modelo.fit(X_train, y_train)
         y_pred = modelo.predict(X_test)
-        print(f"\n{'='*20}\n{nome}\n{'='*20}")
-        print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-        print(f"F1 Score: {f1_score(y_test, y_pred, average='weighted'):.4f}")
-        print("\nClassification Report:")
-        print(classification_report(y_test, y_pred))
-        print("Matriz de Confusão:")
-        print(confusion_matrix(y_test, y_pred))
+        logging.info(f"\n{'='*20}\n{nome}\n{'='*20}")
+        logging.info(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+        logging.info(f"F1 Score: {f1_score(y_test, y_pred, average='weighted'):.4f}")
+        logging.info("\nClassification Report:")
+        logging.info(classification_report(y_test, y_pred))
+        logging.info("Matriz de Confusão:")
+        logging.info(confusion_matrix(y_test, y_pred))
+        # Avaliação AUC-ROC
+        from sklearn.metrics import roc_auc_score
+        try:
+            auc = roc_auc_score(y_test, y_pred)
+            logging.info(f"AUC-ROC: {auc:.4f}")
+        except ValueError as e:
+            logging.warning(f"Não foi possível calcular AUC-ROC: {e}")
         return modelo
     except Exception as e:
-        print(f"\n⚠️ Erro ao treinar {nome}: {str(e)}")
+        logging.warning(f"\n⚠️ Erro ao treinar {nome}: {str(e)}")
         return None
 
 # Inicializar modelos
@@ -412,9 +522,9 @@ for nome, modelo in modelos.items():
 # ================================================
 # SALVAR MODELOS E PREPROCESSOR
 # ================================================
-print("\n" + "="*60)
-print("SALVANDO MODELOS E PREPROCESSOR")
-print("="*60)
+logging.info("\n" + "="*60)
+logging.info("SALVANDO MODELOS E PREPROCESSOR")
+logging.info("="*60)
 
 # Criar diretório models se não existir
 os.makedirs("models", exist_ok=True)
@@ -422,11 +532,11 @@ os.makedirs("models", exist_ok=True)
 # Salvar o modelo Random Forest (melhor para interpretabilidade)
 if "Random Forest" in modelos_treinados:
     joblib.dump(modelos_treinados["Random Forest"], "random_forest_model.joblib")
-    print("✅ Modelo Random Forest salvo como 'random_forest_model.joblib'")
+    logging.info("✅ Modelo Random Forest salvo como 'random_forest_model.joblib'")
 
 # Salvar o preprocessor
 joblib.dump(preprocessor, "preprocessor.joblib")
-print("✅ Preprocessor salvo como 'preprocessor.joblib'")
+logging.info("✅ Preprocessor salvo como 'preprocessor.joblib'")
 
 # Gerar nomes das features após o preprocessamento
 ohe = preprocessor.named_transformers_['cat']
@@ -440,19 +550,19 @@ feature_info = {
     'feature_names': feature_names
 }
 joblib.dump(feature_info, "feature_info.joblib")
-print("✅ Informações das features salvas como 'feature_info.joblib'")
+logging.info("✅ Informações das features salvas como 'feature_info.joblib'")
 
 # Salvar alguns dados de exemplo para testes
 sample_data = X_test.head(5)
 joblib.dump(sample_data, "sample_data.joblib")
-print("✅ Dados de exemplo salvos como 'sample_data.joblib'")
+logging.info("✅ Dados de exemplo salvos como 'sample_data.joblib'")
 
-print(f"\n📁 Todos os arquivos salvos com sucesso!")
-print("Arquivos disponíveis para o dashboard:")
-print("- random_forest_model.joblib")
-print("- preprocessor.joblib") 
-print("- feature_info.joblib")
-print("- sample_data.joblib")
+logging.info(f"\n📁 Todos os arquivos salvos com sucesso!")
+logging.info("Arquivos disponíveis para o dashboard:")
+logging.info("- random_forest_model.joblib")
+logging.info("- preprocessor.joblib")
+logging.info("- feature_info.joblib")
+logging.info("- sample_data.joblib")
 
 # ================================================
 # 7. CLUSTERING E REGRAS DE ASSOCIAÇÃO
@@ -483,7 +593,7 @@ plt.ylabel("Componente Principal 2")
 plt.tight_layout()
 plt.savefig("imagens/kmeans_clusters.png", transparent=True, bbox_inches='tight')
 plt.close()
-print("\nClustering com KMeans concluído. Gráfico salvo em 'imagens/kmeans_clusters.png'.")
+logging.info("\nClustering com KMeans concluído. Gráfico salvo em 'imagens/kmeans_clusters.png'.")
 
 # -------------------------------------
 # Regras de associação (via Apriori)
@@ -502,15 +612,15 @@ freq_items = apriori(df_transacoes, min_support=0.05, use_colnames=True)
 regras = association_rules(freq_items, metric="confidence", min_threshold=0.6)
 
 # Mostrar as 5 principais regras
-print("\nTop 5 Regras de Associação:")
-print(regras[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head())
+logging.info("\nTop 5 Regras de Associação:")
+logging.info(regras[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head())
 
 # ================================================
 # 8. INTERPRETAÇÃO DOS MODELOS
 # ================================================
-print("\n" + "="*60)
-print("INTERPRETAÇÃO DOS MODELOS")
-print("="*60)
+logging.info("\n" + "="*60)
+logging.info("INTERPRETAÇÃO DOS MODELOS")
+logging.info("="*60)
 
 if "Random Forest" in modelos_treinados:
     # -------------------------------
@@ -530,8 +640,8 @@ if "Random Forest" in modelos_treinados:
     }).sort_values(by='Importance', ascending=False)
     
     # Mostrar top 15
-    print("\nTop 15 Features mais importantes (Random Forest):")
-    print(feature_importance_df.head(15))
+    logging.info("\nTop 15 Features mais importantes (Random Forest):")
+    logging.info(feature_importance_df.head(15))
     
     # Plot com fundo transparente
     plt.figure(figsize=(10, 6))
@@ -556,8 +666,8 @@ if "Random Forest" in modelos_treinados:
             'Coefficient': coef
         }).sort_values(by='Coefficient', key=abs, ascending=False)
         
-        print("\nTop 15 Coeficientes mais importantes (Regressão Logística):")
-        print(coef_df.head(15))
+        logging.info("\nTop 15 Coeficientes mais importantes (Regressão Logística):")
+        logging.info(coef_df.head(15))
         
         # Plot com fundo transparente
         plt.figure(figsize=(10, 6))
@@ -589,7 +699,7 @@ if "Random Forest" in modelos_treinados:
         sample_size = min(1000, X_train_shap.shape[0])
         X_sample = X_train_shap[:sample_size]
         
-        print(f"\nGerando SHAP values para {sample_size} amostras...")
+        logging.info(f"\nGerando SHAP values para {sample_size} amostras...")
         
         explainer = shap.TreeExplainer(modelos_treinados["Random Forest"])
         shap_values = explainer.shap_values(X_sample)
@@ -614,22 +724,25 @@ if "Random Forest" in modelos_treinados:
         plt.savefig("imagens/shap_bar_rf.png", transparent=True, bbox_inches='tight')
         plt.close()
         
-        print("✅ Gráficos SHAP gerados com sucesso.")
+        logging.info("✅ Gráficos SHAP gerados com sucesso.")
         
     except ImportError:
-        print("\n⚠️ Pacote SHAP não instalado. Execute: pip install shap")
+        logging.warning("\n⚠️ Pacote SHAP não instalado. Execute: pip install shap")
     except Exception as e:
-        print(f"\n⚠️ Erro ao gerar gráficos SHAP: {str(e)}")
-        print("Continuando sem SHAP...")
+        logging.warning(f"\n⚠️ Erro ao gerar gráficos SHAP: {str(e)}")
+        logging.warning("Continuando sem SHAP...")
 
 else:
-    print("⚠️ Modelo Random Forest não foi treinado com sucesso.")
+    logging.warning("⚠️ Modelo Random Forest não foi treinado com sucesso.")
 
-print("\n🎉 Pipeline completo executado!")
-print("\n📁 Arquivos gerados:")
-print("- Dados: 4-Carateristicas_salario.csv")
-print("- Modelo: random_forest_model.joblib")
-print("- Preprocessor: preprocessor.joblib")
-print("- Features: feature_info.joblib")
-print("- Amostras: sample_data.joblib")
-print("- Gráficos: pasta imagens/ (todos com fundo transparente)")
+logging.info("\n🎉 Pipeline completo executado!")
+logging.info("\n📁 Arquivos gerados:")
+logging.info("- Dados: 4-Carateristicas_salario.csv")
+logging.info("- Modelo: random_forest_model.joblib")
+logging.info("- Preprocessor: preprocessor.joblib")
+logging.info("- Features: feature_info.joblib")
+logging.info("- Amostras: sample_data.joblib")
+logging.info("- Gráficos: pasta imagens/ (todos com fundo transparente)")
+
+# Sugestão final
+logging.info("Sugestão: Para maior robustez, considere adicionar validação cruzada com cross_val_score.")

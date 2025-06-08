@@ -152,3 +152,22 @@ conda-meta/
 .spyderproject
 .spyproject
 .ropeproject
+
+# Ignoe graphics and media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.flv
+*.wmv
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.aac   
