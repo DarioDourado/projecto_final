@@ -160,6 +160,7 @@ conda-meta/
 *.gif
 *.svg
 *.webp
+# Graphics and media files (general)
 *.mp4
 *.avi
 *.mkv
@@ -170,4 +171,12 @@ conda-meta/
 *.wav
 *.ogg
 *.flac
-*.aac   
+*.aac
+
+# Ignore all images in imagens folder
+imagens/*.png
+imagens/*.jpg
+imagens/*.jpeg
+imagens/*.gif
+imagens/*.svg
+imagens/*.webp
