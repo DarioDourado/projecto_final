@@ -763,7 +763,7 @@ else:
     df_filtrado = df
 
 # ======================================
-# 5. GRÁFICOS INTERATIVOS - COM TRATAMENTO DE ERRO
+# 5. GRÁFICOS INTERATIVOS - ATUALIZAR CAMINHOS
 # ======================================
 if user_permissions["view_visualizations"]:
     st.markdown("### 📈 Visualizações")
@@ -781,74 +781,138 @@ if user_permissions["view_visualizations"]:
     with tabs[0]:  # Distribuições
         st.markdown("#### Distribuições das Variáveis")
         
-        # Verificar se os arquivos de imagem existem
+        # ✅ CORRIGIR: Todos os caminhos agora apontam para pasta imagens/
         image_files = {
-            "Idade": "imagens/hist_age.png",
-            "Educação (anos)": "imagens/hist_education-num.png",
-            "Horas por semana": "imagens/hist_hours-per-week.png",
-            "Ganho de capital": "imagens/hist_capital-gain.png"
+            "Distribuição de Idade": "imagens/hist_age.png",
+            "Distribuição de Educação": "imagens/hist_education-num.png", 
+            "Distribuição de Horas/Semana": "imagens/hist_hours-per-week.png",
+            "Distribuição de Ganho Capital": "imagens/hist_capital-gain.png",
+            "Distribuição de Perda Capital": "imagens/hist_capital-loss.png",
+            "Distribuição de Peso Final": "imagens/hist_fnlwgt.png"
         }
         
         # Verificar se a pasta imagens existe
         if not os.path.exists("imagens"):
-            st.warning("📁 Pasta 'imagens' não encontrada. Execute primeiro: python projeto_salario.py")
+            st.warning("📁 Pasta 'imagens' não encontrada. Execute primeiro: `python projeto_salario.py`")
         else:
+            # Mostrar gráficos existentes em grid 2x3
             cols = st.columns(2)
             for idx, (title, file_path) in enumerate(image_files.items()):
                 try:
                     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                         with cols[idx % 2]:
-                            st.image(file_path, caption=title, use_container_width=True)
+                            st.image(file_path, caption=title, use_column_width=True)
                     else:
-                        cols[idx % 2].warning(f"⚠️ Imagem {title} não encontrada ou vazia")
+                        with cols[idx % 2]:
+                            st.info(f"⏳ {title} ainda não gerado")
                 except Exception as e:
                     cols[idx % 2].error(f"❌ Erro ao carregar {title}: {str(e)}")
 
     if user_permissions["view_models"] and len(tabs) > 1:
-        with tabs[1]:  # Importância
-            st.markdown("#### Importância das Features")
+        with tabs[1]:  # Importância das Features
+            st.markdown("#### 🔍 Importância das Features")
             
             col1, col2 = st.columns(2)
             
             with col1:
+                st.markdown("**Random Forest - Importância**")
                 try:
-                    if os.path.exists("imagens/feature_importance_rf.png") and os.path.getsize("imagens/feature_importance_rf.png") > 0:
-                        st.image("imagens/feature_importance_rf.png", caption="Importância - Random Forest", use_container_width=True)
+                    rf_importance_path = "imagens/feature_importance_rf.png"
+                    if os.path.exists(rf_importance_path) and os.path.getsize(rf_importance_path) > 0:
+                        st.image(rf_importance_path, caption="Importância das Features - Random Forest", use_column_width=True)
                     else:
-                        st.warning("⚠️ Gráfico de importância das features não encontrado")
+                        st.info("⏳ Gráfico de importância RF ainda não gerado")
                 except Exception as e:
-                    st.error(f"❌ Erro ao carregar gráfico de importância: {str(e)}")
+                    st.error(f"❌ Erro ao carregar importância RF: {str(e)}")
             
             with col2:
+                st.markdown("**Regressão Logística - Coeficientes**")
                 try:
-                    if os.path.exists("imagens/coefficients_lr.png") and os.path.getsize("imagens/coefficients_lr.png") > 0:
-                        st.image("imagens/coefficients_lr.png", caption="Coeficientes - Regressão Logística", use_container_width=True)
+                    lr_coef_path = "imagens/coefficients_lr.png"
+                    if os.path.exists(lr_coef_path) and os.path.getsize(lr_coef_path) > 0:
+                        st.image(lr_coef_path, caption="Coeficientes - Regressão Logística", use_column_width=True)
                     else:
-                        st.warning("⚠️ Gráfico de coeficientes não encontrado")
+                        st.info("⏳ Gráfico de coeficientes LR ainda não gerado")
                 except Exception as e:
-                    st.error(f"❌ Erro ao carregar gráfico de coeficientes: {str(e)}")
+                    st.error(f"❌ Erro ao carregar coeficientes LR: {str(e)}")
 
-        with tabs[2]:  # Clustering
-            st.markdown("#### Análise de Clustering")
+        with tabs[2]:  # Clustering e Análises Avançadas
+            st.markdown("#### 🎯 Análise de Clustering e Visualizações Avançadas")
             
-            try:
-                if os.path.exists("imagens/kmeans_clusters.png") and os.path.getsize("imagens/kmeans_clusters.png") > 0:
-                    st.image("imagens/kmeans_clusters.png", caption="Clusters K-Means (PCA 2D)", use_container_width=True)
-                else:
-                    st.warning("⚠️ Gráfico de clustering não encontrado")
-            except Exception as e:
-                st.error(f"❌ Erro ao carregar gráfico de clustering: {str(e)}")
+            # Clustering em duas colunas
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Clustering K-Means**")
+                try:
+                    kmeans_path = "imagens/kmeans_clusters.png"
+                    if os.path.exists(kmeans_path) and os.path.getsize(kmeans_path) > 0:
+                        st.image(kmeans_path, caption="Clusters K-Means (PCA 2D)", use_column_width=True)
+                    else:
+                        st.info("⏳ Gráfico de clustering ainda não gerado")
+                except Exception as e:
+                    st.error(f"❌ Erro ao carregar clustering: {str(e)}")
+            
+            with col2:
+                st.markdown("**Análise de Componentes Principais**")
+                try:
+                    pca_path = "imagens/pca_analysis.png"
+                    if os.path.exists(pca_path) and os.path.getsize(pca_path) > 0:
+                        st.image(pca_path, caption="Análise PCA", use_column_width=True)
+                    else:
+                        st.info("⏳ Gráfico PCA ainda não gerado")
+                except Exception as e:
+                    st.error(f"❌ Erro ao carregar PCA: {str(e)}")
+            
+            # SHAP Analysis (se disponível)
+            if SHAP_AVAILABLE:
+                st.markdown("**Interpretabilidade SHAP**")
+                shap_files = {
+                    "SHAP Summary": "imagens/shap_summary.png",
+                    "SHAP Waterfall": "imagens/shap_waterfall.png",
+                    "SHAP Dependence": "imagens/shap_dependence.png"
+                }
+                
+                shap_cols = st.columns(len(shap_files))
+                for idx, (title, path) in enumerate(shap_files.items()):
+                    with shap_cols[idx]:
+                        try:
+                            if os.path.exists(path) and os.path.getsize(path) > 0:
+                                st.image(path, caption=title, use_column_width=True)
+                            else:
+                                st.info(f"⏳ {title} ainda não gerado")
+                        except Exception as e:
+                            st.error(f"❌ Erro ao carregar {title}: {str(e)}")
 
     with tabs[-1]:  # Correlações (sempre último)
-        st.markdown("#### Matriz de Correlação")
+        st.markdown("#### 📊 Matriz de Correlação")
         
-        try:
-            if os.path.exists("imagens/correlacao.png") and os.path.getsize("imagens/correlacao.png") > 0:
-                st.image("imagens/correlacao.png", caption="Correlação entre Variáveis Numéricas", use_container_width=True)
-            else:
-                st.warning("⚠️ Matriz de correlação não encontrada")
-        except Exception as e:
-            st.error(f"❌ Erro ao carregar matriz de correlação: {str(e)}")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            try:
+                correlation_path = "imagens/correlacao.png"
+                if os.path.exists(correlation_path) and os.path.getsize(correlation_path) > 0:
+                    st.image(correlation_path, caption="Correlação entre Variáveis Numéricas", use_column_width=True)
+                else:
+                    st.info("⏳ Matriz de correlação ainda não gerada")
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar matriz de correlação: {str(e)}")
+        
+        with col2:
+            st.markdown("**Informações sobre Correlação:**")
+            st.info("""
+            🔍 **Como interpretar:**
+            
+            • **Cores quentes** (vermelho): Correlação positiva forte
+            • **Cores frias** (azul): Correlação negativa forte  
+            • **Branco**: Sem correlação
+            
+            📊 **Valores:**
+            • +1.0: Correlação perfeita positiva
+            • 0.0: Sem correlação
+            • -1.0: Correlação perfeita negativa
+            """)
 
 # ======================================
 # 6. ANÁLISE EXPLORATÓRIA INTERATIVA
@@ -1398,3 +1462,157 @@ if user_permissions["view_system_info"]:
         - 📊 Dados: {'✅ Carregados' if not df.empty else '❌ Não encontrados'}
         - 📈 Gráficos: {'✅' if os.path.exists('imagens') else '❌'} {'Disponíveis' if os.path.exists('imagens') else 'Pasta não encontrada'}
         """)
+
+# Adicionar função helper para verificar status das imagens
+def get_image_status():
+    """Verificar status de todas as imagens geradas"""
+    expected_images = {
+        # Distribuições
+        "hist_age.png": "Histograma da Idade",
+        "hist_fnlwgt.png": "Histograma do Peso Final", 
+        "hist_education-num.png": "Histograma dos Anos de Educação",
+        "hist_capital-gain.png": "Histograma do Ganho de Capital",
+        "hist_capital-loss.png": "Histograma da Perda de Capital",
+        "hist_hours-per-week.png": "Histograma das Horas por Semana",
+        
+        # Análises categóricas
+        "workclass_distribution.png": "Distribuição da Classe de Trabalho",
+        "education_distribution.png": "Distribuição da Educação",
+        "marital_status_distribution.png": "Distribuição do Estado Civil",
+        "occupation_distribution.png": "Distribuição das Ocupações",
+        "salary_distribution.png": "Distribuição dos Salários",
+        
+        # Correlações
+        "correlacao.png": "Matriz de Correlação",
+        
+        # Importância das features
+        "feature_importance_rf.png": "Importância das Features - Random Forest",
+        "coefficients_lr.png": "Coeficientes - Regressão Logística",
+        
+        # Clustering
+        "kmeans_clusters.png": "Clusters K-Means",
+        "pca_analysis.png": "Análise PCA",
+        
+        # SHAP (se disponível)
+        "shap_summary.png": "SHAP Summary Plot",
+        "shap_waterfall.png": "SHAP Waterfall Plot", 
+        "shap_dependence.png": "SHAP Dependence Plot",
+        
+        # Outros gráficos
+        "salary_by_education.png": "Salário por Educação",
+        "salary_by_age.png": "Salário por Idade",
+        "confusion_matrix.png": "Matriz de Confusão"
+    }
+    
+    status = {}
+    for filename, description in expected_images.items():
+        path = f"imagens/{filename}"
+        exists = os.path.exists(path)
+        size = 0
+        if exists:
+            try:
+                size = os.path.getsize(path)
+            except:
+                size = 0
+        
+        status[filename] = {
+            "exists": exists,
+            "size": size,
+            "description": description,
+            "path": path
+        }
+    
+    return status
+
+# Adicionar na seção de informações do sistema
+if user_permissions["view_system_info"]:
+    with st.expander("📈 Status dos Gráficos Gerados"):
+        image_status = get_image_status()
+        
+        st.markdown("#### 📊 Gráficos Disponíveis")
+        
+        # Categorizar imagens
+        categories = {
+            "📊 Distribuições": [f for f in image_status.keys() if f.startswith("hist_")],
+            "📈 Análises Categóricas": [f for f in image_status.keys() if f.endswith("_distribution.png")],
+            "🔗 Correlações": ["correlacao.png"],
+            "🎯 Importância": ["feature_importance_rf.png", "coefficients_lr.png"],
+            "🧩 Clustering": ["kmeans_clusters.png", "pca_analysis.png"],
+            "🔍 SHAP": [f for f in image_status.keys() if f.startswith("shap_")],
+            "📋 Outros": [f for f in image_status.keys() if f not in sum([
+                [f for f in image_status.keys() if f.startswith("hist_")],
+                [f for f in image_status.keys() if f.endswith("_distribution.png")],
+                ["correlacao.png"],
+                ["feature_importance_rf.png", "coefficients_lr.png"],
+                ["kmeans_clusters.png", "pca_analysis.png"],
+                [f for f in image_status.keys() if f.startswith("shap_")]
+            ], [])]
+        }
+        
+        for category, files in categories.items():
+            if files:  # Só mostrar categorias que têm arquivos
+                st.markdown(f"**{category}**")
+                cols = st.columns(3)
+                
+                for idx, filename in enumerate(files):
+                    if filename in image_status:
+                        status = image_status[filename]
+                        with cols[idx % 3]:
+                            if status["exists"] and status["size"] > 0:
+                                st.success(f"✅ {status['description']}")
+                                st.caption(f"📦 {status['size'] // 1024} KB")
+                            else:
+                                st.warning(f"⚠️ {status['description']}")
+                                st.caption("Arquivo não encontrado")
+                
+                st.markdown("---")
+        
+        # Estatísticas gerais
+        total_images = len(image_status)
+        existing_images = sum(1 for s in image_status.values() if s["exists"] and s["size"] > 0)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total de Gráficos", total_images)
+        col2.metric("Gráficos Gerados", existing_images)
+        col3.metric("Taxa de Conclusão", f"{(existing_images/total_images)*100:.1f}%")
+
+def safe_image_display(image_path, caption, container=None):
+    """Exibir imagem com compatibilidade entre versões do Streamlit"""
+    try:
+        # Tentar primeiro use_container_width (versões mais recentes)
+        if container:
+            container.image(image_path, caption=caption, use_container_width=True)
+        else:
+            st.image(image_path, caption=caption, use_container_width=True)
+    except TypeError:
+        # Fallback para use_column_width (versões mais antigas)
+        if container:
+            container.image(image_path, caption=caption, use_column_width=True)
+        else:
+            st.image(image_path, caption=caption, use_column_width=True)
+
+def safe_button(label, button_type="secondary", container=None):
+    """Botão com compatibilidade entre versões"""
+    try:
+        if container:
+            return container.button(label, type=button_type, use_container_width=True)
+        else:
+            return st.button(label, type=button_type, use_container_width=True)
+    except TypeError:
+        if container:
+            return container.button(label, type=button_type, use_column_width=True)
+        else:
+            return st.button(label, type=button_type, use_column_width=True)
+
+def safe_dataframe(df, container=None):
+    """DataFrame com compatibilidade"""
+    try:
+        if container:
+            container.dataframe(df, use_container_width=True)
+        else:
+            st.dataframe(df, use_container_width=True)
+    except TypeError:
+        if container:
+            container.dataframe(df, use_column_width=True)
+        else:
+            st.dataframe(df, use_column_width=True)

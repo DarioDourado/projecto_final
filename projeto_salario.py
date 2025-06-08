@@ -10,7 +10,9 @@ import numpy as np
 import os
 import logging
 
-# Configurar formatação personalizada
+# ================================================
+# 1.1. CONFIGURAÇÃO DE LOGGING
+# ================================================
 class EmojiFormatter(logging.Formatter):
     """Formatter personalizado com emojis"""
     
@@ -19,7 +21,8 @@ class EmojiFormatter(logging.Formatter):
         'INFO': 'ℹ️',
         'WARNING': '⚠️',
         'ERROR': '❌',
-        'CRITICAL': '🚨'
+        'CRITICAL': '🚨',
+        'SUCCESS': '✅'
     }
     
     def format(self, record):
@@ -36,6 +39,35 @@ logger.setLevel(logging.INFO)
 # Remover handlers padrão para evitar duplicação
 logger.handlers = [handler]
 
+# ================================================
+# 1.2. FUNÇÕES DE LOGGING AUXILIARES (DEFINIR PRIMEIRO)
+# ================================================
+def log_success(message):
+    """Log com checkmark verde"""
+    logging.info(f"✅ {message}")
+
+def log_function_start(function_name):
+    """Log início de função"""
+    logging.info(f"🔄 Iniciando: {function_name}")
+
+def log_function_end(function_name):
+    """Log fim de função com sucesso"""
+    logging.info(f"✅ Concluído: {function_name}")
+
+def log_function(func):
+    """Decorator para logging de início e fim de função"""
+    def wrapper(*args, **kwargs):
+        logging.info(f"🔄 Iniciando: {func.__name__}")
+        result = func(*args, **kwargs)
+        logging.info(f"✅ Concluído: {func.__name__}")
+        return result
+    return wrapper
+
+def get_memory_usage(df):
+    """Calcular uso de memória do DataFrame"""
+    memory_usage = df.memory_usage(deep=True).sum()
+    return memory_usage / 1024 / 1024  # MB
+
 # Configuração global para fundo transparente
 plt.rcParams['figure.facecolor'] = 'none'
 plt.rcParams['axes.facecolor'] = 'none'
@@ -46,6 +78,7 @@ plt.rcParams['savefig.facecolor'] = 'none'
 # ================================================
 df = pd.read_csv('4-Carateristicas_salario.csv')
 df = df.drop_duplicates()
+logging.info("✅ Dados carregados e duplicatas removidas")
 
 logging.info("\nResumo dos dados:")
 logging.info(df.info())
@@ -63,6 +96,7 @@ logging.info("="*60)
 
 def limpar_e_tipar_dados(df):
     """Limpar dados e aplicar tipagem correta às colunas"""
+    log_function_start("Limpeza e tipagem de dados")
     
     # Fazer cópia para não alterar o original
     df_clean = df.copy()
@@ -143,12 +177,8 @@ def limpar_e_tipar_dados(df):
                 logging.warning(f"⚠️ Encontrados {invalid_capital.sum()} valores negativos em {col}")
                 df_clean.loc[invalid_capital, col] = 0
     
+    log_function_end("Limpeza e tipagem de dados")
     return df_clean, numerical_columns_types, categorical_columns
-
-def get_memory_usage(df):
-    """Calcular uso de memória do DataFrame"""
-    memory_usage = df.memory_usage(deep=True).sum()
-    return memory_usage / 1024 / 1024  # MB
 
 # Mostrar uso de memória antes da otimização
 memory_before = get_memory_usage(df)
@@ -156,6 +186,7 @@ logging.info(f"💾 Uso de memória antes da otimização: {memory_before:.2f} M
 
 # Aplicar limpeza e tipagem
 df, numerical_columns_types, categorical_columns = limpar_e_tipar_dados(df)
+logging.info("✅ Limpeza e tipagem de dados concluída")
 
 # Mostrar uso de memória após otimização
 memory_after = get_memory_usage(df)
@@ -176,10 +207,11 @@ if missing_values.any():
 numerical_columns = list(numerical_columns_types.keys())
 
 # ================================================
-# Remover outliers com base no Z-score
+# 2.2. REMOÇÃO DE OUTLIERS
 # ================================================
 from scipy.stats import zscore
 
+@log_function
 def remover_outliers(df, columns, threshold=3):
     """Remove outliers com base no Z-score"""
     df_filtered = df.copy()
@@ -208,10 +240,7 @@ def remover_outliers(df, columns, threshold=3):
     
     return df_filtered
 
-# Definir colunas numéricas no escopo principal
-numerical_columns = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
-
-# Aplicar remoção de outliers após limpeza de dados
+# Aplicar remoção de outliers
 logging.info("\n" + "="*60)
 logging.info("REMOÇÃO DE OUTLIERS")
 logging.info("="*60)
@@ -286,7 +315,7 @@ for col in categorical_cols:
     plt.savefig(f'imagens/bar_{col}.png', transparent=True, bbox_inches='tight')
     plt.close()
 
-logging.info("\nGráficos salvos na pasta 'imagens'")
+logging.info("✅ Gráficos EDA gerados e salvos")
 
 # ================================================
 # 4. PRÉ-PROCESSAMENTO
@@ -418,7 +447,7 @@ X_test_processed = preprocessor.transform(X_test)
 # Novo: Garantir que X_test_processed é do tipo float
 X_test_processed = X_test_processed.astype(float)
 
-logging.info("\nPré-processamento completo. Formato final dos dados:")
+logging.info("\nPré-processamento concluído. Formato final dos dados:")
 logging.info(f"X_train: {X_train_processed.shape}")
 logging.info(f"X_test: {X_test_processed.shape}")
 logging.info(f"y_train classes únicas: {y_train.unique()}")
@@ -483,6 +512,7 @@ def avaliar_modelo(nome, modelo, X_train, y_train, X_test, y_test):
         logging.warning(f"Classes em y_train: {y_train.unique()}")
         return None
     
+    logging.info(f"🔄 Iniciando treinamento: {nome}")
     try:
         modelo.fit(X_train, y_train)
         y_pred = modelo.predict(X_test)
@@ -500,6 +530,7 @@ def avaliar_modelo(nome, modelo, X_train, y_train, X_test, y_test):
             logging.info(f"AUC-ROC: {auc:.4f}")
         except ValueError as e:
             logging.warning(f"Não foi possível calcular AUC-ROC: {e}")
+        logging.info(f"✅ Modelo {nome} treinado com sucesso")
         return modelo
     except Exception as e:
         logging.warning(f"\n⚠️ Erro ao treinar {nome}: {str(e)}")
@@ -518,6 +549,8 @@ for nome, modelo in modelos.items():
     modelo_treinado = avaliar_modelo(nome, modelo, X_train_processed, y_train, X_test_processed, y_test)
     if modelo_treinado is not None:
         modelos_treinados[nome] = modelo_treinado
+
+logging.info("✅ Todos os modelos treinados e avaliados")
 
 # ================================================
 # SALVAR MODELOS E PREPROCESSOR
@@ -734,6 +767,8 @@ if "Random Forest" in modelos_treinados:
 
 else:
     logging.warning("⚠️ Modelo Random Forest não foi treinado com sucesso.")
+
+logging.info("✅ Interpretação de modelos concluída")
 
 logging.info("\n🎉 Pipeline completo executado!")
 logging.info("\n📁 Arquivos gerados:")
