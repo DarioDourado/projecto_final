@@ -68,10 +68,136 @@ def get_memory_usage(df):
     memory_usage = df.memory_usage(deep=True).sum()
     return memory_usage / 1024 / 1024  # MB
 
-# Configuração global para fundo transparente
-plt.rcParams['figure.facecolor'] = 'none'
-plt.rcParams['axes.facecolor'] = 'none'
-plt.rcParams['savefig.facecolor'] = 'none'
+# ================================================
+# CONFIGURAÇÃO DE ESTILO MODERNO
+# ================================================
+
+# Configurar estilo moderno
+plt.style.use('default')
+sns.set_palette("husl")
+
+# Configuração global CORRIGIDA
+plt.rcParams.update({
+    # Figura
+    'figure.figsize': (12, 8),
+    'figure.dpi': 100,
+    'figure.facecolor': 'white',
+    'figure.edgecolor': 'none',
+    
+    # Eixos
+    'axes.facecolor': '#f8f9fa',
+    'axes.edgecolor': '#dee2e6',
+    'axes.linewidth': 1.2,
+    'axes.grid': True,
+    'axes.axisbelow': True,
+    'axes.labelsize': 12,
+    'axes.titlesize': 16,
+    'axes.titleweight': 'bold',
+    'axes.titlepad': 20,
+    
+    # Grid
+    'grid.color': '#e9ecef',
+    'grid.linestyle': '-',
+    'grid.linewidth': 0.8,
+    'grid.alpha': 0.7,
+    
+    # Texto - SEM FONTES PROBLEMÁTICAS
+    'font.family': ['DejaVu Sans', 'Arial', 'sans-serif'],
+    'font.size': 11,
+    'text.color': '#343a40',
+    
+    # Legendas
+    'legend.fontsize': 10,
+    'legend.frameon': True,
+    'legend.fancybox': True,
+    'legend.shadow': True,
+    'legend.framealpha': 0.9,
+    'legend.facecolor': 'white',
+    'legend.edgecolor': '#dee2e6',
+    
+    # Ticks
+    'xtick.labelsize': 10,
+    'ytick.labelsize': 10,
+    'xtick.color': '#6c757d',
+    'ytick.color': '#6c757d',
+    
+    # Cores
+    'patch.linewidth': 0.5,
+    'patch.facecolor': '#007bff',
+    'patch.edgecolor': '#0056b3',
+    
+    # Salvamento
+    'savefig.dpi': 300,
+    'savefig.facecolor': 'white',
+    'savefig.edgecolor': 'none',
+    'savefig.bbox': 'tight',
+    'savefig.pad_inches': 0.2
+})
+
+# Paleta de cores moderna
+MODERN_COLORS = {
+    'primary': '#007bff',
+    'secondary': '#6c757d', 
+    'success': '#28a745',
+    'danger': '#dc3545',
+    'warning': '#ffc107',
+    'info': '#17a2b8',
+    'light': '#f8f9fa',
+    'dark': '#343a40',
+    'gradient_blue': ['#667eea', '#764ba2'],
+    'gradient_sunset': ['#ff9a9e', '#fecfef'],
+    'gradient_ocean': ['#2196f3', '#21cbf3'],
+    'categorical': ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14']
+}
+
+# Função apply_modern_style CORRIGIDA
+def apply_modern_style(ax, title="", subtitle="", remove_spines=True):
+    """Aplicar estilo moderno consistente a um gráfico"""
+    
+    # Título principal (SEM EMOJIS PROBLEMÁTICOS)
+    if title:
+        ax.set_title(title, fontsize=16, fontweight='bold', 
+                    color=MODERN_COLORS['dark'], pad=20)
+    
+    # Subtítulo
+    if subtitle:
+        ax.text(0.5, 0.95, subtitle, transform=ax.transAxes, 
+               fontsize=11, color=MODERN_COLORS['secondary'],
+               ha='center', style='italic')
+    
+    # Remover spines desnecessários
+    if remove_spines:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color(MODERN_COLORS['secondary'])
+        ax.spines['bottom'].set_color(MODERN_COLORS['secondary'])
+    
+    # Grid sutil
+    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.8)
+    ax.set_axisbelow(True)
+    
+    # Cor de fundo
+    ax.set_facecolor('#fafbfc')
+    
+    return ax
+
+# Função save_modern_plot CORRIGIDA
+def save_modern_plot(filename, dpi=300, transparent=False):
+    """Salvar gráfico com configurações modernas - SEM EMOJIS"""
+    try:
+        plt.tight_layout()
+        plt.savefig(f"imagens/{filename}", 
+                    dpi=dpi, 
+                    transparent=transparent,
+                    bbox_inches='tight',
+                    facecolor='white',
+                    edgecolor='none',
+                    pad_inches=0.2)
+        print(f"✓ Gráfico salvo: {filename}")  # Usar print simples
+        plt.close()
+    except Exception as e:
+        print(f"✗ Erro ao salvar {filename}: {e}")
+        plt.close()
 
 # ================================================
 # 2. CARREGAMENTO E LIMPEZA DOS DADOS
@@ -267,517 +393,408 @@ else:
     logging.warning("⚠️ Nenhuma coluna numérica encontrada para remoção de outliers")
 
 # ================================================
-# 3. ANÁLISE EXPLORATÓRIA DE DADOS (EDA)
+# FUNÇÕES DE VISUALIZAÇÃO MODERNA (DEFINIR ANTES DO USO)
 # ================================================
+
+def create_modern_histogram(data, column, title="", bins=30):
+    """Criar histograma moderno com estatísticas - SEM EMOJIS PROBLEMÁTICOS"""
+    
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Dados válidos
+    valid_data = data[column].dropna()
+    
+    if len(valid_data) == 0:
+        ax.text(0.5, 0.5, f'Sem dados válidos para {column}', 
+               ha='center', va='center', transform=ax.transAxes)
+        return fig, ax
+    
+    # Histograma principal
+    n, bins_edges, patches = ax.hist(valid_data, bins=bins, 
+                                   color=MODERN_COLORS['primary'], 
+                                   alpha=0.7, edgecolor='white', linewidth=1.2)
+    
+    # Gradiente nas barras
+    for i, patch in enumerate(patches):
+        height_ratio = n[i] / max(n) if max(n) > 0 else 0
+        color_intensity = 0.3 + 0.7 * height_ratio
+        patch.set_facecolor(plt.cm.Blues(color_intensity))
+        patch.set_edgecolor('white')
+    
+    # Curva de densidade suavizada
+    try:
+        from scipy import stats
+        density = stats.gaussian_kde(valid_data)
+        xs = np.linspace(valid_data.min(), valid_data.max(), 200)
+        density_values = density(xs)
+        
+        # Escalar densidade para ajustar ao histograma
+        density_scaled = density_values * len(valid_data) * (bins_edges[1] - bins_edges[0])
+        
+        ax2 = ax.twinx()
+        ax2.plot(xs, density_scaled, color=MODERN_COLORS['danger'], 
+                 linewidth=3, alpha=0.8, label='Densidade')
+        ax2.set_ylabel('Densidade', color=MODERN_COLORS['danger'])
+        ax2.tick_params(axis='y', labelcolor=MODERN_COLORS['danger'])
+        ax2.spines['right'].set_color(MODERN_COLORS['danger'])
+    except Exception as e:
+        print(f"Aviso: Não foi possível adicionar curva de densidade para {column}: {e}")
+    
+    # Estatísticas no gráfico
+    mean_val = valid_data.mean()
+    median_val = valid_data.median()
+    std_val = valid_data.std()
+    
+    # Linhas de referência
+    ax.axvline(mean_val, color=MODERN_COLORS['success'], 
+               linestyle='--', linewidth=2, alpha=0.8, label=f'Media: {mean_val:.1f}')
+    ax.axvline(median_val, color=MODERN_COLORS['warning'], 
+               linestyle='--', linewidth=2, alpha=0.8, label=f'Mediana: {median_val:.1f}')
+    
+    # Caixa de estatísticas (SEM EMOJIS PROBLEMÁTICOS)
+    stats_text = f"""Estatisticas:
+    • Media: {mean_val:.2f}
+    • Mediana: {median_val:.2f}
+    • Desvio Padrao: {std_val:.2f}
+    • Min: {valid_data.min():.2f}
+    • Max: {valid_data.max():.2f}
+    • Registros: {len(valid_data):,}"""
+    
+    ax.text(0.98, 0.98, stats_text, transform=ax.transAxes,
+           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
+           verticalalignment='top', horizontalalignment='right',
+           fontsize=10, fontfamily='monospace')
+    
+    # Aplicar estilo moderno
+    apply_modern_style(ax, title=title or f"Distribuicao de {column}")
+    
+    # Labels
+    ax.set_xlabel(column.replace('-', ' ').replace('_', ' ').title(), 
+                 fontsize=12, fontweight='bold')
+    ax.set_ylabel('Frequencia', fontsize=12, fontweight='bold')
+    
+    # Legenda
+    ax.legend(loc='upper left', framealpha=0.9)
+    
+    return fig, ax
+
+def create_modern_barplot(data, column, title="", top_n=15, horizontal=True):
+    """Criar gráfico de barras moderno - SEM EMOJIS PROBLEMÁTICOS"""
+    
+    # Preparar dados
+    value_counts = data[column].value_counts().head(top_n)
+    
+    if len(value_counts) == 0:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.text(0.5, 0.5, f'Sem dados para {column}', 
+               ha='center', va='center', transform=ax.transAxes)
+        return fig, ax
+    
+    if horizontal:
+        fig, ax = plt.subplots(figsize=(12, max(8, len(value_counts) * 0.6)))
+        
+        # Criar gradiente de cores
+        colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(value_counts)))
+        
+        bars = ax.barh(range(len(value_counts)), value_counts.values, 
+                      color=colors, edgecolor='white', linewidth=1)
+        
+        # Adicionar valores nas barras
+        for i, (bar, value) in enumerate(zip(bars, value_counts.values)):
+            width = bar.get_width()
+            ax.text(width + value * 0.01, bar.get_y() + bar.get_height()/2,
+                   f'{value:,}', ha='left', va='center', fontweight='bold')
+        
+        # Configurar eixos
+        ax.set_yticks(range(len(value_counts)))
+        ax.set_yticklabels(value_counts.index, fontsize=10)
+        ax.set_xlabel('Frequencia', fontsize=12, fontweight='bold')
+        
+        # Inverter ordem (maior no topo)
+        ax.invert_yaxis()
+        
+    else:
+        fig, ax = plt.subplots(figsize=(max(12, len(value_counts) * 0.8), 8))
+        
+        colors = plt.cm.plasma(np.linspace(0.2, 0.8, len(value_counts)))
+        
+        bars = ax.bar(range(len(value_counts)), value_counts.values,
+                     color=colors, edgecolor='white', linewidth=1)
+        
+        # Adicionar valores nas barras
+        for bar, value in zip(bars, value_counts.values):
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2, height + value * 0.01,
+                   f'{value:,}', ha='center', va='bottom', fontweight='bold')
+        
+        # Configurar eixos
+        ax.set_xticks(range(len(value_counts)))
+        ax.set_xticklabels(value_counts.index, rotation=45, ha='right')
+        ax.set_ylabel('Frequencia', fontsize=12, fontweight='bold')
+    
+    # Percentuais
+    total = value_counts.sum()
+    percentages = (value_counts / total * 100).round(1)
+    
+    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
+    info_text = f"""Top {len(value_counts)} categorias:
+    • Total registros: {total:,}
+    • Categorias unicas: {data[column].nunique()}
+    • Categoria mais comum: {value_counts.index[0]} ({percentages.iloc[0]:.1f}%)"""
+    
+    ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
+           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                    edgecolor=MODERN_COLORS['info'], alpha=0.9),
+           verticalalignment='top', fontsize=10, fontfamily='monospace')
+    
+    # Aplicar estilo moderno
+    apply_modern_style(ax, title=title or f"Distribuicao de {column}")
+    
+    return fig, ax
+
+def create_modern_correlation_matrix(data, title="Matriz de Correlacao"):
+    """Criar matriz de correlação moderna - CORRIGIDA"""
+    
+    # Selecionar apenas colunas numéricas
+    numeric_data = data.select_dtypes(include=[np.number])
+    
+    if numeric_data.empty:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.text(0.5, 0.5, 'Nenhuma variavel numerica encontrada', 
+               ha='center', va='center', transform=ax.transAxes)
+        return fig, ax
+    
+    correlation_matrix = numeric_data.corr()
+    
+    fig, ax = plt.subplots(figsize=(14, 12))
+    
+    # Criar máscara para triângulo superior
+    mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
+    
+    # Heatmap com estilo moderno
+    sns.heatmap(correlation_matrix, 
+                mask=mask,
+                annot=True, 
+                cmap='RdBu_r',
+                center=0,
+                square=True,
+                fmt='.2f',
+                cbar_kws={"shrink": 0.8, "label": "Correlacao"},
+                linewidths=0.5,
+                linecolor='white',
+                ax=ax)
+    
+    # Estilo moderno
+    ax.set_title(title, fontsize=18, fontweight='bold', pad=30)
+    
+    # Rotacionar labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+    plt.setp(ax.get_yticklabels(), rotation=0)
+    
+    # CORREÇÃO: Usar gt() e lt() em vez de between()
+    strong_corr_mask = correlation_matrix.abs() > 0.7
+    moderate_corr_mask = (correlation_matrix.abs() > 0.3) & (correlation_matrix.abs() <= 0.7)
+    
+    strong_corr = strong_corr_mask.sum().sum() - len(correlation_matrix)  # Subtrair diagonal
+    moderate_corr = moderate_corr_mask.sum().sum()
+    
+    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
+    info_text = f"""Analise de Correlacao:
+    • Correlacoes fortes (|r| > 0.7): {strong_corr}
+    • Correlacoes moderadas (0.3 < |r| < 0.7): {moderate_corr}
+    • Variaveis analisadas: {len(correlation_matrix)}"""
+    
+    ax.text(1.02, 0.98, info_text, transform=ax.transAxes,
+           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
+           verticalalignment='top', fontsize=10, fontfamily='monospace')
+    
+    return fig, ax
+
+def create_modern_feature_importance(importance_data, feature_names, title="Importancia das Features", top_n=20):
+    """Criar gráfico moderno de importância das features - SEM EMOJIS PROBLEMÁTICOS"""
+    
+    # Preparar dados
+    feature_df = pd.DataFrame({
+        'feature': feature_names,
+        'importance': importance_data
+    }).sort_values('importance', ascending=True).tail(top_n)
+    
+    fig, ax = plt.subplots(figsize=(12, max(8, len(feature_df) * 0.4)))
+    
+    # Gradiente de cores baseado na importância
+    norm = plt.Normalize(feature_df['importance'].min(), feature_df['importance'].max())
+    colors = plt.cm.viridis(norm(feature_df['importance']))
+    
+    bars = ax.barh(range(len(feature_df)), feature_df['importance'], 
+                   color=colors, edgecolor='white', linewidth=1.2)
+    
+    # Adicionar valores nas barras
+    for i, (bar, importance) in enumerate(zip(bars, feature_df['importance'])):
+        width = bar.get_width()
+        ax.text(width + importance * 0.01, bar.get_y() + bar.get_height()/2,
+               f'{importance:.3f}', ha='left', va='center', 
+               fontweight='bold', fontsize=9)
+    
+    # Configurar eixos
+    ax.set_yticks(range(len(feature_df)))
+    ax.set_yticklabels(feature_df['feature'], fontsize=10)
+    ax.set_xlabel('Importancia', fontsize=12, fontweight='bold')
+    
+    # Destacar top 3
+    for i in range(max(0, len(bars)-3), len(bars)):
+        bars[i].set_edgecolor(MODERN_COLORS['danger'])
+        bars[i].set_linewidth(2)
+    
+    # Informações estatísticas
+    total_importance = feature_df['importance'].sum()
+    top3_importance = feature_df['importance'].tail(3).sum()
+    
+    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
+    info_text = f"""Analise de Importancia:
+    • Top 3 features: {top3_importance/total_importance*100:.1f}% da importancia
+    • Feature mais importante: {feature_df.iloc[-1]['feature']}
+    • Importancia maxima: {feature_df['importance'].max():.3f}
+    • Features analisadas: {len(feature_df)}"""
+    
+    ax.text(0.98, 0.02, info_text, transform=ax.transAxes,
+           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                    edgecolor=MODERN_COLORS['success'], alpha=0.9),
+           verticalalignment='bottom', horizontalalignment='right',
+           fontsize=10, fontfamily='monospace')
+    
+    # Aplicar estilo moderno
+    apply_modern_style(ax, title=title)
+    
+    return fig, ax
+
+def create_modern_confusion_matrix(y_true, y_pred, model_name="Modelo"):
+    """Criar matriz de confusão moderna - SEM EMOJIS PROBLEMÁTICOS"""
+    from sklearn.metrics import confusion_matrix
+    
+    cm = confusion_matrix(y_true, y_pred)
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Heatmap da matriz de confusão
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                square=True, linewidths=0.5,
+                cbar_kws={"shrink": 0.8},
+                annot_kws={"size": 14, "weight": "bold"},
+                ax=ax)
+    
+    # Labels
+    ax.set_xlabel('Predicao', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Real', fontsize=12, fontweight='bold')
+    ax.set_title(f'Matriz de Confusao - {model_name}', fontsize=16, fontweight='bold', pad=20)
+    
+    # Configurar ticks
+    ax.set_xticklabels(['≤ 50K', '> 50K'])
+    ax.set_yticklabels(['≤ 50K', '> 50K'])
+    
+    # Calcular métricas
+    tn, fp, fn, tp = cm.ravel() if cm.size == 4 else (cm[0,0], 0, 0, cm[1,1])
+    
+    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    # Caixa de métricas (SEM EMOJIS PROBLEMÁTICOS)
+    metrics_text = f"""Metricas:
+    • Accuracy: {accuracy:.3f}
+    • Precision: {precision:.3f}
+    • Recall: {recall:.3f}
+    • F1-Score: {f1:.3f}
+    
+    Matriz:
+    • VP: {tp}  |  FP: {fp}
+    • FN: {fn}  |  VN: {tn}"""
+    
+    ax.text(1.05, 0.5, metrics_text, transform=ax.transAxes,
+           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
+           verticalalignment='center', fontsize=10, fontfamily='monospace')
+    
+    return fig, ax
+
+# ================================================
+# 3. ANÁLISE EXPLORATÓRIA DE DADOS (EDA) - VERSÃO CORRIGIDA
+# ================================================
+logging.info("\n" + "="*60)
+logging.info("GERANDO VISUALIZAÇÕES MODERNAS")
+logging.info("="*60)
+
 # Criar diretório para imagens se não existir
 os.makedirs("imagens", exist_ok=True)
 
-# Distribuições das variáveis numéricas
-numerical_cols = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
-for col in numerical_cols:
-    plt.figure(figsize=(6, 4))
-    # Configurar fundo transparente
-    plt.gca().patch.set_alpha(0.0)
-    plt.gcf().patch.set_alpha(0.0)
-    
-    sns.histplot(df[col], kde=True, bins=30)
-    plt.title(f'Distribuição de {col}')
-    plt.tight_layout()
-    plt.savefig(f'imagens/hist_{col}.png', transparent=True, bbox_inches='tight')
-    plt.close()
+try:
+    # 1. Histogramas modernos para variáveis numéricas
+    logging.info("📊 Gerando histogramas modernos...")
+    numerical_cols = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+    for col in numerical_cols:
+        if col in df.columns:
+            logging.info(f"  📈 Processando {col}")
+            try:
+                fig, ax = create_modern_histogram(df, col, title=f"Distribuicao de {col.replace('-', ' ').title()}")
+                save_modern_plot(f"hist_{col}.png")
+            except Exception as e:
+                logging.warning(f"Erro ao gerar histograma para {col}: {e}")
 
-# Matriz de correlação
-corr = df[numerical_cols].corr()
-plt.figure(figsize=(8, 6))
-# Configurar fundo transparente
-plt.gca().patch.set_alpha(0.0)
-plt.gcf().patch.set_alpha(0.0)
-
-sns.heatmap(corr, annot=True, cmap='coolwarm')
-plt.title("Matriz de Correlação entre Variáveis Numéricas")
-plt.tight_layout()
-plt.savefig('imagens/correlacao.png', transparent=True, bbox_inches='tight')
-plt.close()
-
-# Distribuição de salário por variáveis categóricas
-categorical_cols = ['workclass', 'education', 'marital-status', 'occupation', 
-                    'relationship', 'race', 'sex', 'native-country']
-for col in categorical_cols:
-    plt.figure(figsize=(10, 5))
-    # Configurar fundo transparente
-    plt.gca().patch.set_alpha(0.0)
-    plt.gcf().patch.set_alpha(0.0)
-    
-    sns.countplot(data=df, x=col, hue='salary')
-    plt.title(f'Distribuição de Salário por {col}')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(f'imagens/bar_{col}.png', transparent=True, bbox_inches='tight')
-    plt.close()
-
-logging.info("✅ Gráficos EDA gerados e salvos")
-
-# ================================================
-# 4. PRÉ-PROCESSAMENTO
-# ================================================
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-
-# Separar variáveis numéricas e categóricas
-numerical_features = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
-categorical_features = ['workclass', 'education', 'marital-status', 'occupation',
+    # 2. Gráficos categóricos modernos
+    logging.info("📊 Gerando gráficos categóricos modernos...")
+    categorical_cols = ['workclass', 'education', 'marital-status', 'occupation', 
                         'relationship', 'race', 'sex', 'native-country']
 
-# DIAGNÓSTICO DETALHADO DOS DADOS
-logging.info("\n" + "="*60)
-logging.info("DIAGNÓSTICO DETALHADO DOS DADOS")
-logging.info("="*60)
+    for col in categorical_cols:
+        if col in df.columns and df[col].nunique() < 50:
+            logging.info(f"  📈 Processando {col}")
+            try:
+                fig, ax = create_modern_barplot(df, col, title=f"Distribuicao de {col.replace('-', ' ').title()}")
+                save_modern_plot(f"{col}_distribution.png")
+            except Exception as e:
+                logging.warning(f"Erro ao gerar gráfico para {col}: {e}")
 
-logging.info("\nDistribuição original de salary:")
-logging.info(df['salary'].value_counts())
-logging.info(f"Valores únicos originais: {df['salary'].unique()}")
-
-# Verificar se há espaços ou caracteres especiais
-logging.info("\nAnálise detalhada dos valores de salary:")
-for valor in df['salary'].unique():
-    logging.info(f"'{valor}' (tipo: {type(valor)}, comprimento: {len(str(valor))})")
-
-# Limpar valores de salary primeiro
-df['salary'] = df['salary'].astype(str).str.strip()
-logging.info("\nApós limpeza de espaços:")
-logging.info(df['salary'].value_counts())
-
-# Codificar variável-alvo com verificação mais robusta
-def codificar_salary(valor):
-    valor = str(valor).strip().lower()
-    if '>50k' in valor or valor == '>50k':
-        return 1
-    elif '<=50k' in valor or valor == '<=50k':
-        return 0
-    else:
-        logging.warning(f"⚠️ Valor não reconhecido: '{valor}'")
-        return 0
-
-df['salary'] = df['salary'].apply(codificar_salary)
-
-# Verificar distribuição após codificação
-logging.info("\nDistribuição após codificação:")
-logging.info(df['salary'].value_counts())
-logging.info("Percentual de cada classe:")
-logging.info(df['salary'].value_counts(normalize=True) * 100)
-
-# Verificar se há ambas as classes
-if df['salary'].nunique() < 2:
-    logging.warning("⚠️ ERRO: Apenas uma classe encontrada nos dados!")
-    logging.warning(f"Valores únicos em salary: {df['salary'].unique()}")
-    
-    # Investigar mais a fundo
-    df_original = pd.read_csv('4-Carateristicas_salario.csv')
-    logging.info("\nValores únicos no arquivo original:")
-    for valor in df_original['salary'].unique():
-        logging.info(f"'{valor}' (aparece {(df_original['salary'] == valor).sum()} vezes)")
-    
-    # Tentar uma codificação diferente
-    logging.info("\nTentando codificação alternativa...")
-    df['salary'] = df_original['salary'].apply(lambda x: 1 if '>' in str(x) else 0)
-    logging.info("Nova distribuição:")
-    logging.info(df['salary'].value_counts())
-
-else:
-    logging.info("✅ Ambas as classes presentes nos dados")
-
-# Separar X e y
-X = df[numerical_features + categorical_features]
-y = df['salary']
-
-# Verificar valores ausentes
-logging.info(f"\nValores ausentes em X: {X.isnull().sum().sum()}")
-logging.info(f"Valores ausentes em y: {y.isnull().sum()}")
-
-# Tratar valores '?' como NaN primeiro
-X = X.replace('?', pd.NA)
-logging.info(f"Valores ausentes após tratar '?': {X.isnull().sum().sum()}")
-
-# Remover registros com valores ausentes se necessário
-if X.isnull().sum().sum() > 0:
-    logging.info("Removendo registros com valores ausentes...")
-    mask = ~(X.isnull().any(axis=1) | y.isnull())
-    X = X[mask]
-    y = y[mask]
-    logging.info(f"Registros restantes: {len(X)}")
-
-# Verificar distribuição final antes da divisão
-logging.info(f"\nDistribuição final de y antes da divisão:")
-logging.info(y.value_counts())
-logging.info(f"Classes únicas: {y.unique()}")
-
-# PARAR SE NÃO HÁ AMBAS AS CLASSES
-if y.nunique() < 2:
-    logging.error("\n❌ ERRO CRÍTICO: Impossível continuar com apenas uma classe!")
-    logging.error("Verifique os dados originais e a codificação da variável 'salary'")
-    exit()
-
-# Pré-processador para colunas (OneHot para categóricas, StandardScaler para numéricas)
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', StandardScaler(), numerical_features),
-        ('cat', OneHotEncoder(handle_unknown='ignore', drop='first'), categorical_features)
-    ])
-
-# Divisão treino/teste com stratify para manter proporção das classes
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, 
-    test_size=0.2, 
-    random_state=42, 
-    stratify=y  # Importante: mantém proporção das classes
-)
-
-# Verificar distribuição nas partições
-logging.info(f"\nDistribuição em y_train:")
-logging.info(y_train.value_counts())
-logging.info(f"\nDistribuição em y_test:")
-logging.info(y_test.value_counts())
-
-# Ajustar transformações
-X_train_processed = preprocessor.fit_transform(X_train)
-X_test_processed = preprocessor.transform(X_test)
-
-# Novo: Garantir que X_test_processed é do tipo float
-X_test_processed = X_test_processed.astype(float)
-
-logging.info("\nPré-processamento concluído. Formato final dos dados:")
-logging.info(f"X_train: {X_train_processed.shape}")
-logging.info(f"X_test: {X_test_processed.shape}")
-logging.info(f"y_train classes únicas: {y_train.unique()}")
-logging.info(f"y_test classes únicas: {y_test.unique()}")
-
-# ================================================
-# 5. BALANCEAMENTO DOS DADOS (SMOTE) - CONDICIONAL
-# ================================================
-logging.info("\n" + "="*60)
-logging.info("BALANCEAMENTO DOS DADOS")
-logging.info("="*60)
-
-# Verificar se precisa de balanceamento
-class_counts = y_train.value_counts()
-minority_ratio = min(class_counts) / max(class_counts)
-
-logging.info(f"Proporção da classe minoritária: {minority_ratio:.2f}")
-
-if minority_ratio < 0.3:  # Se a classe minoritária representa menos de 30%
-    logging.info("Dataset desbalanceado. Aplicando SMOTE...")
-    from imblearn.over_sampling import SMOTE
-    
-    # Verificar se há pelo menos 2 classes antes do SMOTE
-    if len(y_train.unique()) >= 2:
-        sm = SMOTE(random_state=42)
-        X_train_processed, y_train = sm.fit_resample(X_train_processed, y_train)
-        
-        logging.info("✅ SMOTE aplicado com sucesso")
-        logging.info("Distribuição após SMOTE:")
-        logging.info(y_train.value_counts())
-    else:
-        logging.warning("⚠️ Impossível aplicar SMOTE: apenas uma classe nos dados de treino")
-else:
-    logging.info("Dataset já balanceado. SMOTE não necessário.")
-
-# ================================================
-# 6. MODELAGEM PREDITIVA
-# ================================================
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
-import joblib
-
-# Função para treinar e avaliar modelos
-def avaliar_modelo(nome, modelo, X_train, y_train, X_test, y_test):
-    """
-    Treina e avalia um modelo de classificação.
-
-    Parâmetros:
-    - nome: str, nome do modelo
-    - modelo: instância do classificador
-    - X_train, y_train: dados de treino
-    - X_test, y_test: dados de teste
-
-    Retorna:
-    - modelo treinado ou None se erro ocorrer
-    """
-    # Verificar se há pelo menos 2 classes nos dados de treino
-    if len(y_train.unique()) < 2:
-        logging.warning(f"\n⚠️ {nome}: Impossível treinar - apenas uma classe nos dados de treino")
-        logging.warning(f"Classes em y_train: {y_train.unique()}")
-        return None
-    
-    logging.info(f"🔄 Iniciando treinamento: {nome}")
+    # 3. Distribuição da variável target
+    logging.info("📊 Gerando distribuição da variável target...")
     try:
-        modelo.fit(X_train, y_train)
-        y_pred = modelo.predict(X_test)
-        logging.info(f"\n{'='*20}\n{nome}\n{'='*20}")
-        logging.info(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-        logging.info(f"F1 Score: {f1_score(y_test, y_pred, average='weighted'):.4f}")
-        logging.info("\nClassification Report:")
-        logging.info(classification_report(y_test, y_pred))
-        logging.info("Matriz de Confusão:")
-        logging.info(confusion_matrix(y_test, y_pred))
-        # Avaliação AUC-ROC
-        from sklearn.metrics import roc_auc_score
-        try:
-            auc = roc_auc_score(y_test, y_pred)
-            logging.info(f"AUC-ROC: {auc:.4f}")
-        except ValueError as e:
-            logging.warning(f"Não foi possível calcular AUC-ROC: {e}")
-        logging.info(f"✅ Modelo {nome} treinado com sucesso")
-        return modelo
-    except Exception as e:
-        logging.warning(f"\n⚠️ Erro ao treinar {nome}: {str(e)}")
-        return None
-
-# Inicializar modelos
-modelos = {
-    "Regressão Logística": LogisticRegression(max_iter=1000, class_weight='balanced'),
-    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced'),
-    "k-NN (k=5)": KNeighborsClassifier(n_neighbors=5)
-}
-
-# Avaliar todos os modelos e salvar
-modelos_treinados = {}
-for nome, modelo in modelos.items():
-    modelo_treinado = avaliar_modelo(nome, modelo, X_train_processed, y_train, X_test_processed, y_test)
-    if modelo_treinado is not None:
-        modelos_treinados[nome] = modelo_treinado
-
-logging.info("✅ Todos os modelos treinados e avaliados")
-
-# ================================================
-# SALVAR MODELOS E PREPROCESSOR
-# ================================================
-logging.info("\n" + "="*60)
-logging.info("SALVANDO MODELOS E PREPROCESSOR")
-logging.info("="*60)
-
-# Criar diretório models se não existir
-os.makedirs("models", exist_ok=True)
-
-# Salvar o modelo Random Forest (melhor para interpretabilidade)
-if "Random Forest" in modelos_treinados:
-    joblib.dump(modelos_treinados["Random Forest"], "random_forest_model.joblib")
-    logging.info("✅ Modelo Random Forest salvo como 'random_forest_model.joblib'")
-
-# Salvar o preprocessor
-joblib.dump(preprocessor, "preprocessor.joblib")
-logging.info("✅ Preprocessor salvo como 'preprocessor.joblib'")
-
-# Gerar nomes das features após o preprocessamento
-ohe = preprocessor.named_transformers_['cat']
-cat_feature_names = ohe.get_feature_names_out(categorical_features)
-feature_names = numerical_features + list(cat_feature_names)
-
-# Salvar informações sobre as features
-feature_info = {
-    'numerical_features': numerical_features,
-    'categorical_features': categorical_features,
-    'feature_names': feature_names
-}
-joblib.dump(feature_info, "feature_info.joblib")
-logging.info("✅ Informações das features salvas como 'feature_info.joblib'")
-
-# Salvar alguns dados de exemplo para testes
-sample_data = X_test.head(5)
-joblib.dump(sample_data, "sample_data.joblib")
-logging.info("✅ Dados de exemplo salvos como 'sample_data.joblib'")
-
-logging.info(f"\n📁 Todos os arquivos salvos com sucesso!")
-logging.info("Arquivos disponíveis para o dashboard:")
-logging.info("- random_forest_model.joblib")
-logging.info("- preprocessor.joblib")
-logging.info("- feature_info.joblib")
-logging.info("- sample_data.joblib")
-
-# ================================================
-# 7. CLUSTERING E REGRAS DE ASSOCIAÇÃO
-# ================================================
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
-import pandas as pd
-
-# Usar PCA para reduzir a dimensionalidade para 2D para visualização
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X_train_processed.toarray() if hasattr(X_train_processed, 'toarray') else X_train_processed)
-
-# KMeans clustering
-kmeans = KMeans(n_clusters=3, random_state=42)
-clusters = kmeans.fit_predict(X_pca)
-
-# Plot dos clusters
-plt.figure(figsize=(8, 6))
-# Configurar fundo transparente
-plt.gca().patch.set_alpha(0.0)
-plt.gcf().patch.set_alpha(0.0)
-
-plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis', s=10)
-plt.title("Visualização dos Clusters com KMeans (PCA 2D)")
-plt.xlabel("Componente Principal 1")
-plt.ylabel("Componente Principal 2")
-plt.tight_layout()
-plt.savefig("imagens/kmeans_clusters.png", transparent=True, bbox_inches='tight')
-plt.close()
-logging.info("\nClustering com KMeans concluído. Gráfico salvo em 'imagens/kmeans_clusters.png'.")
-
-# -------------------------------------
-# Regras de associação (via Apriori)
-# -------------------------------------
-from mlxtend.frequent_patterns import apriori, association_rules
-from mlxtend.preprocessing import TransactionEncoder
-
-# Criar um dataset amostral com transações binárias (apenas para demonstração simples)
-amostras = df[['education', 'occupation', 'relationship', 'sex', 'salary']].astype(str).values.tolist()
-te = TransactionEncoder()
-transacoes = te.fit(amostras).transform(amostras)
-df_transacoes = pd.DataFrame(transacoes, columns=te.columns_)
-
-# Aplicar Apriori
-freq_items = apriori(df_transacoes, min_support=0.05, use_colnames=True)
-regras = association_rules(freq_items, metric="confidence", min_threshold=0.6)
-
-# Mostrar as 5 principais regras
-logging.info("\nTop 5 Regras de Associação:")
-logging.info(regras[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head())
-
-# ================================================
-# 8. INTERPRETAÇÃO DOS MODELOS
-# ================================================
-logging.info("\n" + "="*60)
-logging.info("INTERPRETAÇÃO DOS MODELOS")
-logging.info("="*60)
-
-if "Random Forest" in modelos_treinados:
-    # -------------------------------
-    # FEATURE IMPORTANCE - Random Forest
-    # -------------------------------
-    importances = modelos_treinados["Random Forest"].feature_importances_
-    
-    # Obter nomes das colunas após transformação
-    ohe = preprocessor.named_transformers_['cat']
-    cat_feature_names = ohe.get_feature_names_out(categorical_features)
-    feature_names = numerical_features + list(cat_feature_names)
-    
-    # Combinar com os valores
-    feature_importance_df = pd.DataFrame({
-        'Feature': feature_names,
-        'Importance': importances
-    }).sort_values(by='Importance', ascending=False)
-    
-    # Mostrar top 15
-    logging.info("\nTop 15 Features mais importantes (Random Forest):")
-    logging.info(feature_importance_df.head(15))
-    
-    # Plot com fundo transparente
-    plt.figure(figsize=(10, 6))
-    # Configurar fundo transparente
-    plt.gca().patch.set_alpha(0.0)
-    plt.gcf().patch.set_alpha(0.0)
-    
-    sns.barplot(data=feature_importance_df.head(15), x='Importance', y='Feature')
-    plt.title("Importância das Features - Random Forest")
-    plt.tight_layout()
-    plt.savefig("imagens/feature_importance_rf.png", transparent=True, bbox_inches='tight')
-    plt.close()
-    
-    # -------------------------------
-    # COEFICIENTES - Regressão Logística (se disponível)
-    # -------------------------------
-    if "Regressão Logística" in modelos_treinados:
-        coef = modelos_treinados["Regressão Logística"].coef_[0]
+        fig, ax = plt.subplots(figsize=(10, 6))
+        salary_counts = df['salary'].value_counts()
         
-        coef_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Coefficient': coef
-        }).sort_values(by='Coefficient', key=abs, ascending=False)
-        
-        logging.info("\nTop 15 Coeficientes mais importantes (Regressão Logística):")
-        logging.info(coef_df.head(15))
-        
-        # Plot com fundo transparente
-        plt.figure(figsize=(10, 6))
-        # Configurar fundo transparente
-        plt.gca().patch.set_alpha(0.0)
-        plt.gcf().patch.set_alpha(0.0)
-        
-        sns.barplot(data=coef_df.head(15), x='Coefficient', y='Feature')
-        plt.title("Coeficientes - Regressão Logística")
-        plt.tight_layout()
-        plt.savefig("imagens/coefficients_lr.png", transparent=True, bbox_inches='tight')
-        plt.close()
-    
-    # -------------------------------
-    # SHAP VALUES (corrigido)
-    # -------------------------------
-    try:
-        import shap
-        
-        # Converter para array denso se necessário e garantir tipo float
-        X_train_shap = X_train_processed
-        if hasattr(X_train_shap, 'toarray'):
-            X_train_shap = X_train_shap.toarray()
-        
-        # Garantir que é float64
-        X_train_shap = X_train_shap.astype(np.float64)
-        
-        # Usar apenas uma amostra menor para SHAP (mais rápido)
-        sample_size = min(1000, X_train_shap.shape[0])
-        X_sample = X_train_shap[:sample_size]
-        
-        logging.info(f"\nGerando SHAP values para {sample_size} amostras...")
-        
-        explainer = shap.TreeExplainer(modelos_treinados["Random Forest"])
-        shap_values = explainer.shap_values(X_sample)
-        
-        # Se o modelo retorna valores SHAP para cada classe, usar a classe positiva
-        if isinstance(shap_values, list):
-            shap_values_plot = shap_values[1]  # Classe positiva (>50K)
+        if len(salary_counts) > 1:
+            colors = [MODERN_COLORS['success'], MODERN_COLORS['danger']]
+            wedges, texts, autotexts = ax.pie(salary_counts.values, 
+                                             labels=['≤ 50K', '> 50K'] if 0 in salary_counts.index else salary_counts.index,
+                                             autopct='%1.1f%%',
+                                             colors=colors,
+                                             explode=(0.05, 0.05),
+                                             shadow=True,
+                                             startangle=90)
+            
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontweight('bold')
+                autotext.set_fontsize(12)
+            
+            ax.set_title('Distribuicao de Salarios', fontsize=16, fontweight='bold', pad=20)
         else:
-            shap_values_plot = shap_values
-        
-        # Summary plot com fundo transparente
-        plt.figure(figsize=(10, 8))
-        shap.summary_plot(shap_values_plot, X_sample, feature_names=feature_names, show=False)
-        plt.tight_layout()
-        plt.savefig("imagens/shap_summary_rf.png", transparent=True, bbox_inches='tight')
-        plt.close()
-        
-        # Bar plot SHAP com fundo transparente
-        plt.figure(figsize=(10, 6))
-        shap.summary_plot(shap_values_plot, X_sample, feature_names=feature_names, plot_type="bar", show=False)
-        plt.tight_layout()
-        plt.savefig("imagens/shap_bar_rf.png", transparent=True, bbox_inches='tight')
-        plt.close()
-        
-        logging.info("✅ Gráficos SHAP gerados com sucesso.")
-        
-    except ImportError:
-        logging.warning("\n⚠️ Pacote SHAP não instalado. Execute: pip install shap")
+            ax.bar(['Classe Unica'], [len(df)], color=MODERN_COLORS['primary'])
+            ax.set_title('Distribuicao de Salarios (Apenas uma classe)', fontsize=16, fontweight='bold')
+
+        save_modern_plot("salary_distribution.png")
     except Exception as e:
-        logging.warning(f"\n⚠️ Erro ao gerar gráficos SHAP: {str(e)}")
-        logging.warning("Continuando sem SHAP...")
+        logging.warning(f"Erro ao gerar distribuição de salários: {e}")
 
-else:
-    logging.warning("⚠️ Modelo Random Forest não foi treinado com sucesso.")
+    # 4. Matriz de correlação moderna
+    logging.info("📊 Gerando matriz de correlação moderna...")
+    try:
+        fig, ax = create_modern_correlation_matrix(df, title="Matriz de Correlacao - Variaveis Numericas")
+        save_modern_plot("correlacao.png")
+    except Exception as e:
+        logging.warning(f"Erro ao gerar matriz de correlação: {e}")
 
-logging.info("✅ Interpretação de modelos concluída")
+    logging.info("✅ Todas as visualizações modernas foram geradas!")
 
-logging.info("\n🎉 Pipeline completo executado!")
-logging.info("\n📁 Arquivos gerados:")
-logging.info("- Dados: 4-Carateristicas_salario.csv")
-logging.info("- Modelo: random_forest_model.joblib")
-logging.info("- Preprocessor: preprocessor.joblib")
-logging.info("- Features: feature_info.joblib")
-logging.info("- Amostras: sample_data.joblib")
-logging.info("- Gráficos: pasta imagens/ (todos com fundo transparente)")
-
-# Sugestão final
-logging.info("Sugestão: Para maior robustez, considere adicionar validação cruzada com cross_val_score.")
+except Exception as e:
+    logging.error(f"Erro geral na geração de visualizações: {e}")
