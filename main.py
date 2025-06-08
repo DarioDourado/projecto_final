@@ -60,7 +60,7 @@ def main():
         viz_generator = VisualizationGenerator()
         viz_generator.generate_all_plots(df)
         
-        # 4. Treinar modelos (salvar em models/ e output/models/)
+        # 4. Treinar modelos (salvar em data/processed/)
         trainer = ModelTrainer()
         models, results = trainer.train_complete_pipeline(df)
         
@@ -76,10 +76,18 @@ def main():
         
         logging.info("📂 Estrutura de saídas:")
         logging.info("  📈 Visualizações: output/images/")
-        logging.info("  🤖 Modelos: models/trained/ e output/models/")
         logging.info("  📊 Dados processados: data/processed/")
-        logging.info("  💾 Compatibilidade dashboard: arquivos .joblib na raiz")
+        logging.info("  🤖 Modelos (.joblib): data/processed/")
+        logging.info("  📚 Cópias organizadas: models/trained/")
         logging.info("\n🎉 Pipeline concluído com sucesso!")
+        
+        # Listar arquivos .joblib gerados
+        processed_dir = Path("data/processed")
+        joblib_files = list(processed_dir.glob("*.joblib"))
+        if joblib_files:
+            logging.info("\n📁 Arquivos .joblib gerados:")
+            for file in joblib_files:
+                logging.info(f"  • {file.name}")
         
     except Exception as e:
         logging.error(f"❌ Erro durante execução: {e}")
