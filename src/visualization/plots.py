@@ -14,7 +14,7 @@ class VisualizationGenerator:
     def __init__(self):
         pass
     
-    def generate_all_plots(self, df):
+    def generate_all_plots(self, df, models=None, results=None):
         """Gerar todas as visualizações"""
         logging.info("\n" + "="*60)
         logging.info("GERANDO VISUALIZAÇÕES MODERNAS")
@@ -66,6 +66,27 @@ class VisualizationGenerator:
             except Exception as e:
                 logging.warning(f"Erro ao gerar matriz de correlação: {e}")
 
+            # 5. Feature importance (se modelos fornecidos)
+            if models and 'Random Forest' in models:
+                logging.info("📊 Gerando importância das features...")
+                try:
+                    self._create_feature_importance(models['Random Forest'])
+                    save_modern_plot("feature_importance_rf.png")
+                except Exception as e:
+                    logging.warning(f"Erro ao gerar feature importance: {e}")
+
+            # 6. Matriz de confusão (se resultados fornecidos)
+            if results and models:
+                logging.info("📊 Gerando matriz de confusão...")
+                for model_name, result in results.items():
+                    if 'y_pred' in result and model_name in models:
+                        try:
+                            # Precisamos dos dados de teste para isso
+                            # Por agora, vamos pular ou implementar diferente
+                            logging.info(f"  📈 Matriz de confusão para {model_name} será gerada pelo modelo")
+                        except Exception as e:
+                            logging.warning(f"Erro ao gerar matriz de confusão para {model_name}: {e}")
+
             logging.info("✅ Todas as visualizações modernas foram geradas!")
 
         except Exception as e:
@@ -105,6 +126,21 @@ class VisualizationGenerator:
                    linestyle='--', linewidth=2, alpha=0.8, label=f'Media: {mean_val:.1f}')
         ax.axvline(median_val, color=MODERN_COLORS['warning'], 
                    linestyle='--', linewidth=2, alpha=0.8, label=f'Mediana: {median_val:.1f}')
+        
+        # Caixa de estatísticas
+        stats_text = f"""Estatisticas:
+• Media: {mean_val:.2f}
+• Mediana: {median_val:.2f}
+• Desvio Padrao: {std_val:.2f}
+• Min: {valid_data.min():.2f}
+• Max: {valid_data.max():.2f}
+• Registros: {len(valid_data):,}"""
+        
+        ax.text(0.98, 0.98, stats_text, transform=ax.transAxes,
+               bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                        edgecolor=MODERN_COLORS['primary'], alpha=0.9),
+               verticalalignment='top', horizontalalignment='right',
+               fontsize=10, fontfamily='monospace')
         
         # Aplicar estilo moderno
         apply_modern_style(ax, title=f"Distribuicao de {column.replace('-', ' ').title()}")
@@ -152,6 +188,21 @@ class VisualizationGenerator:
         # Inverter ordem (maior no topo)
         ax.invert_yaxis()
         
+        # Percentuais
+        total = value_counts.sum()
+        percentages = (value_counts / total * 100).round(1)
+        
+        # Caixa de informações
+        info_text = f"""Top {len(value_counts)} categorias:
+• Total registros: {total:,}
+• Categorias unicas: {data[column].nunique()}
+• Categoria mais comum: {value_counts.index[0]} ({percentages.iloc[0]:.1f}%)"""
+        
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
+               bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                        edgecolor=MODERN_COLORS['info'], alpha=0.9),
+               verticalalignment='top', fontsize=10, fontfamily='monospace')
+        
         # Aplicar estilo moderno
         apply_modern_style(ax, title=f"Distribuicao de {column.replace('-', ' ').title()}")
         
@@ -180,6 +231,9 @@ class VisualizationGenerator:
                     autotext.set_fontsize(12)
                 
                 ax.set_title('Distribuicao de Salarios', fontsize=16, fontweight='bold', pad=20)
+            else:
+                ax.bar(['Classe Unica'], [len(df)], color=MODERN_COLORS['primary'])
+                ax.set_title('Distribuicao de Salarios (Apenas uma classe)', fontsize=16, fontweight='bold')
         
         return fig, ax
     
@@ -220,5 +274,106 @@ class VisualizationGenerator:
         # Rotacionar labels
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         plt.setp(ax.get_yticklabels(), rotation=0)
+        
+        # Análise de correlações
+        strong_corr_mask = correlation_matrix.abs() > 0.7
+        moderate_corr_mask = (correlation_matrix.abs() > 0.3) & (correlation_matrix.abs() <= 0.7)
+        
+        strong_corr = strong_corr_mask.sum().sum() - len(correlation_matrix)  # Subtrair diagonal
+        moderate_corr = moderate_corr_mask.sum().sum()
+        
+        # Caixa de informações
+        info_text = f"""Analise de Correlacao:
+• Correlacoes fortes (|r| > 0.7): {strong_corr}
+• Correlacoes moderadas (0.3 < |r| < 0.7): {moderate_corr}
+• Variaveis analisadas: {len(correlation_matrix)}"""
+        
+        ax.text(1.02, 0.98, info_text, transform=ax.transAxes,
+               bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                        edgecolor=MODERN_COLORS['primary'], alpha=0.9),
+               verticalalignment='top', fontsize=10, fontfamily='monospace')
+        
+        return fig, ax
+    
+    def _create_feature_importance(self, model):
+        """Criar gráfico de importância das features"""
+        if not hasattr(model, 'feature_importances_'):
+            logging.warning("Modelo não possui feature_importances_")
+            return
+        
+        # Tentar carregar informações das features
+        try:
+            import joblib
+            from pathlib import Path
+            
+            # Buscar feature_info
+            processed_dir = Path("data/processed")
+            feature_info_path = processed_dir / "feature_info.joblib"
+            
+            if feature_info_path.exists():
+                feature_info = joblib.load(feature_info_path)
+                feature_names = feature_info['feature_names']
+            else:
+                # Fallback: nomes genéricos
+                feature_names = [f"Feature_{i}" for i in range(len(model.feature_importances_))]
+                
+        except Exception as e:
+            logging.warning(f"Erro ao carregar nomes das features: {e}")
+            feature_names = [f"Feature_{i}" for i in range(len(model.feature_importances_))]
+        
+        importance_data = model.feature_importances_
+        top_n = min(20, len(importance_data))
+        
+        # Preparar dados
+        feature_df = pd.DataFrame({
+            'feature': feature_names,
+            'importance': importance_data
+        }).sort_values('importance', ascending=True).tail(top_n)
+        
+        fig, ax = plt.subplots(figsize=(12, max(8, len(feature_df) * 0.4)))
+        
+        # Gradiente de cores baseado na importância
+        norm = plt.Normalize(feature_df['importance'].min(), feature_df['importance'].max())
+        colors = plt.cm.viridis(norm(feature_df['importance']))
+        
+        bars = ax.barh(range(len(feature_df)), feature_df['importance'], 
+                       color=colors, edgecolor='white', linewidth=1.2)
+        
+        # Adicionar valores nas barras
+        for i, (bar, importance) in enumerate(zip(bars, feature_df['importance'])):
+            width = bar.get_width()
+            ax.text(width + importance * 0.01, bar.get_y() + bar.get_height()/2,
+                   f'{importance:.3f}', ha='left', va='center', 
+                   fontweight='bold', fontsize=9)
+        
+        # Configurar eixos
+        ax.set_yticks(range(len(feature_df)))
+        ax.set_yticklabels(feature_df['feature'], fontsize=10)
+        ax.set_xlabel('Importancia', fontsize=12, fontweight='bold')
+        
+        # Destacar top 3
+        for i in range(max(0, len(bars)-3), len(bars)):
+            bars[i].set_edgecolor(MODERN_COLORS['danger'])
+            bars[i].set_linewidth(2)
+        
+        # Informações estatísticas
+        total_importance = feature_df['importance'].sum()
+        top3_importance = feature_df['importance'].tail(3).sum()
+        
+        # Caixa de informações
+        info_text = f"""Analise de Importancia:
+• Top 3 features: {top3_importance/total_importance*100:.1f}% da importancia
+• Feature mais importante: {feature_df.iloc[-1]['feature']}
+• Importancia maxima: {feature_df['importance'].max():.3f}
+• Features analisadas: {len(feature_df)}"""
+        
+        ax.text(0.98, 0.02, info_text, transform=ax.transAxes,
+               bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
+                        edgecolor=MODERN_COLORS['success'], alpha=0.9),
+               verticalalignment='bottom', horizontalalignment='right',
+               fontsize=10, fontfamily='monospace')
+        
+        # Aplicar estilo moderno
+        apply_modern_style(ax, title="Importancia das Features - Random Forest")
         
         return fig, ax

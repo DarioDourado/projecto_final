@@ -56,13 +56,13 @@ def main():
         processor = DataProcessor()
         df = processor.process_complete_pipeline()
         
-        # 3. Gerar visualizações (em output/images/)
-        viz_generator = VisualizationGenerator()
-        viz_generator.generate_all_plots(df)
-        
-        # 4. Treinar modelos (salvar em data/processed/)
+        # 3. Treinar modelos (salvar em data/processed/)
         trainer = ModelTrainer()
         models, results = trainer.train_complete_pipeline(df)
+        
+        # 4. Gerar visualizações (incluindo feature importance)
+        viz_generator = VisualizationGenerator()
+        viz_generator.generate_all_plots(df, models=models, results=results)
         
         # 5. Relatório final
         logging.info("\n" + "="*60)
@@ -88,6 +88,17 @@ def main():
             logging.info("\n📁 Arquivos .joblib gerados:")
             for file in joblib_files:
                 logging.info(f"  • {file.name}")
+        
+        # Listar visualizações geradas
+        images_dirs = [Path("output/images"), Path("imagens")]
+        for img_dir in images_dirs:
+            if img_dir.exists():
+                image_files = list(img_dir.glob("*.png"))
+                if image_files:
+                    logging.info(f"\n🎨 Visualizações geradas em {img_dir}:")
+                    for img in image_files:
+                        logging.info(f"  • {img.name}")
+                break
         
     except Exception as e:
         logging.error(f"❌ Erro durante execução: {e}")
