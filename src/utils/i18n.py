@@ -207,27 +207,85 @@ class I18nSystem:
             st.error(f"❌ Erro ao criar estrutura: {e}")
     
     def get_language(self):
-        """Obter idioma atual da sessão"""
-        return st.session_state.get('language', self.default_language)
-    
-    def set_language(self, lang_code):
-        """Definir idioma atual"""
-        available_langs = self.get_available_languages()
-        if lang_code in available_langs:
-            st.session_state.language = lang_code
-            return True
-        return False
+        """Obter idioma atual com fallback seguro"""
+        try:
+            lang = st.session_state.get('current_language', self.default_language)
+            
+            # Validar se o idioma é suportado
+            available = self.get_available_languages()
+            if lang not in available:
+                lang = self.default_language
+            
+            return lang
+        
+        except Exception as e:
+            logging.error(f"Erro ao obter idioma atual: {e}")
+            return self.default_language or 'pt'
+
+    def set_language(self, language_code):
+        """Definir idioma com validação"""
+        try:
+            available = self.get_available_languages()
+            
+            if language_code in available:
+                st.session_state.current_language = language_code
+                logging.info(f"Idioma alterado para: {language_code}")
+            else:
+                logging.warning(f"Idioma não suportado: {language_code}")
+                st.session_state.current_language = self.default_language
+        
+        except Exception as e:
+            logging.error(f"Erro ao definir idioma: {e}")
+            st.session_state.current_language = self.default_language or 'pt'
     
     def get_available_languages(self):
-        """Obter idiomas disponíveis"""
-        langs = self.config.get('available_languages', {})
-        # Garantir que não está vazio
-        if not langs:
+        """Obter idiomas disponíveis - SEMPRE retorna dict consistente"""
+        try:
+            # Tentar obter do config
+            langs = self.config.get('available_languages', {})
+            
+            # ✅ CORREÇÃO: Garantir sempre dict válido
+            if not langs or not isinstance(langs, dict):
+                # Configuração padrão robusta
+                langs = {
+                    "pt": {
+                        "name": "🇵🇹 Português",
+                        "flag": "🇵🇹",
+                        "region": "Portugal/Brasil"
+                    },
+                    "en": {
+                        "name": "🇺🇸 English", 
+                        "flag": "🇺🇸",
+                        "region": "United States"
+                    }
+                }
+            
+            # Validar estrutura de cada idioma
+            validated_langs = {}
+            for code, info in langs.items():
+                if isinstance(info, dict):
+                    validated_langs[code] = {
+                        "name": info.get('name', f'🌍 {code.upper()}'),
+                        "flag": info.get('flag', '🌍'),
+                        "region": info.get('region', 'Unknown')
+                    }
+                else:
+                    # Se info não for dict, criar estrutura padrão
+                    validated_langs[code] = {
+                        "name": f'🌍 {code.upper()}',
+                        "flag": '🌍',
+                        "region": 'Unknown'
+                    }
+            
+            return validated_langs
+        
+        except Exception as e:
+            logging.error(f"Erro ao obter idiomas disponíveis: {e}")
+            # Retorno de emergência
             return {
-                "pt": {"name": "🇵🇹 Português", "flag": "🇵🇹"},
-                "en": {"name": "🇬🇧 English", "flag": "🇬🇧"}
+                "pt": {"name": "🇵🇹 Português", "flag": "🇵🇹", "region": "Portugal"},
+                "en": {"name": "🇺🇸 English", "flag": "🇺🇸", "region": "United States"}
             }
-        return langs
     
     def t(self, key, fallback=None):
         """
@@ -263,53 +321,10 @@ class I18nSystem:
         return current
     
     def show_language_selector(self):
-        """Mostrar seletor de idioma na sidebar"""
-        with st.sidebar:
-            st.markdown("---")
-            
-            current_lang = self.get_language()
-            available_langs = self.get_available_languages()
-            
-            # PROTEÇÃO: Verificar se há idiomas disponíveis
-            if not available_langs:
-                st.warning("⚠️ Nenhum idioma configurado")
-                return
-            
-            # Criar lista de opções
-            lang_options = []
-            lang_codes = []
-            current_index = 0
-            
-            try:
-                for i, (code, info) in enumerate(available_langs.items()):
-                    lang_options.append(info.get('name', code))
-                    lang_codes.append(code)
-                    if code == current_lang:
-                        current_index = i
-            except Exception as e:
-                st.error(f"❌ Erro na configuração de idiomas: {e}")
-                return
-            
-            # Selectbox para idioma
-            if lang_options:  # PROTEÇÃO adicional
-                selected_label = st.selectbox(
-                    "🌍 Idioma | Language",
-                    lang_options,
-                    index=current_index,
-                    key='language_selector'
-                )
-                
-                # Atualizar idioma se mudou
-                try:
-                    selected_index = lang_options.index(selected_label)
-                    selected_code = lang_codes[selected_index]
-                    
-                    if selected_code != current_lang:
-                        self.set_language(selected_code)
-                        st.rerun()
-                except (ValueError, IndexError) as e:
-                    st.error(f"❌ Erro ao trocar idioma: {e}")
-    
+        """Mostrar seletor de idioma na sidebar - REMOVIDO (movido para app_multilingual.py)"""
+        # Esta função foi movida para app_multilingual.py para evitar conflitos
+        pass
+
     def translate_data_value(self, value):
         """Traduzir valores específicos dos dados"""
         current_lang = self.get_language()

@@ -145,7 +145,7 @@ class MultilingualDashboard:
             
             st.markdown("---")
             
-            # Botão de logout - CORRIGIDO: Key único
+            # Botão de logout - CORRIGIDO: Key unico
             if st.button(
                 f"🚪 {self.i18n.t('auth.logout', 'Logout')}", 
                 use_container_width=True,
@@ -159,31 +159,73 @@ class MultilingualDashboard:
                 st.rerun()
     
     def _show_language_selector(self):
-        """Mostrar seletor de idioma"""
+        """Mostrar seletor de idioma - CORRIGIDO"""
         st.markdown(f"### 🌍 {self.i18n.t('navigation.language', 'Idioma')}")
         
-        languages = self.i18n.get_available_languages()
+        # ✅ CORREÇÃO: Obter languages como dict e extrair as chaves
+        languages_dict = self.i18n.get_available_languages()
         current_lang = self.i18n.get_language()
         
-        # Mapear códigos para nomes
-        lang_names = {
-            'pt': '🇵🇹 Português',
-            'en': '🇺🇸 English'
-        }
+        # Verificar se languages_dict é válido
+        if not languages_dict or not isinstance(languages_dict, dict):
+            # Fallback para configuração padrão
+            languages_dict = {
+                'pt': {'name': '🇵🇹 Português', 'flag': '🇵🇹'},
+                'en': {'name': '🇺🇸 English', 'flag': '🇺🇸'}
+            }
         
-        selected_lang = st.selectbox(
-            "Selecionar idioma:",
-            languages,
-            index=languages.index(current_lang) if current_lang in languages else 0,
-            format_func=lambda x: lang_names.get(x, x),
-            label_visibility="collapsed",
-            key="language_selector_main"  # ✅ KEY ÚNICO
-        )
+        # Extrair lista de códigos de idioma
+        language_codes = list(languages_dict.keys())
         
-        if selected_lang != current_lang:
-            self.i18n.set_language(selected_lang)
-            st.rerun()
-    
+        # Criar mapeamento para display
+        lang_display = {}
+        for code, info in languages_dict.items():
+            if isinstance(info, dict):
+                lang_display[code] = info.get('name', f'🌍 {code.upper()}')
+            else:
+                # Fallback se info não for dict
+                lang_display[code] = f'🌍 {code.upper()}'
+        
+        # Encontrar índice atual com segurança
+        try:
+            current_index = language_codes.index(current_lang) if current_lang in language_codes else 0
+        except (ValueError, AttributeError):
+            current_index = 0
+        
+        # Selectbox com tratamento de erro
+        try:
+            selected_lang = st.selectbox(
+                "Selecionar idioma:",
+                language_codes,
+                index=current_index,
+                format_func=lambda x: lang_display.get(x, f'🌍 {x}'),
+                label_visibility="collapsed",
+                key="language_selector_main"  # ✅ KEY ÚNICO
+            )
+            
+            # Atualizar idioma se mudou
+            if selected_lang != current_lang:
+                self.i18n.set_language(selected_lang)
+                st.rerun()
+        
+        except Exception as e:
+            st.error(f"❌ Erro no seletor de idioma: {e}")
+            # Fallback: mostrar idioma atual
+            st.info(f"🌍 Idioma atual: {current_lang}")
+            
+            # Botões simples como fallback
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🇵🇹 PT", key="fallback_pt"):
+                    self.i18n.set_language('pt')
+                    st.rerun()
+            
+            with col2:
+                if st.button("🇺🇸 EN", key="fallback_en"):
+                    self.i18n.set_language('en')
+                    st.rerun()
+
     def _show_navigation_menu(self):
         """Mostrar menu de navegação"""
         st.markdown(f"### 📋 {self.i18n.t('navigation.menu', 'Menu')}")

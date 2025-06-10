@@ -10,12 +10,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pathlib import Path
-from src.components.layout import create_metric_card, create_status_box
+
 def show_overview_page(data, i18n):
     """Página principal de visão geral"""
     from src.components.navigation import show_page_header
-    from src.components.layout import create_metric_card, create_status_box
     
+    # ✅ IMPORT DIRETO DAS FUNÇÕES (correção do erro)
     show_page_header(
         i18n.t('navigation.overview', 'Visão Geral'),
         i18n.t('overview.subtitle', 'Dashboard principal com métricas e insights dos dados'),
@@ -31,14 +31,14 @@ def show_overview_page(data, i18n):
     # Status dos dados
     status = data.get('status', '❌ Dados não encontrados')
     if "✅" in status:
-        st.markdown(create_status_box(status, "success"), unsafe_allow_html=True)
+        st.success(status)
     elif "⚠️" in status:
-        st.markdown(create_status_box(status, "warning"), unsafe_allow_html=True)
+        st.warning(status)
     else:
-        st.markdown(create_status_box(status, "error"), unsafe_allow_html=True)
+        st.error(status)
     
-    # MÉTRICAS PRINCIPAIS - COMPLETAS (incluindo a em falta)
-    _show_main_metrics(df, i18n)
+    # MÉTRICAS PRINCIPAIS - Usando st.metric diretamente (sem create_metric_card)
+    _show_main_metrics_corrected(df, i18n)
     
     # Visualizações resumidas
     col1, col2 = st.columns(2)
@@ -54,8 +54,8 @@ def show_overview_page(data, i18n):
     # Métricas avançadas se disponíveis
     _show_advanced_overview(data, i18n)
 
-def _show_main_metrics(df, i18n):
-    """Mostrar métricas principais - COMPLETAS"""
+def _show_main_metrics_corrected(df, i18n):
+    """Mostrar métricas principais usando st.metric diretamente"""
     st.markdown(f"## 📋 {i18n.t('overview.main_metrics', 'Métricas Principais')}")
     
     # 4 colunas para as métricas principais
@@ -64,45 +64,43 @@ def _show_main_metrics(df, i18n):
     with col1:
         # Métrica 1: Total de Registros
         total_records = len(df)
-        st.markdown(create_metric_card(
-            i18n.t('data.records', 'Registros'),
-            f"{total_records:,}",
-            "📋"
-        ), unsafe_allow_html=True)
+        st.metric(
+            label=f"📋 {i18n.t('data.records', 'Registros')}",
+            value=f"{total_records:,}"
+        )
     
     with col2:
         # Métrica 2: Total de Colunas
         total_columns = len(df.columns)
-        st.markdown(create_metric_card(
-            i18n.t('data.columns', 'Colunas'),
-            f"{total_columns}",
-            "📊"
-        ), unsafe_allow_html=True)
+        st.metric(
+            label=f"📊 {i18n.t('data.columns', 'Colunas')}",
+            value=f"{total_columns}"
+        )
     
     with col3:
         # Métrica 3: Taxa de Salário Alto
         if 'salary' in df.columns:
             high_salary_rate = (df['salary'] == '>50K').mean()
-            st.markdown(create_metric_card(
-                i18n.t('data.high_salary', 'Salário Alto'),
-                f"{high_salary_rate:.1%}",
-                "💰"
-            ), unsafe_allow_html=True)
+            st.metric(
+                label=f"💰 {i18n.t('data.high_salary', 'Salário Alto')}",
+                value=f"{high_salary_rate:.1%}",
+                delta=f"+{high_salary_rate-0.24:.1%}" if high_salary_rate > 0.24 else None
+            )
         else:
-            st.markdown(create_metric_card(
-                i18n.t('data.high_salary', 'Salário Alto'),
-                "N/A",
-                "💰"
-            ), unsafe_allow_html=True)
+            st.metric(
+                label=f"💰 {i18n.t('data.high_salary', 'Salário Alto')}",
+                value="N/A"
+            )
     
     with col4:
         # Métrica 4: Taxa de Valores Ausentes - ✅ MÉTRICA EM FALTA ADICIONADA
         missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
-        st.markdown(create_metric_card(
-            i18n.t('data.missing', 'Missing'),
-            f"{missing_rate:.1%}",
-            "❌"
-        ), unsafe_allow_html=True)
+        st.metric(
+            label=f"❌ {i18n.t('data.missing', 'Missing')}",
+            value=f"{missing_rate:.1%}",
+            delta=f"-{0.05-missing_rate:.1%}" if missing_rate < 0.05 else None,
+            delta_color="inverse"  # Verde para menos missing values
+        )
     
     # Métricas secundárias em uma segunda linha
     col5, col6, col7, col8 = st.columns(4)
@@ -112,39 +110,38 @@ def _show_main_metrics(df, i18n):
         if hasattr(df, 'duplicated'):
             duplicates = df.duplicated().sum()
             duplicate_rate = (duplicates / len(df)) * 100
-            st.markdown(create_metric_card(
-                i18n.t('data.duplicates', 'Duplicatas'),
-                f"{duplicate_rate:.1f}%",
-                "🔄"
-            ), unsafe_allow_html=True)
+            st.metric(
+                label=f"🔄 {i18n.t('data.duplicates', 'Duplicatas')}",
+                value=f"{duplicate_rate:.1f}%",
+                delta=f"-{2.0-duplicate_rate:.1f}%" if duplicate_rate < 2.0 else None,
+                delta_color="inverse"
+            )
     
     with col6:
         # Idade média
         if 'age' in df.columns:
             avg_age = df['age'].mean()
-            st.markdown(create_metric_card(
-                i18n.t('data.avg_age', 'Idade Média'),
-                f"{avg_age:.1f}",
-                "🎂"
-            ), unsafe_allow_html=True)
+            st.metric(
+                label=f"🎂 {i18n.t('data.avg_age', 'Idade Média')}",
+                value=f"{avg_age:.1f}",
+                delta="anos"
+            )
     
     with col7:
         # Variáveis numéricas
         numeric_cols = df.select_dtypes(include=[np.number]).columns
-        st.markdown(create_metric_card(
-            i18n.t('data.numeric_vars', 'Vars. Numéricas'),
-            f"{len(numeric_cols)}",
-            "🔢"
-        ), unsafe_allow_html=True)
+        st.metric(
+            label=f"🔢 {i18n.t('data.numeric_vars', 'Vars. Numéricas')}",
+            value=f"{len(numeric_cols)}"
+        )
     
     with col8:
         # Variáveis categóricas
         categorical_cols = df.select_dtypes(include=['object']).columns
-        st.markdown(create_metric_card(
-            i18n.t('data.categorical_vars', 'Vars. Categóricas'),
-            f"{len(categorical_cols)}",
-            "📝"
-        ), unsafe_allow_html=True)
+        st.metric(
+            label=f"📝 {i18n.t('data.categorical_vars', 'Vars. Categóricas')}",
+            value=f"{len(categorical_cols)}"
+        )
 
 def _show_salary_distribution(df, i18n):
     """Mostrar distribuição de salários"""
@@ -274,11 +271,10 @@ def _show_advanced_overview(data, i18n):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown(create_metric_card(
-                i18n.t('models.total', 'Total de Modelos'),
-                f"{len(models)}",
-                "🤖"
-            ), unsafe_allow_html=True)
+            st.metric(
+                label=f"🤖 {i18n.t('models.total', 'Total de Modelos')}",
+                value=f"{len(models)}"
+            )
         
         # Buscar melhor modelo por accuracy
         best_model = None
@@ -292,18 +288,17 @@ def _show_advanced_overview(data, i18n):
         
         if best_model:
             with col2:
-                st.markdown(create_metric_card(
-                    i18n.t('models.best_model', 'Melhor Modelo'),
-                    best_model,
-                    "🏆"
-                ), unsafe_allow_html=True)
+                st.metric(
+                    label=f"🏆 {i18n.t('models.best_model', 'Melhor Modelo')}",
+                    value=best_model
+                )
             
             with col3:
-                st.markdown(create_metric_card(
-                    i18n.t('models.best_accuracy', 'Melhor Accuracy'),
-                    f"{best_accuracy:.3f}",
-                    "🎯"
-                ), unsafe_allow_html=True)
+                st.metric(
+                    label=f"🎯 {i18n.t('models.best_accuracy', 'Melhor Accuracy')}",
+                    value=f"{best_accuracy:.3f}",
+                    delta=f"+{best_accuracy-0.8:.3f}" if best_accuracy > 0.8 else None
+                )
     
     # Status dos arquivos gerados
     _show_files_status(data, i18n)

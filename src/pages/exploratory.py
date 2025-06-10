@@ -1,6 +1,6 @@
 """
 📈 Página de Análise Exploratória
-Ferramentas interativas para exploração de dados
+Interface completa para exploração dos dados
 """
 
 import streamlit as st
@@ -9,402 +9,320 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import seaborn as sns
-import matplotlib.pyplot as plt
-from src.components.navigation import show_page_header, show_breadcrumbs
-from src.components.layout import create_status_box
 
 def show_exploratory_page(data, i18n):
-    """Página de análise exploratória interativa"""
+    """Página principal de análise exploratória"""
+    # Import safe
+    try:
+        from src.components.navigation import show_page_header
+    except ImportError:
+        def show_page_header(title, subtitle, icon):
+            st.markdown(f"## {icon} {title}")
+            if subtitle:
+                st.markdown(f"*{subtitle}*")
     
-    # Header da página
     show_page_header(
-        title=i18n.t('navigation.exploratory', 'Análise Exploratória'),
-        subtitle=i18n.t('exploratory.subtitle', 'Explore os dados de forma interativa'),
-        icon="📈"
+        i18n.t('navigation.exploratory', 'Análise Exploratória'),
+        i18n.t('exploratory.subtitle', 'Exploração detalhada dos dados e padrões'),
+        "📈"
     )
-    
-    # Breadcrumbs
-    show_breadcrumbs([
-        (i18n.t('navigation.overview', 'Visão Geral'), 'navigation.overview'),
-        (i18n.t('navigation.exploratory', 'Análise Exploratória'), 'navigation.exploratory')
-    ], i18n)
     
     df = data.get('df')
     if df is None or len(df) == 0:
-        st.warning(i18n.t('messages.pipeline_needed', '⚠️ Execute: python main.py'))
+        st.warning(i18n.t('messages.pipeline_needed', 'Execute pipeline primeiro'))
         return
     
-    # Tabs de análise
+    # Tabs para diferentes análises
     tab1, tab2, tab3, tab4 = st.tabs([
-        f"🔍 {i18n.t('exploratory.univariate', 'Análise Univariada')}",
-        f"📊 {i18n.t('exploratory.bivariate', 'Análise Bivariada')}",
+        f"📊 {i18n.t('exploratory.distributions', 'Distribuições')}",
         f"🔗 {i18n.t('exploratory.correlations', 'Correlações')}",
-        f"📋 {i18n.t('exploratory.data_quality', 'Qualidade dos Dados')}"
+        f"📈 {i18n.t('exploratory.interactive', 'Análise Interativa')}",
+        f"📋 {i18n.t('exploratory.statistics', 'Estatísticas')}"
     ])
     
     with tab1:
-        _show_univariate_analysis(df, i18n)
+        _show_distributions_analysis(df, i18n)
     
     with tab2:
-        _show_bivariate_analysis(df, i18n)
-    
-    with tab3:
         _show_correlation_analysis(df, i18n)
     
-    with tab4:
-        _show_data_quality_analysis(df, i18n)
-
-def _show_univariate_analysis(df, i18n):
-    """Análise univariada - uma variável por vez"""
-    st.markdown(f"### 🔍 {i18n.t('exploratory.select_variable', 'Selecione uma Variável')}")
+    with tab3:
+        _show_interactive_analysis(df, i18n)
     
-    # Separar variáveis por tipo
+    with tab4:
+        _show_statistical_analysis(df, i18n)
+
+def _show_distributions_analysis(df, i18n):
+    """Análise de distribuições"""
+    st.subheader(f"📊 {i18n.t('exploratory.distributions_title', 'Análise de Distribuições')}")
+    
+    # Seletor de variável
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
     
     col1, col2 = st.columns(2)
     
     with col1:
-        variable_type = st.selectbox(
-            "🎯 Tipo de Variável:",
-            ["Numérica", "Categórica"]
-        )
-    
-    with col2:
-        if variable_type == "Numérica" and numeric_cols:
-            selected_var = st.selectbox("📊 Variável Numérica:", numeric_cols)
-        elif variable_type == "Categórica" and categorical_cols:
-            selected_var = st.selectbox("📋 Variável Categórica:", categorical_cols)
-        else:
-            st.warning("Nenhuma variável deste tipo disponível")
-            return
-    
-    if selected_var:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Estatísticas descritivas
-            st.markdown("#### 📈 Estatísticas")
-            if variable_type == "Numérica":
-                stats = df[selected_var].describe()
-                st.dataframe(stats, use_container_width=True)
-            else:
-                value_counts = df[selected_var].value_counts()
-                st.dataframe(value_counts, use_container_width=True)
-        
-        with col2:
-            # Gráfico
-            st.markdown("#### 📊 Visualização")
-            if variable_type == "Numérica":
-                fig = px.histogram(
-                    df, x=selected_var,
-                    title=f"Distribuição: {selected_var}",
-                    template="plotly_white",
-                    color_discrete_sequence=px.colors.qualitative.Set3
-                )
-            else:
-                value_counts = df[selected_var].value_counts()
-                fig = px.bar(
-                    x=value_counts.index,
-                    y=value_counts.values,
-                    title=f"Contagem: {selected_var}",
-                    template="plotly_white",
-                    color_discrete_sequence=px.colors.qualitative.Set3
-                )
+        if numeric_cols:
+            selected_numeric = st.selectbox(
+                f"🔢 {i18n.t('exploratory.select_numeric', 'Selecionar Variável Numérica')}:",
+                numeric_cols,
+                key="numeric_dist"
+            )
             
-            fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-            st.plotly_chart(fig, use_container_width=True)
-
-def _show_bivariate_analysis(df, i18n):
-    """Análise bivariada - relação entre duas variáveis"""
-    st.markdown(f"### 📊 {i18n.t('exploratory.select_two_variables', 'Selecione Duas Variáveis')}")
-    
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    all_cols = numeric_cols + categorical_cols
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        var1 = st.selectbox("🎯 Variável X:", all_cols, key="bivar_x")
+            if selected_numeric:
+                _plot_numeric_distribution(df, selected_numeric, i18n)
     
     with col2:
-        var2 = st.selectbox("🎯 Variável Y:", all_cols, key="bivar_y")
+        if categorical_cols:
+            selected_categorical = st.selectbox(
+                f"📝 {i18n.t('exploratory.select_categorical', 'Selecionar Variável Categórica')}:",
+                categorical_cols,
+                key="categorical_dist"
+            )
+            
+            if selected_categorical:
+                _plot_categorical_distribution(df, selected_categorical, i18n)
+
+def _plot_numeric_distribution(df, column, i18n):
+    """Plotar distribuição de variável numérica"""
+    st.markdown(f"#### 📊 {column}")
     
-    with col3:
-        color_var = st.selectbox(
-            "🎨 Colorir por:", 
-            ["Nenhum"] + categorical_cols,
-            key="bivar_color"
+    try:
+        # Histograma com densidade
+        fig = px.histogram(
+            df, 
+            x=column,
+            nbins=30,
+            title=f"Distribuição de {column}",
+            marginal="box",
+            color_discrete_sequence=['#667eea'],
+            template="plotly_white"
         )
-    
-    if var1 and var2 and var1 != var2:
-        # Determinar tipo de gráfico baseado nos tipos de variáveis
-        var1_numeric = var1 in numeric_cols
-        var2_numeric = var2 in numeric_cols
         
-        color_column = None if color_var == "Nenhum" else color_var
-        
-        if var1_numeric and var2_numeric:
-            # Scatter plot
-            fig = px.scatter(
-                df, x=var1, y=var2, color=color_column,
-                title=f"Relação: {var1} vs {var2}",
-                template="plotly_white",
-                color_discrete_sequence=px.colors.qualitative.Set3
-            )
-        elif var1_numeric and not var2_numeric:
-            # Box plot
-            fig = px.box(
-                df, x=var2, y=var1, color=color_column,
-                title=f"Distribuição de {var1} por {var2}",
-                template="plotly_white",
-                color_discrete_sequence=px.colors.qualitative.Set3
-            )
-        elif not var1_numeric and var2_numeric:
-            # Box plot invertido
-            fig = px.box(
-                df, x=var1, y=var2, color=color_column,
-                title=f"Distribuição de {var2} por {var1}",
-                template="plotly_white",
-                color_discrete_sequence=px.colors.qualitative.Set3
-            )
-        else:
-            # Heatmap de crosstab
-            crosstab = pd.crosstab(df[var1], df[var2], normalize='index') * 100
-            fig = px.imshow(
-                crosstab,
-                title=f"Crosstab: {var1} vs {var2} (%)",
-                template="plotly_white",
-                color_continuous_scale="Blues",
-                aspect="auto"
-            )
-        
-        fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+        fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
         
-        # Estatísticas da relação
-        if var1_numeric and var2_numeric:
-            correlation = df[var1].corr(df[var2])
-            st.markdown(create_status_box(
-                f"📊 Correlação entre {var1} e {var2}: {correlation:.3f}",
-                "info"
-            ), unsafe_allow_html=True)
+        # Estatísticas descritivas
+        stats = df[column].describe()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("📊 Média", f"{stats['mean']:.2f}")
+        with col2:
+            st.metric("📈 Mediana", f"{stats['50%']:.2f}")
+        with col3:
+            st.metric("📏 Desvio", f"{stats['std']:.2f}")
+        with col4:
+            st.metric("📋 Missing", f"{df[column].isnull().sum()}")
+            
+    except Exception as e:
+        st.error(f"Erro ao plotar {column}: {e}")
+
+def _plot_categorical_distribution(df, column, i18n):
+    """Plotar distribuição de variável categórica"""
+    st.markdown(f"#### 📝 {column}")
+    
+    try:
+        value_counts = df[column].value_counts()
+        
+        # Gráfico de barras
+        fig = px.bar(
+            x=value_counts.index,
+            y=value_counts.values,
+            title=f"Distribuição de {column}",
+            color=value_counts.values,
+            color_continuous_scale='viridis',
+            template="plotly_white"
+        )
+        
+        fig.update_layout(
+            xaxis_tickangle=45,
+            height=400,
+            xaxis_title=column,
+            yaxis_title="Contagem"
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Estatísticas categóricas
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("📊 Únicos", f"{df[column].nunique()}")
+        with col2:
+            st.metric("🏆 Mais Frequente", f"{value_counts.index[0]}")
+        with col3:
+            st.metric("📈 Freq. Max", f"{value_counts.iloc[0]}")
+        with col4:
+            st.metric("📋 Missing", f"{df[column].isnull().sum()}")
+            
+    except Exception as e:
+        st.error(f"Erro ao plotar {column}: {e}")
 
 def _show_correlation_analysis(df, i18n):
     """Análise de correlações"""
-    st.markdown(f"### 🔗 {i18n.t('charts.correlation_matrix', 'Matriz de Correlação')}")
+    st.subheader(f"🔗 {i18n.t('exploratory.correlations_title', 'Análise de Correlações')}")
     
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    numeric_df = df.select_dtypes(include=[np.number])
     
-    if len(numeric_cols) < 2:
-        st.warning("Precisamos de pelo menos 2 variáveis numéricas para análise de correlação")
+    if len(numeric_df.columns) < 2:
+        st.warning("Poucas variáveis numéricas para análise de correlação")
         return
     
-    # Opções de configuração
+    # Matriz de correlação
+    try:
+        corr_matrix = numeric_df.corr()
+        
+        # Heatmap interativo
+        fig = px.imshow(
+            corr_matrix,
+            text_auto=True,
+            aspect="auto",
+            title="Matriz de Correlação",
+            color_continuous_scale='RdBu_r',
+            zmin=-1, zmax=1
+        )
+        
+        fig.update_layout(height=600)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Top correlações
+        _show_top_correlations(corr_matrix, i18n)
+        
+    except Exception as e:
+        st.error(f"Erro na análise de correlação: {e}")
+
+def _show_top_correlations(corr_matrix, i18n):
+    """Mostrar top correlações"""
+    st.markdown("#### 🏆 Top Correlações")
+    
+    try:
+        # Remover correlações consigo mesmo e duplicatas
+        correlations = []
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i+1, len(corr_matrix.columns)):
+                var1 = corr_matrix.columns[i]
+                var2 = corr_matrix.columns[j]
+                corr_value = corr_matrix.iloc[i, j]
+                if not pd.isna(corr_value):
+                    correlations.append({
+                        'Variável 1': var1,
+                        'Variável 2': var2,
+                        'Correlação': corr_value,
+                        'Abs Correlação': abs(corr_value)
+                    })
+        
+        if correlations:
+            corr_df = pd.DataFrame(correlations)
+            corr_df = corr_df.sort_values('Abs Correlação', ascending=False).head(10)
+            
+            # Mostrar tabela
+            st.dataframe(
+                corr_df[['Variável 1', 'Variável 2', 'Correlação']].round(3),
+                use_container_width=True
+            )
+    except Exception as e:
+        st.error(f"Erro ao calcular top correlações: {e}")
+
+def _show_interactive_analysis(df, i18n):
+    """Análise interativa"""
+    st.subheader(f"📈 {i18n.t('exploratory.interactive_title', 'Análise Interativa')}")
+    
+    # Controles
     col1, col2, col3 = st.columns(3)
     
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+    
     with col1:
-        method = st.selectbox(
-            "🔧 Método de Correlação:",
-            ["pearson", "spearman", "kendall"]
-        )
+        if numeric_cols:
+            x_var = st.selectbox("📊 Eixo X:", numeric_cols, key="x_var")
     
     with col2:
-        min_correlation = st.slider(
-            "📊 Correlação Mínima:",
-            0.0, 1.0, 0.0, 0.05
-        )
+        y_options = ["Nenhuma"] + numeric_cols
+        y_var = st.selectbox("📈 Eixo Y:", y_options, key="y_var")
     
     with col3:
-        show_values = st.checkbox("🔢 Mostrar Valores", value=True)
+        color_options = ["Nenhuma"] + categorical_cols
+        color_var = st.selectbox("🎨 Cor por:", color_options, key="color_var")
     
-    # Calcular matriz de correlação
-    corr_matrix = df[numeric_cols].corr(method=method)
-    
-    # Filtrar correlações baixas se especificado
-    if min_correlation > 0:
-        mask = (np.abs(corr_matrix) >= min_correlation) | (corr_matrix == 1.0)
-        corr_matrix = corr_matrix.where(mask)
-    
-    # Criar heatmap
-    fig = px.imshow(
-        corr_matrix,
-        title=f"Matriz de Correlação ({method.title()})",
-        template="plotly_white",
-        color_continuous_scale="RdBu",
-        color_continuous_midpoint=0,
-        aspect="auto"
-    )
-    
-    if show_values:
-        # Adicionar valores de texto
-        fig.update_traces(
-            text=np.around(corr_matrix.values, decimals=2),
-            texttemplate="%{text}",
-            textfont={"size": 10}
-        )
-    
-    fig.update_layout(
-        margin=dict(l=0, r=0, t=40, b=0),
-        width=700,
-        height=500
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Top correlações
-    st.markdown("#### 🏆 Correlações Mais Altas")
-    
-    # Extrair correlações em formato de lista
-    corr_pairs = []
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i+1, len(corr_matrix.columns)):
-            var1 = corr_matrix.columns[i]
-            var2 = corr_matrix.columns[j]
-            corr_value = corr_matrix.iloc[i, j]
+    # Gerar gráfico baseado na seleção
+    if 'x_var' in locals():
+        try:
+            if y_var == "Nenhuma":
+                # Histograma
+                fig = px.histogram(
+                    df, 
+                    x=x_var,
+                    color=color_var if color_var != "Nenhuma" else None,
+                    title=f"Distribuição de {x_var}",
+                    template="plotly_white",
+                    marginal="box"
+                )
+            else:
+                # Scatter plot
+                fig = px.scatter(
+                    df, 
+                    x=x_var, 
+                    y=y_var,
+                    color=color_var if color_var != "Nenhuma" else None,
+                    title=f"{x_var} vs {y_var}",
+                    template="plotly_white",
+                    opacity=0.7
+                )
             
-            if not pd.isna(corr_value):
-                corr_pairs.append({
-                    'Variável 1': var1,
-                    'Variável 2': var2,
-                    'Correlação': corr_value,
-                    'Correlação Absoluta': abs(corr_value)
-                })
-    
-    if corr_pairs:
-        corr_df = pd.DataFrame(corr_pairs)
-        corr_df = corr_df.sort_values('Correlação Absoluta', ascending=False)
-        
-        # Mostrar top 10
-        st.dataframe(
-            corr_df.head(10)[['Variável 1', 'Variável 2', 'Correlação']], 
-            use_container_width=True
-        )
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+            
+        except Exception as e:
+            st.error(f"Erro ao criar gráfico: {e}")
 
-def _show_data_quality_analysis(df, i18n):
-    """Análise da qualidade dos dados"""
-    st.markdown(f"### 📋 {i18n.t('exploratory.data_quality', 'Qualidade dos Dados')}")
+def _show_statistical_analysis(df, i18n):
+    """Análise estatística"""
+    st.subheader(f"📋 {i18n.t('exploratory.statistics_title', 'Estatísticas Descritivas')}")
     
-    # Resumo geral
+    # Estatísticas numéricas
+    numeric_df = df.select_dtypes(include=[np.number])
+    if not numeric_df.empty:
+        st.markdown("#### 🔢 Variáveis Numéricas")
+        st.dataframe(numeric_df.describe().round(3), use_container_width=True)
+    
+    # Estatísticas categóricas
+    categorical_df = df.select_dtypes(include=['object'])
+    if not categorical_df.empty:
+        st.markdown("#### 📝 Variáveis Categóricas")
+        
+        cat_stats = []
+        for col in categorical_df.columns:
+            stats = {
+                'Coluna': col,
+                'Únicos': df[col].nunique(),
+                'Mais Frequente': df[col].mode().iloc[0] if not df[col].mode().empty else 'N/A',
+                'Freq. Max': df[col].value_counts().iloc[0] if not df[col].empty else 0,
+                'Missing': df[col].isnull().sum(),
+                'Missing %': (df[col].isnull().sum() / len(df)) * 100
+            }
+            cat_stats.append(stats)
+        
+        if cat_stats:
+            cat_df = pd.DataFrame(cat_stats)
+            st.dataframe(cat_df, use_container_width=True)
+    
+    # Informações gerais do dataset
+    st.markdown("#### 📊 Informações Gerais")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("📊 Total de Registros", f"{len(df):,}")
+        st.metric("📋 Total Registros", f"{len(df):,}")
     
     with col2:
-        st.metric("📋 Total de Colunas", len(df.columns))
+        st.metric("📊 Total Colunas", len(df.columns))
     
     with col3:
         total_missing = df.isnull().sum().sum()
-        st.metric("❌ Valores Faltantes", f"{total_missing:,}")
+        st.metric("❌ Total Missing", f"{total_missing:,}")
     
     with col4:
-        duplicates = df.duplicated().sum()
-        st.metric("🔄 Duplicatas", duplicates)
-    
-    # Análise por coluna
-    st.markdown("#### 📊 Análise por Coluna")
-    
-    quality_data = []
-    for col in df.columns:
-        missing_count = df[col].isnull().sum()
-        missing_pct = (missing_count / len(df)) * 100
-        unique_count = df[col].nunique()
-        data_type = str(df[col].dtype)
-        
-        quality_data.append({
-            'Coluna': col,
-            'Tipo': data_type,
-            'Valores Únicos': unique_count,
-            'Valores Faltantes': missing_count,
-            '% Faltantes': f"{missing_pct:.1f}%",
-            'Qualidade': _assess_quality(missing_pct, unique_count, len(df))
-        })
-    
-    quality_df = pd.DataFrame(quality_data)
-    st.dataframe(quality_df, use_container_width=True)
-    
-    # Gráfico de valores faltantes
-    if total_missing > 0:
-        st.markdown("#### ❌ Valores Faltantes por Coluna")
-        
-        missing_data = df.isnull().sum().sort_values(ascending=False)
-        missing_data = missing_data[missing_data > 0]
-        
-        if len(missing_data) > 0:
-            fig = px.bar(
-                x=missing_data.values,
-                y=missing_data.index,
-                orientation='h',
-                title="Contagem de Valores Faltantes",
-                template="plotly_white",
-                color_discrete_sequence=px.colors.qualitative.Set3
-            )
-            
-            fig.update_layout(
-                xaxis_title="Quantidade de Valores Faltantes",
-                yaxis_title="Colunas",
-                margin=dict(l=0, r=0, t=40, b=0)
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-    
-    # Outliers (apenas para variáveis numéricas)
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    if numeric_cols:
-        st.markdown("#### 🎯 Detecção de Outliers")
-        
-        selected_numeric = st.selectbox(
-            "Selecione uma variável numérica:",
-            numeric_cols
-        )
-        
-        if selected_numeric:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Box plot para outliers
-                fig = px.box(
-                    df, y=selected_numeric,
-                    title=f"Box Plot: {selected_numeric}",
-                    template="plotly_white"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                # Estatísticas de outliers
-                Q1 = df[selected_numeric].quantile(0.25)
-                Q3 = df[selected_numeric].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
-                
-                outliers = df[(df[selected_numeric] < lower_bound) | 
-                             (df[selected_numeric] > upper_bound)]
-                
-                st.markdown("**📊 Estatísticas de Outliers:**")
-                st.write(f"- **Q1 (25%):** {Q1:.2f}")
-                st.write(f"- **Q3 (75%):** {Q3:.2f}")
-                st.write(f"- **IQR:** {IQR:.2f}")
-                st.write(f"- **Limite Inferior:** {lower_bound:.2f}")
-                st.write(f"- **Limite Superior:** {upper_bound:.2f}")
-                st.write(f"- **Outliers Detectados:** {len(outliers)} ({len(outliers)/len(df)*100:.1f}%)")
-
-def _assess_quality(missing_pct, unique_count, total_count):
-    """Avaliar qualidade da coluna"""
-    if missing_pct == 0:
-        if unique_count == total_count:
-            return "🟢 Excelente (Única)"
-        elif unique_count > total_count * 0.8:
-            return "🟢 Excelente"
-        else:
-            return "🟡 Boa"
-    elif missing_pct < 5:
-        return "🟡 Boa"
-    elif missing_pct < 20:
-        return "🟠 Moderada"
-    else:
-        return "🔴 Ruim"
+        missing_percent = (total_missing / (len(df) * len(df.columns))) * 100
+        st.metric("📈 Missing %", f"{missing_percent:.1f}%")
