@@ -1,4 +1,4 @@
-"""Análise de Clustering para Segmentação Salarial"""
+"""Análise de Clustering para Segmentação Salarial - VERSÃO COMPLETA"""
 
 import pandas as pd
 import numpy as np
@@ -18,8 +18,7 @@ class SalaryClusteringAnalysis:
         self.kmeans_model = None
         self.dbscan_model = None
         self.pca = None
-        # CORRIGIR: Usar with_mean=False para matrizes esparsas
-        self.scaler = StandardScaler(with_mean=False)
+        self.scaler = StandardScaler(with_mean=False)  # Para matrizes esparsas
         self.silhouette_scores = {}
     
     def perform_kmeans_analysis(self, X, max_clusters=8):
@@ -29,15 +28,13 @@ class SalaryClusteringAnalysis:
         # Verificar se é matriz esparsa e converter se necessário
         if hasattr(X, 'sparse') and X.sparse:
             logging.info("📊 Convertendo matriz esparsa para densa...")
-            X_scaled = X.toarray()  # Converter para array denso
-            X_scaled = StandardScaler().fit_transform(X_scaled)  # Agora pode usar StandardScaler normal
+            X_scaled = X.toarray()
+            X_scaled = StandardScaler().fit_transform(X_scaled)
         elif hasattr(X, 'shape') and len(X.shape) == 2:
-            # Tentar com StandardScaler normal primeiro
             try:
                 X_scaled = StandardScaler().fit_transform(X)
             except ValueError as e:
                 if "sparse" in str(e).lower():
-                    # Se der erro de matriz esparsa, usar with_mean=False
                     logging.info("📊 Usando StandardScaler com with_mean=False...")
                     X_scaled = StandardScaler(with_mean=False).fit_transform(X)
                 else:
@@ -67,6 +64,9 @@ class SalaryClusteringAnalysis:
         # Treinar modelo final
         self.kmeans_model = KMeans(n_clusters=best_k, random_state=42, n_init=10)
         clusters = self.kmeans_model.fit_predict(X_scaled)
+        
+        # Salvar resultados
+        self._save_clustering_results(clusters, best_k, max(silhouette_scores))
         
         return clusters, best_k
     
@@ -140,3 +140,39 @@ class SalaryClusteringAnalysis:
         plt.close()
         
         logging.info("📈 Visualizações PCA dos clusters salvas")
+    
+    def _save_clustering_results(self, clusters, best_k, best_silhouette):
+        """Salvar resultados do clustering"""
+        try:
+            analysis_dir = Path("output/analysis")
+            analysis_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Estatísticas dos clusters
+            unique_clusters, counts = np.unique(clusters, return_counts=True)
+            
+            results = []
+            for cluster_id, count in zip(unique_clusters, counts):
+                results.append({
+                    'cluster_id': int(cluster_id),
+                    'size': int(count),
+                    'percentage': float(count / len(clusters) * 100)
+                })
+            
+            results_df = pd.DataFrame(results)
+            results_df.to_csv(analysis_dir / "clustering_results.csv", index=False)
+            
+            # Sumário geral
+            summary = {
+                'best_k': best_k,
+                'silhouette_score': best_silhouette,
+                'total_samples': len(clusters),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+            
+            summary_df = pd.DataFrame([summary])
+            summary_df.to_csv(analysis_dir / "clustering_summary.csv", index=False)
+            
+            logging.info("✅ Resultados de clustering salvos")
+            
+        except Exception as e:
+            logging.error(f"❌ Erro ao salvar resultados: {e}")

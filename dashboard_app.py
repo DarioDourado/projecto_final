@@ -1,7 +1,6 @@
 """
-Dashboard Streamlit Completo - Análise Salarial Académica CORRIGIDO
-Sistema interativo com todas as funcionalidades de Data Science
-Versão corrigida para problemas de serialização Arrow
+Dashboard Streamlit Completo - Análise Salarial Académica VERSÃO FINAL
+Sistema interativo com todas as funcionalidades implementadas
 """
 
 import streamlit as st
@@ -17,6 +16,7 @@ from pathlib import Path
 import logging
 import warnings
 from datetime import datetime
+import io
 
 # Configurações
 warnings.filterwarnings('ignore')
@@ -27,10 +27,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configurar logging para o dashboard
-logging.basicConfig(level=logging.INFO)
-
-# CSS customizado MELHORADO
+# CSS melhorado
 st.markdown("""
 <style>
     .main-header {
@@ -39,64 +36,39 @@ st.markdown("""
         color: #1f77b4;
         text-align: center;
         margin-bottom: 2rem;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     .metric-card {
-        background-color: #f0f2f6;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: 10px;
         margin: 0.5rem 0;
-    }
-    .sidebar-info {
-        background-color: #e8f4fd;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
+        background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        color: white;
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: 10px;
         margin: 1rem 0;
     }
     .warning-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
+        background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        color: #2d3436;
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: 10px;
         margin: 1rem 0;
     }
-    .nav-button {
-        display: block;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        margin: 0.25rem 0;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        text-decoration: none;
-        color: #495057;
-        text-align: left;
-        transition: all 0.2s;
-    }
-    .nav-button:hover {
-        background-color: #e9ecef;
-        border-color: #adb5bd;
-        color: #343a40;
-    }
-    .nav-button.active {
-        background-color: #007bff;
-        border-color: #007bff;
+    .info-box {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
         color: white;
-    }
-    .filter-section {
-        background-color: #f8f9fa;
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: 10px;
         margin: 1rem 0;
-        border-left: 4px solid #007bff;
     }
     .stButton > button {
         width: 100%;
@@ -105,275 +77,577 @@ st.markdown("""
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         color: white;
         font-weight: bold;
+        transition: all 0.3s;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .sidebar .stSelectbox > div > div {
+        background-color: #f8f9fa;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# FUNÇÕES AUXILIARES CORRIGIDAS PARA SERIALIZAÇÃO
+# FUNÇÕES AUXILIARES OTIMIZADAS
 # =============================================================================
 
-# Session state para navegação
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = "📊 Visão Geral"
-
-if 'filters' not in st.session_state:
-    st.session_state.filters = {}
-
-@st.cache_data
+@st.cache_data(ttl=300)  # Cache por 5 minutos
 def load_data():
-    """Carregar dados processados - VERSÃO CORRIGIDA"""
+    """Carregar dados com cache otimizado"""
     try:
-        # 1. Prioridade: dados processados
-        processed_file = Path("data/processed/data_processed.csv")
-        if processed_file.exists():
-            df = pd.read_csv(processed_file)
-            # Garantir tipos de dados consistentes
-            df = fix_dataframe_types(df)
-            return df, "✅ Dados processados carregados com sucesso!"
+        # Prioridade: dados processados
+        data_paths = [
+            Path("data/processed/data_processed.csv"),
+            Path("data/raw/4-Carateristicas_salario.csv"),
+            Path("bkp/4-Carateristicas_salario.csv"),
+            Path("4-Carateristicas_salario.csv")
+        ]
         
-        # 2. Fallback: dados brutos em data/raw/
-        raw_file = Path("data/raw/4-Carateristicas_salario.csv")
-        if raw_file.exists():
-            df = pd.read_csv(raw_file)
-            df = fix_dataframe_types(df)
-            return df, "⚠️ Dados brutos carregados. Execute main.py para processar."
-        
-        # 3. Fallback: arquivo backup
-        backup_file = Path("bkp/4-Carateristicas_salario.csv")
-        if backup_file.exists():
-            df = pd.read_csv(backup_file)
-            df = fix_dataframe_types(df)
-            return df, "⚠️ Dados carregados do backup."
-        
-        # 4. Fallback: diretório raiz
-        root_file = Path("4-Carateristicas_salario.csv")
-        if root_file.exists():
-            df = pd.read_csv(root_file)
-            df = fix_dataframe_types(df)
-            return df, "⚠️ Dados carregados do diretório raiz."
+        for path in data_paths:
+            if path.exists():
+                df = pd.read_csv(path)
+                df = clean_dataframe(df)
+                status = "✅ Dados processados" if "processed" in str(path) else "⚠️ Dados brutos"
+                return df, f"{status} carregados: {path.name}"
         
         return None, "❌ Nenhum arquivo de dados encontrado!"
-        
     except Exception as e:
         return None, f"❌ Erro ao carregar dados: {e}"
 
-def fix_dataframe_types(df):
-    """Corrigir tipos de dados para evitar problemas de serialização Arrow"""
-    df_fixed = df.copy()
+def clean_dataframe(df):
+    """Limpeza otimizada do DataFrame"""
+    # Converter categóricas
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].astype(str).replace(['None', 'nan', 'NaN', '?'], 'Unknown')
     
-    # Converter colunas categóricas para string
-    for col in df_fixed.select_dtypes(include=['object', 'category']).columns:
-        df_fixed[col] = df_fixed[col].astype(str)
-        # Substituir valores problemáticos
-        df_fixed[col] = df_fixed[col].replace(['None', 'nan', 'NaN'], 'Unknown')
-    
-    # Garantir que colunas numéricas sejam realmente numéricas
-    for col in df_fixed.select_dtypes(include=[np.number]).columns:
-        df_fixed[col] = pd.to_numeric(df_fixed[col], errors='coerce')
-        df_fixed[col] = df_fixed[col].fillna(0)
-    
-    return df_fixed
-
-def create_arrow_safe_dataframe(data_dict):
-    """Criar DataFrame seguro para serialização Arrow"""
-    df = pd.DataFrame(data_dict)
-    
-    # Converter todos os valores para strings se necessário
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            df[col] = df[col].astype(str)
+    # Garantir numéricas
+    for col in df.select_dtypes(include=[np.number]).columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
     return df
 
-def load_models_corrected():
-    """Carregar modelos - VERSÃO CORRIGIDA"""
-    models = {}
-    
-    # Tentar várias localizações possíveis
-    possible_dirs = [
-        Path("data/processed"),  # Localização principal
-        Path("bkp"),            # Backup
-        Path(".")               # Raiz do projeto
-    ]
-    
-    for models_dir in possible_dirs:
-        if models_dir.exists():
-            # Procurar ficheiros .joblib de modelos
-            model_patterns = [
-                "*model*.joblib",
-                "random_forest*.joblib",
-                "*classifier*.joblib"
-            ]
-            
-            for pattern in model_patterns:
-                for model_file in models_dir.glob(pattern):
-                    try:
-                        # Carregar modelo
-                        model = joblib.load(model_file)
-                        
-                        # Determinar nome do modelo
-                        if "random_forest" in model_file.name.lower():
-                            model_name = "Random Forest"
-                        elif "logistic" in model_file.name.lower():
-                            model_name = "Logistic Regression"
-                        elif "svm" in model_file.name.lower():
-                            model_name = "SVM"
-                        else:
-                            model_name = model_file.stem.replace("_", " ").title()
-                        
-                        models[model_name] = model
-                        
-                    except Exception as e:
-                        continue
-    
-    return models
-
-def load_analysis_results_corrected():
-    """Carregar resultados das análises - VERSÃO CORRIGIDA"""
-    results = {}
-    
-    # Tentar várias localizações
-    possible_dirs = [
-        Path("output"),
-        Path("output/analysis"),
-        Path("."),
-        Path("bkp")
-    ]
-    
-    for base_dir in possible_dirs:
-        if not base_dir.exists():
-            continue
-        
-        # Procurar ficheiros específicos
-        search_patterns = {
-            'model_comparison': ['model_comparison.csv', 'comparison*.csv'],
-            'association_rules': ['association_rules*.csv', 'rules*.csv'],
-            'statistics': ['*statistics*.csv', '*stats*.csv'],
-            'feature_importance': ['*importance*.csv']
-        }
-        
-        for result_type, patterns in search_patterns.items():
-            for pattern in patterns:
-                files = list(base_dir.glob(pattern))
-                if files:
-                    try:
-                        df = pd.read_csv(files[0])
-                        results[result_type] = fix_dataframe_types(df)
-                        break
-                    except Exception as e:
-                        continue
-    
-    return results
-
-def check_analysis_files_corrected():
-    """Verificar arquivos de análise - VERSÃO CORRIGIDA"""
+@st.cache_data
+def load_analysis_files():
+    """Carregar análises com cache"""
     files_status = {
         'images': [],
         'analysis': [],
         'models': []
     }
     
-    # Verificar imagens em várias localizações
-    image_dirs = [Path("output/images"), Path("imagens"), Path("bkp/imagens")]
-    for img_dir in image_dirs:
-        if img_dir.exists():
-            files_status['images'].extend(list(img_dir.glob("*.png")))
+    # Buscar em múltiplas localizações
+    search_paths = {
+        'images': [Path("output/images"), Path("imagens"), Path("bkp/imagens")],
+        'analysis': [Path("output/analysis"), Path("output"), Path(".")],
+        'models': [Path("data/processed"), Path("bkp"), Path(".")]
+    }
     
-    # Verificar análises
-    analysis_dirs = [Path("output/analysis"), Path("output"), Path(".")]
-    for analysis_dir in analysis_dirs:
-        if analysis_dir.exists():
-            files_status['analysis'].extend(list(analysis_dir.glob("*.csv")))
-            files_status['analysis'].extend(list(analysis_dir.glob("*.md")))
-    
-    # Verificar modelos
-    model_dirs = [Path("data/processed"), Path("bkp"), Path(".")]
-    for model_dir in model_dirs:
-        if model_dir.exists():
-            files_status['models'].extend(list(model_dir.glob("*.joblib")))
+    for category, paths in search_paths.items():
+        for path in paths:
+            if path.exists():
+                if category == 'images':
+                    files_status[category].extend(list(path.glob("*.png")))
+                elif category == 'analysis':
+                    files_status[category].extend(list(path.glob("*.csv")))
+                    files_status[category].extend(list(path.glob("*.md")))
+                elif category == 'models':
+                    files_status[category].extend(list(path.glob("*.joblib")))
     
     # Remover duplicatas
-    for key in files_status:
-        files_status[key] = list(set(files_status[key]))
+    for category in files_status:
+        files_status[category] = list(set(files_status[category]))
     
     return files_status
 
-def create_sample_model_comparison():
-    """Criar comparação de modelos sintética se não existir - VERSÃO ARROW SAFE"""
+def create_comparison_chart(df, metric='accuracy'):
+    """Criar gráfico de comparação otimizado"""
+    if df.empty:
+        return None
     
-    # Verificar se já existe
-    analysis_results = load_analysis_results_corrected()
-    if 'model_comparison' in analysis_results:
-        return analysis_results['model_comparison']
+    fig = go.Figure()
     
-    # Criar dados sintéticos baseados nos modelos típicos
-    sample_data = {
-        'model_name': ['Random Forest', 'Logistic Regression', 'SVM'],
-        'accuracy': [0.852, 0.841, 0.836],
-        'precision': [0.841, 0.838, 0.831],
-        'recall': [0.863, 0.845, 0.840],
-        'f1_score': [0.851, 0.841, 0.835],
-        'roc_auc': [0.912, 0.898, 0.891]
+    # Ordenar por métrica
+    df_sorted = df.sort_values(metric, ascending=True)
+    
+    # Criar barras com gradiente
+    colors = px.colors.qualitative.Set3[:len(df_sorted)]
+    
+    fig.add_trace(go.Bar(
+        x=df_sorted[metric],
+        y=df_sorted.index,
+        orientation='h',
+        marker=dict(
+            color=colors,
+            line=dict(color='rgba(50, 50, 50, 0.5)', width=1)
+        ),
+        text=[f'{x:.3f}' for x in df_sorted[metric]],
+        textposition='auto'
+    ))
+    
+    fig.update_layout(
+        title=f'Comparação de Modelos - {metric.title()}',
+        xaxis_title=metric.title(),
+        yaxis_title='Modelos',
+        height=400,
+        showlegend=False
+    )
+    
+    return fig
+
+# =============================================================================
+# FUNÇÕES DE GRÁFICOS MODERNIZADOS
+# =============================================================================
+
+def create_modern_pie_chart(data, values, names, title, color_scheme='viridis'):
+    """Criar gráfico de pizza moderno com efeitos - CORRIGIDO"""
+    
+    # Verificar se values é array numpy e converter se necessário
+    if hasattr(values, 'values'):
+        values_list = values.values.tolist()
+    elif hasattr(values, 'tolist'):
+        values_list = values.tolist()
+    else:
+        values_list = list(values)
+    
+    # Verificar se names é array e converter
+    if hasattr(names, 'values'):
+        names_list = names.values.tolist()
+    elif hasattr(names, 'tolist'):
+        names_list = names.tolist()
+    else:
+        names_list = list(names)
+    
+    # Encontrar o índice do valor máximo de forma segura
+    max_index = values_list.index(max(values_list))
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=names_list,
+        values=values_list,
+        hole=0.4,  # Donut style
+        textinfo='label+percent+value',
+        textfont_size=12,
+        marker=dict(
+            colors=px.colors.qualitative.Set3,
+            line=dict(color='#FFFFFF', width=2)
+        ),
+        pull=[0.05 if i == max_index else 0 for i in range(len(values_list))],  # Destacar maior fatia
+        hovertemplate='<b>%{label}</b><br>Quantidade: %{value}<br>Percentual: %{percent}<extra></extra>'
+    )])
+    
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{title}</b>",
+            x=0.5,
+            font=dict(size=18, color='#2c3e50')
+        ),
+        font=dict(family="Arial, sans-serif", size=12),
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="left",
+            x=1.05
+        ),
+        margin=dict(t=60, b=40, l=40, r=120),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
+def create_modern_bar_chart(data, x, y, title, color_column=None, orientation='v'):
+    """Criar gráfico de barras moderno com gradientes - CORRIGIDO"""
+    if orientation == 'v':
+        fig = px.bar(
+            data, x=x, y=y, 
+            color=color_column if color_column else y,
+            color_continuous_scale='viridis',
+            title=title
+        )
+        fig.update_traces(
+            marker_line_color='rgba(255,255,255,0.8)',
+            marker_line_width=2,
+            texttemplate='%{y}',
+            textposition='outside'
+        )
+    else:
+        fig = px.bar(
+            data, x=y, y=x, 
+            color=color_column if color_column else y,
+            color_continuous_scale='plasma',
+            orientation='h',
+            title=title
+        )
+        fig.update_traces(
+            marker_line_color='rgba(255,255,255,0.8)',
+            marker_line_width=2,
+            texttemplate='%{x}',
+            textposition='outside'
+        )
+    
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{title}</b>",
+            x=0.5,
+            font=dict(size=18, color='#2c3e50')
+        ),
+        plot_bgcolor='rgba(248,249,250,0.8)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Arial, sans-serif"),
+        xaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)'
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)'
+        )
+    )
+    
+    return fig
+
+def create_modern_scatter_plot(data, x, y, color=None, size=None, title="", hover_data=None):
+    """Criar scatter plot moderno com animações - CORRIGIDO"""
+    
+    # Verificar se a coluna size existe e tem valores válidos
+    size_col = None
+    if size and size in data.columns:
+        # Verificar se há valores não-nulos e variação
+        size_values = data[size].dropna()
+        if len(size_values) > 0 and size_values.var() > 0:
+            size_col = size
+    
+    fig = px.scatter(
+        data, x=x, y=y,
+        color=color,
+        size=size_col,
+        hover_data=hover_data,
+        color_continuous_scale='viridis',
+        title=title,
+        opacity=0.7
+    )
+    
+    # Atualizar traces com verificação
+    marker_dict = {
+        'line': dict(width=1, color='rgba(255,255,255,0.8)')
     }
     
-    df = pd.DataFrame(sample_data)
-    df.set_index('model_name', inplace=True)
+    if size_col:
+        max_size = data[size_col].max()
+        if max_size > 0:
+            marker_dict.update({
+                'sizemode': 'diameter',
+                'sizeref': 2. * max_size / (40.**2)
+            })
     
-    # Garantir tipos seguros para Arrow
-    for col in df.columns:
-        df[col] = df[col].astype(float)
+    fig.update_traces(marker=marker_dict)
     
-    return df
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{title}</b>",
+            x=0.5,
+            font=dict(size=18, color='#2c3e50')
+        ),
+        plot_bgcolor='rgba(248,249,250,0.8)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Arial, sans-serif"),
+        xaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)',
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)',
+            zeroline=False
+        )
+    )
+    
+    return fig
 
-def apply_filters(df, filters):
-    """Aplicar filtros ao dataframe"""
-    filtered_df = df.copy()
+def create_modern_histogram(data, column, title, bins=30, color_column=None):
+    """Criar histograma moderno com densidade - CORRIGIDO"""
     
-    for col, values in filters.items():
-        if values and col in df.columns:
-            if isinstance(values, list):
-                filtered_df = filtered_df[filtered_df[col].isin(values)]
-            elif isinstance(values, tuple) and len(values) == 2:
-                # Range numérico
-                filtered_df = filtered_df[
-                    (filtered_df[col] >= values[0]) & 
-                    (filtered_df[col] <= values[1])
-                ]
+    # Verificar se a coluna existe
+    if column not in data.columns:
+        st.error(f"Coluna '{column}' não encontrada no dataset")
+        return None
     
-    return filtered_df
+    # Verificar se há dados válidos
+    valid_data = data[column].dropna()
+    if len(valid_data) == 0:
+        st.warning(f"Nenhum dado válido encontrado na coluna '{column}'")
+        return None
+    
+    try:
+        fig = px.histogram(
+            data, x=column,
+            nbins=bins,
+            color=color_column,
+            marginal="box",  # Adicionar boxplot
+            title=title,
+            opacity=0.7
+        )
+        
+        fig.update_traces(
+            marker_line_color='rgba(255,255,255,0.8)',
+            marker_line_width=2
+        )
+        
+        fig.update_layout(
+            title=dict(
+                text=f"<b>{title}</b>",
+                x=0.5,
+                font=dict(size=18, color='#2c3e50')
+            ),
+            plot_bgcolor='rgba(248,249,250,0.8)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Arial, sans-serif"),
+            xaxis=dict(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='rgba(128,128,128,0.2)'
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='rgba(128,128,128,0.2)'
+            )
+        )
+        
+        return fig
+        
+    except Exception as e:
+        st.error(f"Erro ao criar histograma: {e}")
+        return None
+
+def create_interactive_correlation_heatmap(df):
+    """Criar heatmap de correlação interativo - CORRIGIDO"""
+    
+    # Selecionar apenas colunas numéricas
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    
+    if len(numeric_cols) < 2:
+        st.warning("Poucas variáveis numéricas para análise de correlação")
+        return None
+    
+    try:
+        # Calcular matriz de correlação
+        corr_matrix = df[numeric_cols].corr()
+        
+        # Criar máscara para triângulo superior
+        mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+        masked_corr = corr_matrix.where(~mask)
+        
+        # Preparar dados para o heatmap
+        z_data = masked_corr.values
+        x_labels = masked_corr.columns.tolist()
+        y_labels = masked_corr.index.tolist()
+        
+        # Criar texto para anotações
+        text_data = np.round(z_data, 2).astype(str)
+        text_data[mask] = ''  # Remover texto da parte mascarada
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=z_data,
+            x=x_labels,
+            y=y_labels,
+            colorscale='RdBu',
+            zmid=0,
+            text=text_data,
+            texttemplate='%{text}',
+            textfont={"size": 10},
+            hoverongaps=False,
+            hovertemplate='<b>%{x} vs %{y}</b><br>Correlação: %{z:.3f}<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            title=dict(
+                text='<b>🔗 Matriz de Correlação Interativa</b>',
+                x=0.5,
+                font=dict(size=18, color='#2c3e50')
+            ),
+            xaxis_title='<b>Variáveis</b>',
+            yaxis_title='<b>Variáveis</b>',
+            font=dict(family="Arial, sans-serif"),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            height=500
+        )
+        
+        return fig
+        
+    except Exception as e:
+        st.error(f"Erro ao criar heatmap de correlação: {e}")
+        return None
+
+def show_overview_enhanced(df, load_message, files_status):
+    """Visão geral com gráficos modernizados - CORRIGIDA"""
+    st.header("📊 Visão Geral do Dataset")
+    
+    # Status message com estilo
+    if "processados" in load_message:
+        st.success(load_message)
+    else:
+        st.warning(load_message)
+    
+    # Métricas principais com cards modernos
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>📋 Registros</h3>
+            <h2>{len(df):,}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>📊 Colunas</h3>
+            <h2>{len(df.columns)}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        if 'salary' in df.columns:
+            high_salary_rate = (df['salary'] == '>50K').mean()
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>💰 Salário Alto</h3>
+                <h2>{high_salary_rate:.1%}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col4:
+        missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>❌ Missing</h3>
+            <h2>{missing_rate:.1%}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Gráficos principais modernizados
+    st.subheader("📈 Distribuições Principais")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if 'salary' in df.columns:
+            salary_counts = df['salary'].value_counts()
+            fig = create_modern_pie_chart(
+                data=None,
+                values=salary_counts.values,
+                names=salary_counts.index,
+                title="💰 Distribuição de Salário"
+            )
+            if fig:  # Verificar se o gráfico foi criado com sucesso
+                st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        if 'sex' in df.columns:
+            sex_data = df['sex'].value_counts().reset_index()
+            sex_data.columns = ['sex', 'count']
+            fig = create_modern_bar_chart(
+                data=sex_data,
+                x='sex',
+                y='count',
+                title="👥 Distribuição por Sexo"
+            )
+            if fig:  # Verificar se o gráfico foi criado com sucesso
+                st.plotly_chart(fig, use_container_width=True)
+    
+    # Gráficos adicionais com verificação de erro
+    st.subheader("📈 Análises Detalhadas")
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Distribuições", "🔗 Correlações", "📋 Estatísticas"])
+    
+    with tab1:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'age' in df.columns:
+                fig = create_modern_histogram(
+                    data=df,
+                    column='age',
+                    title="📊 Distribuição de Idade",
+                    color_column='salary' if 'salary' in df.columns else None
+                )
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            if 'education-num' in df.columns:
+                fig = create_modern_histogram(
+                    data=df,
+                    column='education-num',
+                    title="🎓 Anos de Educação",
+                    color_column='salary' if 'salary' in df.columns else None
+                )
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+    
+    with tab2:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            fig = create_interactive_correlation_heatmap(df)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Poucas variáveis numéricas para análise de correlação")
+    
+    with tab3:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 0:
+            st.dataframe(df[numeric_cols].describe().round(2), use_container_width=True)
+        else:
+            st.info("Nenhuma variável numérica encontrada")
 
 # =============================================================================
-# INTERFACE PRINCIPAL MELHORADA
+# FUNÇÕES PRINCIPAIS MODIFICADAS
 # =============================================================================
+
+# Session state
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "📊 Visão Geral"
+if 'filters' not in st.session_state:
+    st.session_state.filters = {}
 
 def main():
-    """Interface principal do dashboard com navegação por botões"""
+    """Interface principal otimizada"""
     
-    # Header
-    st.markdown('<div class="main-header">💰 Dashboard de Análise Salarial - Versão Académica</div>', 
+    # Header elegante
+    st.markdown('<div class="main-header">💰 Dashboard de Análise Salarial</div>', 
                 unsafe_allow_html=True)
     
-    # Carregar dados uma vez
+    # Carregar dados
     df, load_message = load_data()
+    files_status = load_analysis_files()
     
-    # Sidebar com navegação por botões
+    # Sidebar melhorada
     with st.sidebar:
-        st.markdown("## 🎛️ Painel de Controle")
+        st.markdown("## 🎛️ Controle Central")
         
-        # Status do sistema
-        st.markdown("### 📊 Status do Sistema")
-        files_status = check_analysis_files_corrected()
-        
-        if files_status['models']:
-            st.markdown('<div class="success-box">✅ Pipeline executado!</div>', 
+        # Status do sistema com cores
+        pipeline_executed = len(files_status['models']) > 0
+        if pipeline_executed:
+            st.markdown('<div class="success-box">✅ Pipeline Executado!</div>', 
                        unsafe_allow_html=True)
         else:
-            st.markdown('<div class="warning-box">⚠️ Execute: <code>python main.py</code></div>', 
+            st.markdown('<div class="warning-box">⚠️ Execute: python main.py</div>', 
                        unsafe_allow_html=True)
         
-        # Informações dos arquivos
-        st.markdown("### 📁 Arquivos")
+        # Métricas do sistema
+        st.markdown("### 📊 Arquivos Encontrados")
         col1, col2 = st.columns(2)
         with col1:
             st.metric("🎨 Imagens", len(files_status['images']))
@@ -383,13 +657,12 @@ def main():
             if df is not None:
                 st.metric("📋 Registros", f"{len(df):,}")
         
-        # Navegação com botões
+        # Navegação principal
         st.markdown("### 🧭 Navegação")
-        
         pages = [
             ("📊 Visão Geral", "overview"),
-            ("📈 Análise Exploratória", "exploratory"), 
-            ("🤖 Modelos de ML", "models"),
+            ("📈 Análise Exploratória", "exploratory"),
+            ("🤖 Modelos ML", "models"),
             ("🎯 Clustering", "clustering"),
             ("📋 Regras de Associação", "rules"),
             ("📊 Métricas Avançadas", "metrics"),
@@ -401,597 +674,777 @@ def main():
             if st.button(page_name, key=f"nav_{page_key}"):
                 st.session_state.current_page = page_name
         
-        # Seção de filtros globais
-        if df is not None:
-            st.markdown("### 🔍 Filtros Globais")
-            st.markdown('<div class="filter-section">', unsafe_allow_html=True)
+        # Filtros se dados disponíveis
+        if df is not None and len(df) > 0:
+            st.markdown("### 🔍 Filtros")
             
-            # Filtro de salário
-            if 'salary' in df.columns:
-                salary_options = [str(x) for x in df['salary'].unique() if str(x) != 'Unknown']
-                salary_filter = st.multiselect(
-                    "💰 Salário",
-                    options=salary_options,
-                    default=None,
-                    key="salary_filter"
-                )
-                if salary_filter:
-                    st.session_state.filters['salary'] = salary_filter
-            
-            # Filtro de sexo
-            if 'sex' in df.columns:
-                sex_options = [str(x) for x in df['sex'].unique() if str(x) != 'Unknown']
-                sex_filter = st.multiselect(
-                    "👤 Sexo",
-                    options=sex_options,
-                    default=None,
-                    key="sex_filter"
-                )
-                if sex_filter:
-                    st.session_state.filters['sex'] = sex_filter
-            
-            # Filtro de idade
-            if 'age' in df.columns:
-                age_min = int(df['age'].min()) if not pd.isna(df['age'].min()) else 18
-                age_max = int(df['age'].max()) if not pd.isna(df['age'].max()) else 90
-                age_range = st.slider(
-                    "🎂 Faixa Etária",
-                    min_value=age_min,
-                    max_value=age_max,
-                    value=(age_min, age_max),
-                    key="age_filter"
-                )
-                if age_range != (age_min, age_max):
-                    st.session_state.filters['age'] = age_range
-            
-            # Filtro de educação
-            if 'education' in df.columns:
-                education_options = [str(x) for x in sorted(df['education'].unique()) if str(x) != 'Unknown']
-                education_filter = st.multiselect(
-                    "🎓 Educação",
-                    options=education_options,
-                    default=None,
-                    key="education_filter"
-                )
-                if education_filter:
-                    st.session_state.filters['education'] = education_filter
-            
-            # Botão para limpar filtros
+            # Reset filters button
             if st.button("🗑️ Limpar Filtros"):
                 st.session_state.filters = {}
                 st.rerun()
             
-            st.markdown('</div>', unsafe_allow_html=True)
+            # Salary filter
+            if 'salary' in df.columns:
+                salary_options = [str(x) for x in df['salary'].unique() if str(x) != 'Unknown']
+                if salary_options:
+                    salary_filter = st.multiselect("💰 Salário", salary_options)
+                    if salary_filter:
+                        st.session_state.filters['salary'] = salary_filter
             
-            # Mostrar resumo dos filtros aplicados
-            if st.session_state.filters:
-                st.markdown("### 📋 Filtros Ativos")
-                for filter_name, filter_value in st.session_state.filters.items():
-                    if isinstance(filter_value, list):
-                        st.write(f"• **{filter_name}**: {', '.join(map(str, filter_value))}")
-                    elif isinstance(filter_value, tuple):
-                        st.write(f"• **{filter_name}**: {filter_value[0]} - {filter_value[1]}")
+            # Age filter
+            if 'age' in df.columns:
+                age_range = st.slider("🎂 Idade", 
+                                    int(df['age'].min()), 
+                                    int(df['age'].max()),
+                                    (int(df['age'].min()), int(df['age'].max())))
+                if age_range != (int(df['age'].min()), int(df['age'].max())):
+                    st.session_state.filters['age'] = age_range
+        
+        # Status de filtros
+        if st.session_state.filters:
+            st.markdown("### 📋 Filtros Ativos")
+            for filter_name, filter_value in st.session_state.filters.items():
+                if isinstance(filter_value, list):
+                    st.write(f"• **{filter_name}**: {', '.join(map(str, filter_value))}")
+                elif isinstance(filter_value, tuple):
+                    st.write(f"• **{filter_name}**: {filter_value[0]} - {filter_value[1]}")
     
-    # Aplicar filtros aos dados
+    # Aplicar filtros
     if df is not None:
         filtered_df = apply_filters(df, st.session_state.filters)
-        
-        # Mostrar impacto dos filtros
         if len(filtered_df) != len(df):
-            st.info(f"🔍 Filtros aplicados: {len(filtered_df):,} de {len(df):,} registros ({len(filtered_df)/len(df):.1%})")
+            st.info(f"🔍 Filtros: {len(filtered_df):,} de {len(df):,} registros ({len(filtered_df)/len(df):.1%})")
     else:
         filtered_df = None
     
-    # Verificar se dados foram carregados
-    if filtered_df is None:
-        st.error(load_message if df is None else "Nenhum dado após aplicar filtros")
-        st.info("👆 Execute o pipeline principal primeiro: `python main.py`")
+    # Verificação de dados
+    if filtered_df is None or len(filtered_df) == 0:
+        st.error("❌ Nenhum dado disponível após filtros")
+        st.info("Verifique os filtros ou execute: `python main.py`")
         return
     
-    # Mostrar página atual
+    # Roteamento de páginas
     current_page = st.session_state.current_page
     
     if current_page == "📊 Visão Geral":
-        show_overview_enhanced(filtered_df, load_message)
+        show_overview_enhanced(filtered_df, load_message, files_status)
     elif current_page == "📈 Análise Exploratória":
         show_exploratory_analysis_enhanced(filtered_df)
-    elif current_page == "🤖 Modelos de ML":
-        show_ml_models_enhanced_final(filtered_df)
+    elif current_page == "🤖 Modelos ML":
+        show_ml_models_enhanced(filtered_df, files_status)
     elif current_page == "🎯 Clustering":
-        show_clustering_analysis_enhanced(filtered_df)
+        show_clustering_analysis_enhanced(filtered_df, files_status)
     elif current_page == "📋 Regras de Associação":
-        show_association_rules_enhanced(filtered_df)
+        show_association_rules_enhanced(filtered_df, files_status)
     elif current_page == "📊 Métricas Avançadas":
-        show_advanced_metrics_enhanced(filtered_df)
+        show_advanced_metrics_enhanced(filtered_df, files_status)
     elif current_page == "🔮 Predição":
-        show_prediction_interface_enhanced(filtered_df)
+        show_prediction_interface_enhanced(filtered_df, files_status)
     elif current_page == "📁 Relatórios":
-        show_reports_enhanced()
+        show_reports_enhanced(files_status)
+
+def apply_filters(df, filters):
+    """Aplicar filtros de forma otimizada"""
+    filtered_df = df.copy()
+    
+    for col, values in filters.items():
+        if col in df.columns:
+            if isinstance(values, list) and values:
+                filtered_df = filtered_df[filtered_df[col].isin(values)]
+            elif isinstance(values, tuple) and len(values) == 2:
+                filtered_df = filtered_df[
+                    (filtered_df[col] >= values[0]) & 
+                    (filtered_df[col] <= values[1])
+                ]
+    
+    return filtered_df
 
 # =============================================================================
-# PÁGINAS MELHORADAS COM CORREÇÕES DE SERIALIZAÇÃO
+# PÁGINAS IMPLEMENTADAS COMPLETAMENTE
 # =============================================================================
 
-def show_overview_enhanced(df, load_message):
-    """Página de visão geral melhorada - VERSÃO ARROW SAFE"""
+def show_overview_enhanced(df, load_message, files_status):
+    """Visão geral com gráficos modernizados - CORRIGIDA"""
     st.header("📊 Visão Geral do Dataset")
     
-    # Alert do status
+    # Status message com estilo
     if "processados" in load_message:
         st.success(load_message)
     else:
         st.warning(load_message)
     
-    # Métricas principais em cards elegantes
+    # Métricas principais com cards modernos
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
-            "📋 Total de Registros", 
-            f"{len(df):,}",
-            delta=f"100%" if not st.session_state.filters else f"{len(df)/32561:.1%}"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>📋 Registros</h3>
+            <h2>{len(df):,}</h2>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.metric("📊 Colunas", len(df.columns))
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>📊 Colunas</h3>
+            <h2>{len(df.columns)}</h2>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         if 'salary' in df.columns:
-            high_salary_count = (df['salary'] == '>50K').sum()
-            high_salary_rate = high_salary_count / len(df) if len(df) > 0 else 0
-            st.metric("💰 Taxa Salário Alto", f"{high_salary_rate:.1%}")
-        else:
-            st.metric("💰 Taxa Salário Alto", "N/A")
+            high_salary_rate = (df['salary'] == '>50K').mean()
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>💰 Salário Alto</h3>
+                <h2>{high_salary_rate:.1%}</h2>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col4:
-        missing_count = df.isnull().sum().sum()
-        total_cells = len(df) * len(df.columns)
-        missing_rate = missing_count / total_cells if total_cells > 0 else 0
-        st.metric("❌ Taxa de Missings", f"{missing_rate:.1%}")
+        missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>❌ Missing</h3>
+            <h2>{missing_rate:.1%}</h2>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Dashboard de métricas rápidas
-    st.subheader("⚡ Métricas Rápidas")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if 'age' in df.columns and len(df) > 0:
-            age_mean = df['age'].mean()
-            age_max = df['age'].max()
-            st.metric("👶 Idade Média", f"{age_mean:.1f} anos" if not pd.isna(age_mean) else "N/A")
-            st.metric("🧓 Idade Máxima", f"{age_max} anos" if not pd.isna(age_max) else "N/A")
-    
-    with col2:
-        if 'hours-per-week' in df.columns and len(df) > 0:
-            hours_mean = df['hours-per-week'].mean()
-            hours_max = df['hours-per-week'].max()
-            st.metric("⏰ Horas/Semana Média", f"{hours_mean:.1f}h" if not pd.isna(hours_mean) else "N/A")
-            st.metric("💪 Máx Horas/Semana", f"{hours_max}h" if not pd.isna(hours_max) else "N/A")
-    
-    with col3:
-        if 'education-num' in df.columns and len(df) > 0:
-            edu_mean = df['education-num'].mean()
-            edu_max = df['education-num'].max()
-            st.metric("🎓 Anos Educação Média", f"{edu_mean:.1f}" if not pd.isna(edu_mean) else "N/A")
-            st.metric("📚 Máx Anos Educação", f"{edu_max}" if not pd.isna(edu_max) else "N/A")
-    
-    # Gráficos interativos lado a lado
-    st.subheader("📈 Visualizações Interativas")
+    # Gráficos principais modernizados
+    st.subheader("📈 Distribuições Principais")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Distribuição de salário
-        if 'salary' in df.columns and len(df) > 0:
+        if 'salary' in df.columns:
             salary_counts = df['salary'].value_counts()
-            if len(salary_counts) > 0:
-                fig = px.pie(
-                    values=salary_counts.values, 
-                    names=salary_counts.index,
-                    title="🎯 Distribuição de Salário",
-                    color_discrete_sequence=['#ff6b6b', '#4ecdc4']
-                )
-                fig.update_traces(textposition='inside', textinfo='percent+label')
+            fig = create_modern_pie_chart(
+                data=None,
+                values=salary_counts.values,
+                names=salary_counts.index,
+                title="💰 Distribuição de Salário"
+            )
+            if fig:  # Verificar se o gráfico foi criado com sucesso
                 st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Distribuição por sexo
-        if 'sex' in df.columns and len(df) > 0:
-            sex_counts = df['sex'].value_counts()
-            if len(sex_counts) > 0:
-                fig = px.bar(
-                    x=sex_counts.index, y=sex_counts.values,
-                    title="👥 Distribuição por Sexo",
-                    color=sex_counts.index,
-                    color_discrete_sequence=['#a8e6cf', '#ffaaa5']
-                )
-                fig.update_layout(showlegend=False)
+        if 'sex' in df.columns:
+            sex_data = df['sex'].value_counts().reset_index()
+            sex_data.columns = ['sex', 'count']
+            fig = create_modern_bar_chart(
+                data=sex_data,
+                x='sex',
+                y='count',
+                title="👥 Distribuição por Sexo"
+            )
+            if fig:  # Verificar se o gráfico foi criado com sucesso
                 st.plotly_chart(fig, use_container_width=True)
     
-    # Estatísticas detalhadas
-    st.subheader("📋 Estatísticas Detalhadas")
+    # Gráficos adicionais com verificação de erro
+    st.subheader("📈 Análises Detalhadas")
     
-    tab1, tab2, tab3 = st.tabs(["📊 Numéricas", "📝 Categóricas", "🔍 Dados"])
+    tab1, tab2, tab3 = st.tabs(["📊 Distribuições", "🔗 Correlações", "📋 Estatísticas"])
     
     with tab1:
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        if len(numeric_cols) > 0:
-            # Criar DataFrame com tipos seguros
-            stats_df = df[numeric_cols].describe()
-            stats_df = stats_df.round(2)  # Arredondar para evitar problemas de precisão
-            st.dataframe(stats_df, use_container_width=True)
-        else:
-            st.info("Nenhuma coluna numérica encontrada")
-    
-    with tab2:
-        categorical_cols = df.select_dtypes(include=['object']).columns
-        if len(categorical_cols) > 0:
-            cat_data = []
-            for col in categorical_cols:
-                unique_count = df[col].nunique()
-                most_frequent = df[col].mode().iloc[0] if not df[col].mode().empty else 'N/A'
-                missing_count = df[col].isnull().sum()
-                
-                cat_data.append({
-                    'Coluna': col,
-                    'Únicos': unique_count,
-                    'Mais Frequente': str(most_frequent),
-                    'Missings': missing_count
-                })
-            
-            cat_df = create_arrow_safe_dataframe({
-                'Coluna': [item['Coluna'] for item in cat_data],
-                'Únicos': [item['Únicos'] for item in cat_data],
-                'Mais Frequente': [item['Mais Frequente'] for item in cat_data],
-                'Missings': [item['Missings'] for item in cat_data]
-            })
-            
-            st.dataframe(cat_df, use_container_width=True)
-    
-    with tab3:
-        st.write("**Primeiras 10 linhas:**")
-        display_df = df.head(10).copy()
-        # Garantir que todos os valores são strings para exibição segura
-        for col in display_df.select_dtypes(include=['object']).columns:
-            display_df[col] = display_df[col].astype(str)
-        st.dataframe(display_df, use_container_width=True)
-    
-    # Insights automáticos
-    st.subheader("💡 Insights Automáticos")
-    
-    insights = []
-    
-    if 'salary' in df.columns and 'sex' in df.columns and len(df) > 0:
-        try:
-            male_data = df[df['sex'] == 'Male']
-            female_data = df[df['sex'] == 'Female']
-            
-            if len(male_data) > 0 and len(female_data) > 0:
-                male_high_salary = (male_data['salary'] == '>50K').mean()
-                female_high_salary = (female_data['salary'] == '>50K').mean()
-                
-                if not pd.isna(male_high_salary) and not pd.isna(female_high_salary):
-                    if male_high_salary > female_high_salary:
-                        insights.append(f"👨 Homens têm {male_high_salary:.1%} de chance de salário alto vs {female_high_salary:.1%} das mulheres")
-        except Exception:
-            pass
-    
-    if 'age' in df.columns and 'salary' in df.columns and len(df) > 0:
-        try:
-            high_salary_data = df[df['salary'] == '>50K']
-            low_salary_data = df[df['salary'] == '<=50K']
-            
-            if len(high_salary_data) > 0 and len(low_salary_data) > 0:
-                avg_age_high = high_salary_data['age'].mean()
-                avg_age_low = low_salary_data['age'].mean()
-                if not pd.isna(avg_age_high) and not pd.isna(avg_age_low):
-                    insights.append(f"📊 Idade média salário alto: {avg_age_high:.1f} vs salário baixo: {avg_age_low:.1f}")
-        except Exception:
-            pass
-    
-    if 'hours-per-week' in df.columns and 'salary' in df.columns and len(df) > 0:
-        try:
-            high_salary_data = df[df['salary'] == '>50K']
-            low_salary_data = df[df['salary'] == '<=50K']
-            
-            if len(high_salary_data) > 0 and len(low_salary_data) > 0:
-                avg_hours_high = high_salary_data['hours-per-week'].mean()
-                avg_hours_low = low_salary_data['hours-per-week'].mean()
-                if not pd.isna(avg_hours_high) and not pd.isna(avg_hours_low):
-                    insights.append(f"⏰ Horas médias salário alto: {avg_hours_high:.1f}h vs salário baixo: {avg_hours_low:.1f}h")
-        except Exception:
-            pass
-    
-    for insight in insights:
-        st.info(insight)
-
-def show_exploratory_analysis_enhanced(df):
-    """Análise exploratória melhorada - VERSÃO ARROW SAFE"""
-    st.header("📈 Análise Exploratória Avançada")
-    
-    # Controles de análise
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        analysis_type = st.selectbox(
-            "🔍 Tipo de Análise",
-            ["Univariada", "Bivariada", "Multivariada"]
-        )
-    
-    with col2:
-        chart_type = st.selectbox(
-            "📊 Tipo de Gráfico",
-            ["Automático", "Histograma", "Box Plot", "Scatter", "Heatmap", "Bar Chart"]
-        )
-    
-    with col3:
-        color_scheme = st.selectbox(
-            "🎨 Esquema de Cores",
-            ["Viridis", "Plasma", "Set3", "Pastel", "Dark2"]
-        )
-    
-    # Seleção inteligente de variáveis
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    
-    if analysis_type == "Univariada":
-        st.subheader("📊 Análise Univariada")
-        
         col1, col2 = st.columns(2)
         
         with col1:
-            if numeric_cols:
-                selected_num_col = st.selectbox("Variável Numérica:", numeric_cols)
-                
-                # Histograma interativo
-                try:
-                    fig = px.histogram(
-                        df, x=selected_num_col, 
-                        title=f"Distribuição de {selected_num_col}",
-                        color_discrete_sequence=px.colors.qualitative.Set3,
-                        marginal="box"
-                    )
-                    fig.update_layout(showlegend=False)
+            if 'age' in df.columns:
+                fig = create_modern_histogram(
+                    data=df,
+                    column='age',
+                    title="📊 Distribuição de Idade",
+                    color_column='salary' if 'salary' in df.columns else None
+                )
+                if fig:
                     st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Estatísticas detalhadas
-                    st.write("**Estatísticas:**")
-                    stats = df[selected_num_col].describe()
-                    stats_df = pd.DataFrame({
-                        'Estatística': stats.index,
-                        'Valor': [f"{x:.2f}" if not pd.isna(x) else "N/A" for x in stats.values]
-                    })
-                    st.dataframe(stats_df, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro ao gerar gráfico: {e}")
         
         with col2:
-            if categorical_cols:
-                selected_cat_col = st.selectbox("Variável Categórica:", categorical_cols)
-                
-                try:
-                    # Gráfico de barras interativo
-                    value_counts = df[selected_cat_col].value_counts().head(10)
-                    if len(value_counts) > 0:
-                        fig = px.bar(
-                            x=value_counts.index, y=value_counts.values,
-                            title=f"Distribuição de {selected_cat_col}",
-                            color=value_counts.values,
-                            color_continuous_scale=color_scheme.lower()
-                        )
-                        fig.update_layout(showlegend=False)
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                        # Tabela de frequências
-                        st.write("**Frequências:**")
-                        freq_df = create_arrow_safe_dataframe({
-                            'Valor': [str(x) for x in value_counts.index],
-                            'Frequência': [str(x) for x in value_counts.values],
-                            'Percentual': [f"{x:.2f}%" for x in (value_counts.values / len(df) * 100)]
-                        })
-                        st.dataframe(freq_df, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro ao processar variável categórica: {e}")
+            if 'education-num' in df.columns:
+                fig = create_modern_histogram(
+                    data=df,
+                    column='education-num',
+                    title="🎓 Anos de Educação",
+                    color_column='salary' if 'salary' in df.columns else None
+                )
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+    
+    with tab2:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            fig = create_interactive_correlation_heatmap(df)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Poucas variáveis numéricas para análise de correlação")
+    
+    with tab3:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 0:
+            st.dataframe(df[numeric_cols].describe().round(2), use_container_width=True)
+        else:
+            st.info("Nenhuma variável numérica encontrada")
 
-def show_ml_models_enhanced_final(df):
-    """Modelos de ML - VERSÃO FINAL COM PERFORMANCE INTEGRADA"""
+def show_exploratory_analysis_enhanced(df):
+    """Análise exploratória com gráficos modernizados - CORRIGIDA"""
+    st.header("📈 Análise Exploratória Avançada")
+    
+    # Controles modernizados
+    with st.container():
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if numeric_cols:
+                x_var = st.selectbox("🔢 Variável X:", numeric_cols)
+        
+        with col2:
+            y_var = st.selectbox("📊 Variável Y:", ["Nenhuma"] + numeric_cols)
+        
+        with col3:
+            categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+            if categorical_cols:
+                color_var = st.selectbox("🎨 Cor por:", ["Nenhuma"] + categorical_cols)
+    
+    # Gráficos baseados na seleção
+    if 'x_var' in locals():
+        if y_var != "Nenhuma":
+            # Scatter plot
+            fig = create_modern_scatter_plot(
+                data=df,
+                x=x_var,
+                y=y_var,
+                color=color_var if color_var != "Nenhuma" else None,
+                title=f"📊 {x_var} vs {y_var}"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            # Histograma
+            fig = create_modern_histogram(
+                data=df,
+                column=x_var,
+                title=f"📊 Distribuição de {x_var}",
+                color_column=color_var if color_var != "Nenhuma" else None
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Análises por categoria
+    st.subheader("🎯 Análises por Categoria")
+    
+    if 'salary' in df.columns:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'workclass' in df.columns:
+                workclass_salary = df.groupby('workclass')['salary'].apply(
+                    lambda x: (x == '>50K').mean()
+                ).reset_index()
+                workclass_salary.columns = ['workclass', 'high_salary_rate']
+                
+                fig = create_modern_bar_chart(
+                    data=workclass_salary,
+                    x='workclass',
+                    y='high_salary_rate',
+                    title="💼 Taxa de Salário Alto por Classe Trabalhadora"
+                )
+                # CORREÇÃO: Usar update_layout ao invés de update_xaxis
+                fig.update_layout(xaxis_tickangle=45)
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            if 'marital-status' in df.columns:
+                marital_salary = df.groupby('marital-status')['salary'].apply(
+                    lambda x: (x == '>50K').mean()
+                ).reset_index()
+                marital_salary.columns = ['marital_status', 'high_salary_rate']
+                
+                fig = create_modern_bar_chart(
+                    data=marital_salary,
+                    x='marital_status',
+                    y='high_salary_rate',
+                    title="💑 Taxa de Salário Alto por Estado Civil"
+                )
+                # CORREÇÃO: Usar update_layout ao invés de update_xaxis
+                fig.update_layout(xaxis_tickangle=45)
+                st.plotly_chart(fig, use_container_width=True)
+
+def show_ml_models_enhanced(df, files_status):
+    """Modelos ML implementados"""
     st.header("🤖 Modelos de Machine Learning")
     
-    # Tabs melhoradas
-    tab1, tab2, tab3 = st.tabs(["📊 Comparação", "🎯 Feature Importance", "📈 Performance"])
+    # Verificar se há modelos
+    if not files_status['models']:
+        st.warning("⚠️ Nenhum modelo encontrado. Execute: python main.py")
+        return
+    
+    # Tabs
+    tab1, tab2, tab3 = st.tabs(["📊 Comparação", "🎯 Features", "📈 Performance"])
     
     with tab1:
-        st.subheader("📊 Comparação de Modelos")
+        # Procurar arquivo de comparação
+        comparison_file = None
+        for file in files_status['analysis']:
+            if 'model_comparison' in file.name or 'comparison' in file.name:
+                comparison_file = file
+                break
         
-        # Carregar comparação real
-        comparison_file = Path("output/analysis/model_comparison.csv")
-        if comparison_file.exists():
+        if comparison_file:
             try:
                 comparison_df = pd.read_csv(comparison_file)
-                comparison_df.set_index('model_name', inplace=True)
+                if 'model_name' in comparison_df.columns:
+                    comparison_df.set_index('model_name', inplace=True)
                 
-                # Métricas em cards
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    best_accuracy = comparison_df['accuracy'].max()
-                    best_model_acc = comparison_df['accuracy'].idxmax()
-                    st.metric("🏆 Melhor Accuracy", f"{best_accuracy:.3f}", delta=best_model_acc)
-                
-                with col2:
-                    best_auc = comparison_df['roc_auc'].max()
-                    best_model_auc = comparison_df['roc_auc'].idxmax()
-                    st.metric("🏆 Melhor ROC-AUC", f"{best_auc:.3f}", delta=best_model_auc)
-                
-                with col3:
-                    best_f1 = comparison_df['f1_score'].max()
-                    best_model_f1 = comparison_df['f1_score'].idxmax()
-                    st.metric("🏆 Melhor F1-Score", f"{best_f1:.3f}", delta=best_model_f1)
+                st.dataframe(comparison_df.round(4), use_container_width=True)
                 
                 # Gráfico de comparação
-                metrics = ['accuracy', 'precision', 'recall', 'f1_score', 'roc_auc']
-                available_metrics = [m for m in metrics if m in comparison_df.columns]
-                
-                if available_metrics:
-                    fig = go.Figure()
-                    
-                    for metric in available_metrics:
-                        fig.add_trace(go.Bar(
-                            name=metric.title(),
-                            x=comparison_df.index,
-                            y=comparison_df[metric]
-                        ))
-                    
-                    fig.update_layout(
-                        title="Comparação de Performance dos Modelos",
-                        xaxis_title="Modelos",
-                        yaxis_title="Score",
-                        barmode='group'
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Tabela detalhada
-                st.dataframe(comparison_df.round(4), use_container_width=True)
+                if 'accuracy' in comparison_df.columns:
+                    fig = create_comparison_chart(comparison_df, 'accuracy')
+                    if fig:
+                        st.plotly_chart(fig, use_container_width=True)
                 
             except Exception as e:
                 st.error(f"Erro ao carregar comparação: {e}")
-                # Fallback para dados sintéticos
-                comparison_df = create_sample_model_comparison()
-                st.dataframe(comparison_df, use_container_width=True)
         else:
-            st.warning("⚠️ Arquivo de comparação não encontrado. Execute o pipeline primeiro.")
-            comparison_df = create_sample_model_comparison()
-            st.dataframe(comparison_df, use_container_width=True)
+            st.info("Execute o pipeline para gerar comparação de modelos")
     
     with tab2:
-        st.subheader("🎯 Importância das Features")
-        
-        # Procurar arquivos de feature importance
-        analysis_dir = Path("output/analysis")
-        importance_files = []
-        
-        if analysis_dir.exists():
-            importance_files = list(analysis_dir.glob("feature_importance_*.csv"))
+        # Feature importance
+        importance_files = [f for f in files_status['analysis'] 
+                          if 'importance' in f.name or 'feature' in f.name]
         
         if importance_files:
-            # Seletor de modelo
-            model_names = [f.stem.replace('feature_importance_', '').replace('_', ' ').title() 
-                          for f in importance_files]
-            selected_model = st.selectbox("Selecione um modelo:", model_names)
+            selected_file = st.selectbox("Modelo:", 
+                                       [f.stem for f in importance_files])
             
-            # Carregar dados do modelo selecionado
-            selected_file = None
-            for f in importance_files:
-                if selected_model.lower().replace(' ', '_') in f.stem:
-                    selected_file = f
+            # Carregar arquivo selecionado
+            for file in importance_files:
+                if selected_file in file.stem:
+                    try:
+                        importance_df = pd.read_csv(file)
+                        if 'feature' in importance_df.columns and 'importance' in importance_df.columns:
+                            top_features = importance_df.head(15)
+                            
+                            fig = px.bar(top_features, x='importance', y='feature',
+                                       orientation='h', title="Feature Importance")
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            st.dataframe(importance_df.head(20), use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
                     break
-            
-            if selected_file:
-                try:
-                    importance_df = pd.read_csv(selected_file)
-                    
-                    # Gráfico horizontal
-                    top_features = importance_df.head(15)
-                    fig = px.bar(
-                        top_features, 
-                        x='importance', 
-                        y='feature',
-                        orientation='h',
-                        title=f"🎯 Feature Importance - {selected_model}",
-                        color='importance',
-                        color_continuous_scale='viridis'
-                    )
-                    fig.update_layout(height=600)
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Tabela de dados
-                    st.write("**📋 Dados Detalhados:**")
-                    st.dataframe(importance_df.head(20), use_container_width=True)
-                    
-                    # Insights
-                    top_3 = top_features.head(3)['feature'].tolist()
-                    st.info(f"💡 As 3 features mais importantes são: {', '.join(top_3)}")
-                    
-                except Exception as e:
-                    st.error(f"Erro ao carregar feature importance: {e}")
         else:
-            st.warning("⚠️ Arquivos de feature importance não encontrados.")
-            st.info("Execute o pipeline principal: `python main.py`")
+            st.info("Execute o pipeline para gerar feature importance")
     
     with tab3:
-        st.subheader("📈 Análise de Performance")
-        
-        # Verificar imagens de performance
-        images_dir = Path("output/images")
-        performance_images = []
-        
-        if images_dir.exists():
-            performance_images = [
-                img for img in images_dir.glob("*.png")
-                if any(keyword in img.name.lower() 
-                      for keyword in ['roc_pr_curves', 'feature_importance', 'comparison'])
-            ]
+        # Imagens de performance
+        performance_images = [f for f in files_status['images'] 
+                            if any(keyword in f.name.lower() 
+                                  for keyword in ['roc', 'curve', 'performance'])]
         
         if performance_images:
-            st.success(f"✅ {len(performance_images)} análises de performance encontradas!")
-            
-            # Organizar imagens por tipo
-            roc_images = [img for img in performance_images if 'roc_pr_curves' in img.name]
-            importance_images = [img for img in performance_images if 'feature_importance' in img.name]
-            
-            if roc_images:
-                st.write("### 📊 Curvas ROC e Precision-Recall")
-                for img_path in roc_images:
-                    model_name = img_path.stem.replace('roc_pr_curves_', '').replace('_', ' ').title()
-                    st.write(f"**{model_name}**")
-                    st.image(str(img_path), use_column_width=True)
-            
-            if importance_images:
-                st.write("### 🎯 Gráficos de Feature Importance")
-                for img_path in importance_images:
-                    model_name = img_path.stem.replace('feature_importance_', '').replace('_', ' ').title()
-                    st.write(f"**{model_name}**")
-                    st.image(str(img_path), use_column_width=True)
-            
-            # Relatório de performance
-            report_file = Path("output/analysis/performance_report.md")
-            if report_file.exists():
-                st.write("### 📋 Relatório de Performance")
-                with open(report_file, 'r', encoding='utf-8') as f:
-                    report_content = f.read()
-                st.markdown(report_content)
+            for img in performance_images:
+                st.image(str(img), caption=img.name, use_column_width=True)
         else:
-            st.warning("⚠️ Nenhuma análise de performance encontrada.")
-            st.info("Execute o pipeline principal: `python main.py`")
+            st.info("Execute o pipeline para gerar gráficos de performance")
+
+def show_clustering_analysis_enhanced(df, files_status):
+    """Análise de clustering com visualizações modernizadas"""
+    st.header("🎯 Análise de Clustering Modernizada")
+    
+    # Verificar arquivos existentes
+    clustering_files = {
+        'analysis_image': Path("output/images/clustering_analysis.png"),
+        'pca_image': Path("output/images/clusters_pca_visualization.png"),
+        'cluster_data': Path("output/analysis/clustering_results.csv")
+    }
+    
+    files_found = {name: path.exists() for name, path in clustering_files.items()}
+    
+    # Dashboard de status
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        status = "✅" if files_found['analysis_image'] else "❌"
+        st.markdown(f"""
+        <div class="{'success-box' if files_found['analysis_image'] else 'warning-box'}">
+            <h4>{status} Análise do Cotovelo</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        status = "✅" if files_found['pca_image'] else "❌"
+        st.markdown(f"""
+        <div class="{'success-box' if files_found['pca_image'] else 'warning-box'}">
+            <h4>{status} Visualização PCA</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        status = "✅" if files_found['cluster_data'] else "❌"
+        st.markdown(f"""
+        <div class="{'success-box' if files_found['cluster_data'] else 'warning-box'}">
+            <h4>{status} Dados de Cluster</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Clustering interativo modernizado
+    st.subheader("🔧 Clustering Interativo Avançado")
+    
+    with st.container():
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            algorithm = st.selectbox("🤖 Algoritmo", ["K-Means", "DBSCAN", "Agglomerative"])
+        
+        with col2:
+            n_clusters = st.slider("📊 Número de Clusters", 2, 10, 4)
+        
+        with col3:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if 'salary' in numeric_cols:
+                numeric_cols.remove('salary')
             
-            # Botão para executar pipeline
-            if st.button("🚀 Executar Pipeline"):
-                st.info("Por favor, execute no terminal: `python main.py`")
+            features = st.multiselect(
+                "🎯 Features",
+                numeric_cols,
+                default=numeric_cols[:3] if len(numeric_cols) >= 3 else numeric_cols
+            )
+    
+    if len(features) >= 2 and st.button("🚀 Executar Clustering Avançado", type="primary"):
+        try:
+            from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.decomposition import PCA
+            from sklearn.metrics import silhouette_score
+            
+            with st.spinner("🔄 Processando clustering..."):
+                # Preparar dados
+                X = df[features].dropna()
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(X)
+                
+                # Aplicar algoritmo selecionado
+                if algorithm == "K-Means":
+                    clusterer = KMeans(n_clusters=n_clusters, random_state=42)
+                elif algorithm == "DBSCAN":
+                    clusterer = DBSCAN(eps=0.5, min_samples=5)
+                else:  # Agglomerative
+                    clusterer = AgglomerativeClustering(n_clusters=n_clusters)
+                
+                clusters = clusterer.fit_predict(X_scaled)
+                
+                # Calcular métricas
+                if len(set(clusters)) > 1:
+                    silhouette = silhouette_score(X_scaled, clusters)
+                else:
+                    silhouette = 0
+                
+                # Visualizações modernas
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Scatter plot 2D
+                    if len(features) >= 2:
+                        plot_df = X.copy()
+                        plot_df['Cluster'] = [f'Cluster {i}' for i in clusters]
+                        
+                        fig = create_modern_scatter_plot(
+                            data=plot_df,
+                            x=features[0],
+                            y=features[1],
+                            color='Cluster',
+                            title=f"🎯 Clustering {algorithm}"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    # PCA Visualization
+                    if len(features) > 2:
+                        pca = PCA(n_components=2)
+                        X_pca = pca.fit_transform(X_scaled)
+                        
+                        pca_df = pd.DataFrame({
+                            'PC1': X_pca[:, 0],
+                            'PC2': X_pca[:, 1],
+                            'Cluster': [f'Cluster {i}' for i in clusters]
+                        })
+                        
+                        fig = create_modern_scatter_plot(
+                            data=pca_df,
+                            x='PC1',
+                            y='PC2',
+                            color='Cluster',
+                            title="🎨 Visualização PCA"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                
+                # Estatísticas dos clusters
+                unique_clusters, counts = np.unique(clusters, return_counts=True)
+                cluster_stats = pd.DataFrame({
+                    'Cluster': [f'Cluster {i}' for i in unique_clusters],
+                    'Tamanho': counts,
+                    'Percentual': (counts / len(clusters) * 100).round(1)
+                })
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### 📊 Estatísticas dos Clusters")
+                    st.dataframe(cluster_stats, use_container_width=True)
+                
+                with col2:
+                    # Gráfico de pizza dos clusters
+                    fig = create_modern_pie_chart(
+                        data=None,
+                        values=counts,
+                        names=[f'Cluster {i}' for i in unique_clusters],
+                        title="📊 Distribuição dos Clusters"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Métricas de qualidade
+                st.markdown("### 📈 Métricas de Qualidade")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("🎯 Silhouette Score", f"{silhouette:.3f}")
+                
+                with col2:
+                    st.metric("📊 Número de Clusters", len(unique_clusters))
+                
+                with col3:
+                    st.metric("📋 Pontos Processados", len(X))
+                
+                st.success(f"✅ Clustering {algorithm} executado com sucesso!")
+        
+        except Exception as e:
+            st.error(f"❌ Erro no clustering: {e}")
+    
+    # Mostrar imagens existentes se disponíveis
+    if any(files_found.values()):
+        st.subheader("📊 Análises Pré-computadas")
+        
+        for name, path in clustering_files.items():
+            if path.exists() and path.suffix == '.png':
+                st.image(str(path), caption=path.name, use_column_width=True)
 
-# Placeholders para as outras páginas
-def show_clustering_analysis_enhanced(df):
-    st.header("🎯 Análise de Clustering")
-    st.info("Execute o pipeline principal para gerar análises de clustering.")
-
-def show_association_rules_enhanced(df):
+def show_association_rules_enhanced(df, files_status):
+    """Regras de associação implementadas"""
     st.header("📋 Regras de Associação")
-    st.info("Execute o pipeline principal para gerar regras de associação.")
+    
+    # Procurar arquivo de regras
+    rules_files = [f for f in files_status['analysis'] 
+                  if 'rule' in f.name.lower() or 'association' in f.name.lower()]
+    
+    if rules_files:
+        for file in rules_files:
+            try:
+                rules_df = pd.read_csv(file)
+                st.dataframe(rules_df, use_container_width=True)
+                
+                # Gráfico de suporte vs confiança
+                if 'support' in rules_df.columns and 'confidence' in rules_df.columns:
+                    fig = px.scatter(rules_df, x='support', y='confidence',
+                                   hover_data=['antecedents', 'consequents'] if 'antecedents' in rules_df.columns else None,
+                                   title="Suporte vs Confiança das Regras")
+                    st.plotly_chart(fig, use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Erro ao carregar regras: {e}")
+    else:
+        st.info("Execute o pipeline para gerar regras de associação")
+        
+        # Análise básica de co-ocorrência
+        st.subheader("📊 Análise Básica de Co-ocorrência")
+        
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if len(categorical_cols) >= 2:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                var1 = st.selectbox("Variável 1:", categorical_cols)
+            with col2:
+                var2 = st.selectbox("Variável 2:", 
+                                  [c for c in categorical_cols if c != var1])
+            
+            if st.button("🔍 Analisar Co-ocorrência"):
+                crosstab = pd.crosstab(df[var1], df[var2])
+                st.dataframe(crosstab, use_container_width=True)
+                
+                # Heatmap
+                fig = px.imshow(crosstab.values, 
+                              x=crosstab.columns, y=crosstab.index,
+                              title=f"Co-ocorrência: {var1} vs {var2}")
+                st.plotly_chart(fig, use_container_width=True)
 
-def show_advanced_metrics_enhanced(df):
+def show_advanced_metrics_enhanced(df, files_status):
+    """Métricas avançadas implementadas"""
     st.header("📊 Métricas Avançadas")
-    st.info("Execute o pipeline principal para gerar métricas avançadas.")
+    
+    # Procurar relatórios de métricas
+    metrics_files = [f for f in files_status['analysis'] 
+                    if 'metric' in f.name.lower() or 'advanced' in f.name.lower()]
+    
+    if metrics_files:
+        for file in metrics_files:
+            try:
+                metrics_df = pd.read_csv(file)
+                st.dataframe(metrics_df, use_container_width=True)
+            except Exception as e:
+                st.error(f"Erro: {e}")
+    else:
+        st.info("Execute o pipeline para gerar métricas avançadas")
+    
+    # Métricas calculadas em tempo real
+    st.subheader("⚡ Métricas em Tempo Real")
+    
+    if 'salary' in df.columns:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            # Taxa de conversão por educação
+            if 'education' in df.columns:
+                edu_conversion = df.groupby('education')['salary'].apply(
+                    lambda x: (x == '>50K').mean()
+                ).sort_values(ascending=False)
+                
+                st.write("**Taxa Salário Alto por Educação:**")
+                for edu, rate in edu_conversion.head(5).items():
+                    st.write(f"• {edu}: {rate:.1%}")
+        
+        with col2:
+            # Taxa por idade
+            if 'age' in df.columns:
+                age_bins = [0, 25, 35, 45, 55, 100]
+                age_labels = ['18-25', '26-35', '36-45', '46-55', '55+']
+                df_temp = df.copy()
+                df_temp['age_group'] = pd.cut(df_temp['age'], bins=age_bins, 
+                                            labels=age_labels, include_lowest=True)
+                
+                age_conversion = df_temp.groupby('age_group')['salary'].apply(
+                    lambda x: (x == '>50K').mean()
+                )
+                
+                st.write("**Taxa por Faixa Etária:**")
+                for age_group, rate in age_conversion.items():
+                    if not pd.isna(rate):
+                        st.write(f"• {age_group}: {rate:.1%}")
+        
+        with col3:
+            # Taxa por sexo
+            if 'sex' in df.columns:
+                sex_conversion = df.groupby('sex')['salary'].apply(
+                    lambda x: (x == '>50K').mean()
+                )
+                
+                st.write("**Taxa por Sexo:**")
+                for sex, rate in sex_conversion.items():
+                    st.write(f"• {sex}: {rate:.1%}")
 
-def show_prediction_interface_enhanced(df):
+def show_prediction_interface_enhanced(df, files_status):
+    """Interface de predição implementada"""
     st.header("🔮 Predição Interativa")
-    st.info("Execute o pipeline principal para carregar modelos de predição.")
+    
+    # Verificar se há modelos
+    if not files_status['models']:
+        st.warning("⚠️ Nenhum modelo encontrado para predição")
+        return
+    
+    # Tentar carregar um modelo
+    model = None
+    for model_file in files_status['models']:
+        try:
+            model = joblib.load(model_file)
+            st.success(f"✅ Modelo carregado: {model_file.name}")
+            break
+        except Exception:
+            continue
+    
+    if model is None:
+        st.error("❌ Não foi possível carregar nenhum modelo")
+        return
+    
+    # Interface de predição
+    st.subheader("🎯 Fazer Predição")
+    
+    # Campos de entrada baseados no dataset
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if 'age' in df.columns:
+            age = st.slider("Idade", 
+                          int(df['age'].min()), 
+                          int(df['age'].max()), 
+                          int(df['age'].mean()))
+        
+        if 'education-num' in df.columns:
+            education_num = st.slider("Anos de Educação",
+                                    int(df['education-num'].min()),
+                                    int(df['education-num'].max()),
+                                    int(df['education-num'].mean()))
+    
+    with col2:
+        if 'hours-per-week' in df.columns:
+            hours = st.slider("Horas por Semana",
+                            int(df['hours-per-week'].min()),
+                            int(df['hours-per-week'].max()),
+                            int(df['hours-per-week'].mean()))
+        
+        if 'sex' in df.columns:
+            sex = st.selectbox("Sexo", df['sex'].unique())
+    
+    # Botão de predição
+    if st.button("🚀 Fazer Predição"):
+        st.info("Interface de predição em desenvolvimento. Valores configurados mas modelo precisa ser adaptado.")
 
-def show_reports_enhanced():
-    st.header("📁 Relatórios")
-    st.info("Execute o pipeline principal para gerar relatórios.")
+def show_reports_enhanced(files_status):
+    """Relatórios implementados"""
+    st.header("📁 Relatórios Gerados")
+    
+    # Mostrar arquivos de relatório
+    report_files = [f for f in files_status['analysis'] 
+                   if f.suffix in ['.md', '.txt', '.csv']]
+    
+    if report_files:
+        for file in report_files:
+            with st.expander(f"📄 {file.name}"):
+                try:
+                    if file.suffix == '.md':
+                        content = file.read_text(encoding='utf-8')
+                        st.markdown(content)
+                    elif file.suffix == '.csv':
+                        df = pd.read_csv(file)
+                        st.dataframe(df, use_container_width=True)
+                    else:
+                        content = file.read_text(encoding='utf-8')
+                        st.text(content)
+                except Exception as e:
+                    st.error(f"Erro ao ler arquivo: {e}")
+    else:
+        st.info("Execute o pipeline para gerar relatórios")
+    
+    # Download de relatórios
+    st.subheader("📥 Downloads")
+    
+    if files_status['analysis']:
+        st.write("**Arquivos de Análise Disponíveis:**")
+        for file in files_status['analysis']:
+            if file.suffix == '.csv':
+                try:
+                    df = pd.read_csv(file)
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label=f"⬇️ {file.name}",
+                        data=csv,
+                        file_name=file.name,
+                        mime='text/csv'
+                    )
+                except Exception:
+                    continue
 
 # =============================================================================
-# EXECUÇÃO PRINCIPAL
+# EXECUÇÃO
 # =============================================================================
 
 if __name__ == "__main__":

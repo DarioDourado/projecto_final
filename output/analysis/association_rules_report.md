@@ -1,6 +1,6 @@
 # RELATÓRIO DE REGRAS DE ASSOCIAÇÃO
 
-**Data:** 2025-06-10 11:59
+**Data:** 2025-06-10 12:16
 **Total de regras:** 4343
 
 ## TOP 5 REGRAS:
@@ -30,8 +30,8 @@
 - Lift: 0.889
 
 **Regra 33:**
-- SE: salary_<=50K
-- ENTÃO: edu_level_basico
-- Confiança: 0.519
+- SE: edu_level_basico
+- ENTÃO: salary_<=50K
+- Confiança: 0.870
 - Lift: 1.146
 

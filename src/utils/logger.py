@@ -1,39 +1,53 @@
-"""Sistema de logging com emojis - Extraído do projeto_salario.py"""
+"""Sistema de logging configurado"""
 
 import logging
 import sys
-import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
-class EmojiFormatter(logging.Formatter):
-    """Formatter personalizado com emojis"""
-    
-    emoji_mapping = {
-        'DEBUG': '🔍',
-        'INFO': 'ℹ️',
-        'WARNING': '⚠️',
-        'ERROR': '❌',
-        'CRITICAL': '🚨',
-        'SUCCESS': '✅'
-    }
-    
-    def format(self, record):
-        emoji = self.emoji_mapping.get(record.levelname, 'ℹ️')
-        return f"{emoji} {record.getMessage()}"
-
-def setup_logging():
+def setup_logging(level=logging.INFO):
     """Configurar sistema de logging"""
+    
+    # Criar diretório de logs
+    logs_dir = Path("output/logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Nome do arquivo de log com timestamp
+    log_filename = logs_dir / f"pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    
+    # Configurar formatação
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Configurar handler para arquivo
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
+    
+    # Configurar handler para console
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_formatter = logging.Formatter('%(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+    
+    # Configurar logger principal
     logger = logging.getLogger()
+    logger.setLevel(level)
     
-    # Limpar handlers existentes para evitar duplicação
-    logger.handlers = []
+    # Remover handlers existentes para evitar duplicatas
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
     
-    # Handler para console
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(EmojiFormatter())
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    # Adicionar novos handlers
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    # Configurar loggers específicos para reduzir ruído
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
+    logging.getLogger('PIL').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
     
     return logger
 

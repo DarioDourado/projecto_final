@@ -10,23 +10,28 @@ from pathlib import Path
 # Adicionar src ao path
 sys.path.append(str(Path(__file__).parent / "src"))
 
+# Imports básicos
 from src.utils.logger import setup_logging
 from src.visualization.styles import setup_matplotlib_style
-from src.pipelines.data_pipeline import DataPipeline
-from src.pipelines.ml_pipeline import MLPipeline
-from src.pipelines.analysis_pipeline import AnalysisPipeline
-from src.pipelines.performance_pipeline import PerformancePipeline
-from src.pipelines.utils import check_data_structure
 
 class MasterPipeline:
     """Pipeline principal que coordena todos os outros pipelines"""
     
     def __init__(self):
         self.logger = setup_logging()
+        
+        # Import dos pipelines aqui para evitar imports circulares
+        from src.pipelines.data_pipeline import DataPipeline
+        from src.pipelines.ml_pipeline import MLPipeline
+        from src.pipelines.analysis_pipeline import AnalysisPipeline
+        from src.pipelines.performance_pipeline import PerformancePipeline
+        from src.pipelines.utils import check_data_structure
+        
         self.data_pipeline = DataPipeline()
         self.ml_pipeline = MLPipeline()
         self.analysis_pipeline = AnalysisPipeline()
         self.performance_pipeline = PerformancePipeline()
+        self.check_data_structure = check_data_structure
         
         # Resultados
         self.df = None
@@ -45,15 +50,23 @@ class MasterPipeline:
             self._setup()
             
             # 1. Pipeline de dados
+            logging.info("\n📊 PIPELINE DE DADOS")
+            logging.info("-" * 40)
             self.df = self.data_pipeline.run()
             
             # 2. Pipeline de ML
+            logging.info("\n🤖 PIPELINE DE ML")
+            logging.info("-" * 40)
             self.models, self.results = self.ml_pipeline.run(self.df)
             
             # 3. Pipeline de performance
+            logging.info("\n📈 PIPELINE DE PERFORMANCE")
+            logging.info("-" * 40)
             self.performance_pipeline.run(self.models, self.results, self.df)
             
             # 4. Pipelines de análise
+            logging.info("\n🎯 PIPELINE DE ANÁLISES")
+            logging.info("-" * 40)
             self.best_k = self.analysis_pipeline.run_clustering(self.df)
             self.rules = self.analysis_pipeline.run_association_rules(self.df)
             self.analysis_pipeline.run_advanced_metrics(self.df, self.results)
@@ -66,13 +79,19 @@ class MasterPipeline:
             
         except Exception as e:
             logging.error(f"❌ Erro durante execução: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
             raise
     
     def _setup(self):
         """Configurações iniciais"""
-        check_data_structure()
-        setup_matplotlib_style()
-        logging.info("✅ Configurações iniciais concluídas")
+        try:
+            self.check_data_structure()
+            setup_matplotlib_style()
+            logging.info("✅ Configurações iniciais concluídas")
+        except Exception as e:
+            logging.error(f"❌ Erro na configuração: {e}")
+            raise
     
     def _generate_final_report(self):
         """Gerar relatório final consolidado"""
@@ -80,7 +99,9 @@ class MasterPipeline:
         logging.info("📊 RELATÓRIO FINAL")
         logging.info("="*60)
         
-        logging.info(f"📊 Dataset: {len(self.df)} registos")
+        if self.df is not None:
+            logging.info(f"📊 Dataset: {len(self.df)} registos")
+        
         logging.info("🤖 Modelos treinados:")
         for name, result in self.results.items():
             accuracy = result.get('accuracy', 0)
@@ -124,8 +145,16 @@ class MasterPipeline:
 
 def main():
     """Função principal"""
-    pipeline = MasterPipeline()
-    pipeline.run()
+    try:
+        pipeline = MasterPipeline()
+        pipeline.run()
+    except Exception as e:
+        logging.error(f"❌ Erro crítico: {e}")
+        print(f"\n❌ ERRO: {e}")
+        print("\n💡 Soluções possíveis:")
+        print("  1. Verificar se o arquivo de dados existe: python setup_data_structure.py")
+        print("  2. Instalar dependências: pip install -r requirements.txt") 
+        print("  3. Verificar estrutura do projeto")
 
 if __name__ == "__main__":
     main()
