@@ -1,18 +1,18 @@
 # RELATÓRIO COMPARATIVO DE MODELOS
 
-**Data:** 2025-06-10 12:16
+**Data:** 2025-06-10 14:30
 
 ## 📊 Comparação de Métricas
 
 | Modelo | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
 |--------|----------|-----------|--------|----------|----------|
-| Random Forest | 0.8615 | 0.8153 | 0.5491 | 0.6562 | 0.9152 |
-| Logistic Regression | 0.8589 | 0.7471 | 0.6256 | 0.6810 | 0.9132 |
+| Random Forest | 0.8624 | 0.8022 | 0.5689 | 0.6657 | 0.9190 |
+| Logistic Regression | 0.8282 | 0.7261 | 0.4598 | 0.5631 | 0.8606 |
 
 ## 🏆 Melhor Modelo por Métrica
 
-- **Accuracy**: Random Forest (0.8615)
-- **Precision**: Random Forest (0.8153)
-- **Recall**: Logistic Regression (0.6256)
-- **F1_Score**: Logistic Regression (0.6810)
-- **Roc_Auc**: Random Forest (0.9152)
+- **Accuracy**: Random Forest (0.8624)
+- **Precision**: Random Forest (0.8022)
+- **Recall**: Random Forest (0.5689)
+- **F1_Score**: Random Forest (0.6657)
+- **Roc_Auc**: Random Forest (0.9190)
