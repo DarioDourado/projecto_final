@@ -1,6 +1,6 @@
 # RELATÓRIO DE REGRAS DE ASSOCIAÇÃO
 
-**Data:** 2025-06-10 15:22
+**Data:** 2025-06-10 16:03
 **Total de regras:** 4343
 
 ## TOP 5 REGRAS:

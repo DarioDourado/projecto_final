@@ -1,4 +1,13 @@
 # src/utils/__init__.py
 """Módulo de utilitários"""
 
-# Vazio - imports serão feitos diretamente pelos módulos que precisam
+"""
+🛠️ Módulo de Utilitários
+Ferramentas e sistemas auxiliares
+"""
+
+from .i18n import I18nSystem
+
+__all__ = [
+    'I18nSystem'
+]

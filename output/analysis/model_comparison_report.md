@@ -1,6 +1,6 @@
 # RELATÓRIO COMPARATIVO DE MODELOS
 
-**Data:** 2025-06-10 15:22
+**Data:** 2025-06-10 16:03
 
 ## 📊 Comparação de Métricas
 
