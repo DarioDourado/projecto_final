@@ -1,800 +1,1042 @@
-# projeto_salario.py
+"""
+Sistema Completo de Análise Salarial - Versão Académica Final
+Projeto de Data Science com análises supervisionadas e não supervisionadas
+"""
 
-# ================================================
-# 1. IMPORTAÇÃO DE BIBLIOTECAS
-# ================================================
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 import numpy as np
-import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 import logging
+from pathlib import Path
+from datetime import datetime
+import warnings
 
-# ================================================
-# 1.1. CONFIGURAÇÃO DE LOGGING
-# ================================================
-class EmojiFormatter(logging.Formatter):
-    """Formatter personalizado com emojis"""
-    
-    emoji_mapping = {
-        'DEBUG': '🔍',
-        'INFO': 'ℹ️',
-        'WARNING': '⚠️',
-        'ERROR': '❌',
-        'CRITICAL': '🚨',
-        'SUCCESS': '✅'
-    }
-    
-    def format(self, record):
-        emoji = self.emoji_mapping.get(record.levelname, 'ℹ️')
-        return f"{emoji} {record.getMessage()}"
+# Suprimir warnings desnecessários
+warnings.filterwarnings('ignore')
 
-# Aplicar o formatter personalizado
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-handler.setFormatter(EmojiFormatter())
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-# Remover handlers padrão para evitar duplicação
-logger.handlers = [handler]
-
-# ================================================
-# 1.2. FUNÇÕES DE LOGGING AUXILIARES (DEFINIR PRIMEIRO)
-# ================================================
-def log_success(message):
-    """Log com checkmark verde"""
-    logging.info(f"✅ {message}")
-
-def log_function_start(function_name):
-    """Log início de função"""
-    logging.info(f"🔄 Iniciando: {function_name}")
-
-def log_function_end(function_name):
-    """Log fim de função com sucesso"""
-    logging.info(f"✅ Concluído: {function_name}")
-
-def log_function(func):
-    """Decorator para logging de início e fim de função"""
-    def wrapper(*args, **kwargs):
-        logging.info(f"🔄 Iniciando: {func.__name__}")
-        result = func(*args, **kwargs)
-        logging.info(f"✅ Concluído: {func.__name__}")
-        return result
-    return wrapper
-
-def get_memory_usage(df):
-    """Calcular uso de memória do DataFrame"""
-    memory_usage = df.memory_usage(deep=True).sum()
-    return memory_usage / 1024 / 1024  # MB
-
-# ================================================
-# CONFIGURAÇÃO DE ESTILO MODERNO
-# ================================================
-
-# Configurar estilo moderno
-plt.style.use('default')
-sns.set_palette("husl")
-
-# Configuração global CORRIGIDA
-plt.rcParams.update({
-    # Figura
-    'figure.figsize': (12, 8),
-    'figure.dpi': 100,
-    'figure.facecolor': 'white',
-    'figure.edgecolor': 'none',
-    
-    # Eixos
-    'axes.facecolor': '#f8f9fa',
-    'axes.edgecolor': '#dee2e6',
-    'axes.linewidth': 1.2,
-    'axes.grid': True,
-    'axes.axisbelow': True,
-    'axes.labelsize': 12,
-    'axes.titlesize': 16,
-    'axes.titleweight': 'bold',
-    'axes.titlepad': 20,
-    
-    # Grid
-    'grid.color': '#e9ecef',
-    'grid.linestyle': '-',
-    'grid.linewidth': 0.8,
-    'grid.alpha': 0.7,
-    
-    # Texto - SEM FONTES PROBLEMÁTICAS
-    'font.family': ['DejaVu Sans', 'Arial', 'sans-serif'],
-    'font.size': 11,
-    'text.color': '#343a40',
-    
-    # Legendas
-    'legend.fontsize': 10,
-    'legend.frameon': True,
-    'legend.fancybox': True,
-    'legend.shadow': True,
-    'legend.framealpha': 0.9,
-    'legend.facecolor': 'white',
-    'legend.edgecolor': '#dee2e6',
-    
-    # Ticks
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
-    'xtick.color': '#6c757d',
-    'ytick.color': '#6c757d',
-    
-    # Cores
-    'patch.linewidth': 0.5,
-    'patch.facecolor': '#007bff',
-    'patch.edgecolor': '#0056b3',
-    
-    # Salvamento
-    'savefig.dpi': 300,
-    'savefig.facecolor': 'white',
-    'savefig.edgecolor': 'none',
-    'savefig.bbox': 'tight',
-    'savefig.pad_inches': 0.2
-})
-
-# Paleta de cores moderna
-MODERN_COLORS = {
-    'primary': '#007bff',
-    'secondary': '#6c757d', 
-    'success': '#28a745',
-    'danger': '#dc3545',
-    'warning': '#ffc107',
-    'info': '#17a2b8',
-    'light': '#f8f9fa',
-    'dark': '#343a40',
-    'gradient_blue': ['#667eea', '#764ba2'],
-    'gradient_sunset': ['#ff9a9e', '#fecfef'],
-    'gradient_ocean': ['#2196f3', '#21cbf3'],
-    'categorical': ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14']
-}
-
-# Função apply_modern_style CORRIGIDA
-def apply_modern_style(ax, title="", subtitle="", remove_spines=True):
-    """Aplicar estilo moderno consistente a um gráfico"""
-    
-    # Título principal (SEM EMOJIS PROBLEMÁTICOS)
-    if title:
-        ax.set_title(title, fontsize=16, fontweight='bold', 
-                    color=MODERN_COLORS['dark'], pad=20)
-    
-    # Subtítulo
-    if subtitle:
-        ax.text(0.5, 0.95, subtitle, transform=ax.transAxes, 
-               fontsize=11, color=MODERN_COLORS['secondary'],
-               ha='center', style='italic')
-    
-    # Remover spines desnecessários
-    if remove_spines:
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color(MODERN_COLORS['secondary'])
-        ax.spines['bottom'].set_color(MODERN_COLORS['secondary'])
-    
-    # Grid sutil
-    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.8)
-    ax.set_axisbelow(True)
-    
-    # Cor de fundo
-    ax.set_facecolor('#fafbfc')
-    
-    return ax
-
-# Função save_modern_plot CORRIGIDA
-def save_modern_plot(filename, dpi=300, transparent=False):
-    """Salvar gráfico com configurações modernas - SEM EMOJIS"""
-    try:
-        plt.tight_layout()
-        plt.savefig(f"imagens/{filename}", 
-                    dpi=dpi, 
-                    transparent=transparent,
-                    bbox_inches='tight',
-                    facecolor='white',
-                    edgecolor='none',
-                    pad_inches=0.2)
-        print(f"✓ Gráfico salvo: {filename}")  # Usar print simples
-        plt.close()
-    except Exception as e:
-        print(f"✗ Erro ao salvar {filename}: {e}")
-        plt.close()
-
-# ================================================
-# 2. CARREGAMENTO E LIMPEZA DOS DADOS
-# ================================================
-df = pd.read_csv('4-Carateristicas_salario.csv')
-df = df.drop_duplicates()
-logging.info("✅ Dados carregados e duplicatas removidas")
-
-logging.info("\nResumo dos dados:")
-logging.info(df.info())
-logging.info("\nDescrição estatística:")
-logging.info(df.describe())
-logging.info("\nValores ausentes por coluna:")
-logging.info(df.isnull().sum())
-
-# ================================================
-# 2.1. LIMPEZA E TIPAGEM DOS DADOS
-# ================================================
-logging.info("\n" + "="*60)
-logging.info("LIMPEZA E TIPAGEM DOS DADOS")
-logging.info("="*60)
-
-def limpar_e_tipar_dados(df):
-    """Limpar dados e aplicar tipagem correta às colunas"""
-    log_function_start("Limpeza e tipagem de dados")
-    
-    # Fazer cópia para não alterar o original
-    df_clean = df.copy()
-    
-    # Limpar espaços em branco em todas as colunas de texto
-    for col in df_clean.select_dtypes(include=['object']).columns:
-        df_clean[col] = df_clean[col].astype(str).str.strip()
-    
-    # Tratar valores '?' como NaN
-    df_clean = df_clean.replace('?', pd.NA)
-    
-    logging.info("🔧 Aplicando tipagem correta às colunas...")
-    
-    # ===== TIPAGEM DAS VARIÁVEIS NUMÉRICAS =====
-    numerical_columns_types = {
-        'age': 'int16',           # Idade: 17-90 (int16 suficiente)
-        'fnlwgt': 'int32',        # Peso final: pode ser grande (int32)
-        'education-num': 'int8',  # Anos educação: 1-16 (int8 suficiente)
-        'capital-gain': 'int32',  # Ganho capital: pode ser grande
-        'capital-loss': 'int16',  # Perda capital: menor range
-        'hours-per-week': 'int8'  # Horas semana: 1-99 (int8 suficiente)
-    }
-    
-    for col, dtype in numerical_columns_types.items():
-        if col in df_clean.columns:
-            try:
-                # Converter para numérico primeiro, depois para o tipo específico
-                df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
-                df_clean[col] = df_clean[col].astype(dtype)
-                logging.info(f"✅ {col}: convertido para {dtype}")
-            except Exception as e:
-                logging.warning(f"⚠️ Erro ao converter {col}: {e}")
-    
-    # ===== TIPAGEM DAS VARIÁVEIS CATEGÓRICAS =====
-    categorical_columns = [
-        'workclass', 'education', 'marital-status', 'occupation',
-        'relationship', 'race', 'sex', 'native-country', 'salary'
+# Configuração de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('salary_analysis.log', encoding='utf-8')
     ]
+)
+
+# =============================================================================
+# 1. PROCESSAMENTO DE DADOS
+# =============================================================================
+
+class DataProcessor:
+    """Processador completo de dados salariais"""
     
-    for col in categorical_columns:
-        if col in df_clean.columns:
-            try:
-                # Converter para categoria para economizar memória
-                df_clean[col] = df_clean[col].astype('category')
-                logging.info(f"✅ {col}: convertido para category")
-            except Exception as e:
-                logging.warning(f"⚠️ Erro ao converter {col}: {e}")
-    
-    # ===== VALIDAÇÃO DE RANGES =====
-    logging.info("\n🔍 Validando ranges das variáveis...")
-    
-    # Validar idade
-    if 'age' in df_clean.columns:
-        invalid_age = (df_clean['age'] < 17) | (df_clean['age'] > 100)
-        if invalid_age.any():
-            logging.warning(f"⚠️ Encontradas {invalid_age.sum()} idades inválidas (fora de 17-100)")
-            df_clean.loc[invalid_age, 'age'] = pd.NA
-
-    # Validar anos de educação
-    if 'education-num' in df_clean.columns:
-        invalid_edu = (df_clean['education-num'] < 1) | (df_clean['education-num'] > 16)
-        if invalid_edu.any():
-            logging.warning(f"⚠️ Encontrados {invalid_edu.sum()} anos de educação inválidos (fora de 1-16)")
-            df_clean.loc[invalid_edu, 'education-num'] = pd.NA
-
-    # Validar horas por semana
-    if 'hours-per-week' in df_clean.columns:
-        invalid_hours = (df_clean['hours-per-week'] < 1) | (df_clean['hours-per-week'] > 99)
-        if invalid_hours.any():
-            logging.warning(f"⚠️ Encontradas {invalid_hours.sum()} horas/semana inválidas (fora de 1-99)")
-            df_clean.loc[invalid_hours, 'hours-per-week'] = pd.NA
-
-    # Validar ganhos/perdas de capital (não podem ser negativos)
-    for col in ['capital-gain', 'capital-loss']:
-        if col in df_clean.columns:
-            invalid_capital = df_clean[col] < 0
-            if invalid_capital.any():
-                logging.warning(f"⚠️ Encontrados {invalid_capital.sum()} valores negativos em {col}")
-                df_clean.loc[invalid_capital, col] = 0
-    
-    log_function_end("Limpeza e tipagem de dados")
-    return df_clean, numerical_columns_types, categorical_columns
-
-# Mostrar uso de memória antes da otimização
-memory_before = get_memory_usage(df)
-logging.info(f"💾 Uso de memória antes da otimização: {memory_before:.2f} MB")
-
-# Aplicar limpeza e tipagem
-df, numerical_columns_types, categorical_columns = limpar_e_tipar_dados(df)
-logging.info("✅ Limpeza e tipagem de dados concluída")
-
-# Mostrar uso de memória após otimização
-memory_after = get_memory_usage(df)
-logging.info(f"💾 Uso de memória após otimização: {memory_after:.2f} MB")
-logging.info(f"📉 Redução: {((memory_before - memory_after) / memory_before * 100):.1f}%")
-
-logging.info("\n✅ Dados limpos e tipados com sucesso!")
-logging.info("\nInfo dos tipos de dados:")
-logging.info(df.dtypes)
-
-# Verificar valores ausentes após limpeza
-missing_values = df.isnull().sum()
-if missing_values.any():
-    logging.warning(f"\n⚠️ Valores ausentes após limpeza:")
-    logging.warning(missing_values[missing_values > 0])
-
-# Agora podemos usar numerical_columns_types.keys() sem erro
-numerical_columns = list(numerical_columns_types.keys())
-
-# ================================================
-# 2.2. REMOÇÃO DE OUTLIERS
-# ================================================
-from scipy.stats import zscore
-
-@log_function
-def remover_outliers(df, columns, threshold=3):
-    """Remove outliers com base no Z-score"""
-    df_filtered = df.copy()
-    outliers_removed = 0
-    
-    for col in columns:
-        if col in df_filtered.columns and pd.api.types.is_numeric_dtype(df_filtered[col]):
-            # Calcular Z-scores apenas para valores não nulos
-            valid_mask = df_filtered[col].notna()
-            if valid_mask.sum() > 0:  # Se há valores válidos
-                z_scores = np.abs(zscore(df_filtered.loc[valid_mask, col]))
-                outlier_mask = z_scores > threshold
-                
-                # Contar outliers antes de remover
-                outliers_count = outlier_mask.sum()
-                outliers_removed += outliers_count
-                
-                # Remover outliers
-                outlier_indices = df_filtered.loc[valid_mask].index[outlier_mask]
-                df_filtered = df_filtered.drop(outlier_indices)
-                
-                logging.info(f"🔍 {col}: {outliers_count} outliers removidos (Z-score > {threshold})")
-    
-    logging.info(f"📊 Total de registros removidos: {outliers_removed}")
-    logging.info(f"📊 Registros restantes: {len(df_filtered)} de {len(df)} originais")
-    
-    return df_filtered
-
-# Aplicar remoção de outliers
-logging.info("\n" + "="*60)
-logging.info("REMOÇÃO DE OUTLIERS")
-logging.info("="*60)
-
-# Verificar quais colunas numéricas existem no DataFrame
-existing_numerical_cols = [col for col in numerical_columns if col in df.columns]
-logging.info(f"Colunas numéricas encontradas: {existing_numerical_cols}")
-
-if existing_numerical_cols:
-    df_before_outliers = len(df)
-    df = remover_outliers(df, existing_numerical_cols)
-    df_after_outliers = len(df)
-    
-    reduction_percent = ((df_before_outliers - df_after_outliers) / df_before_outliers) * 100
-    logging.info(f"📉 Redução do dataset: {reduction_percent:.1f}%")
-    
-    # Verificar se ainda temos dados suficientes
-    if len(df) < 1000:
-        logging.warning("⚠️ ATENÇÃO: Dataset muito pequeno após remoção de outliers!")
-        logging.warning("Considere usar um threshold maior ou métodos alternativos.")
-    else:
-        logging.info("✅ Outliers removidos com sucesso")
-else:
-    logging.warning("⚠️ Nenhuma coluna numérica encontrada para remoção de outliers")
-
-# ================================================
-# FUNÇÕES DE VISUALIZAÇÃO MODERNA (DEFINIR ANTES DO USO)
-# ================================================
-
-def create_modern_histogram(data, column, title="", bins=30):
-    """Criar histograma moderno com estatísticas - SEM EMOJIS PROBLEMÁTICOS"""
-    
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Dados válidos
-    valid_data = data[column].dropna()
-    
-    if len(valid_data) == 0:
-        ax.text(0.5, 0.5, f'Sem dados válidos para {column}', 
-               ha='center', va='center', transform=ax.transAxes)
-        return fig, ax
-    
-    # Histograma principal
-    n, bins_edges, patches = ax.hist(valid_data, bins=bins, 
-                                   color=MODERN_COLORS['primary'], 
-                                   alpha=0.7, edgecolor='white', linewidth=1.2)
-    
-    # Gradiente nas barras
-    for i, patch in enumerate(patches):
-        height_ratio = n[i] / max(n) if max(n) > 0 else 0
-        color_intensity = 0.3 + 0.7 * height_ratio
-        patch.set_facecolor(plt.cm.Blues(color_intensity))
-        patch.set_edgecolor('white')
-    
-    # Curva de densidade suavizada
-    try:
-        from scipy import stats
-        density = stats.gaussian_kde(valid_data)
-        xs = np.linspace(valid_data.min(), valid_data.max(), 200)
-        density_values = density(xs)
+    def __init__(self):
+        self.df = None
+        self.processed_df = None
         
-        # Escalar densidade para ajustar ao histograma
-        density_scaled = density_values * len(valid_data) * (bins_edges[1] - bins_edges[0])
-        
-        ax2 = ax.twinx()
-        ax2.plot(xs, density_scaled, color=MODERN_COLORS['danger'], 
-                 linewidth=3, alpha=0.8, label='Densidade')
-        ax2.set_ylabel('Densidade', color=MODERN_COLORS['danger'])
-        ax2.tick_params(axis='y', labelcolor=MODERN_COLORS['danger'])
-        ax2.spines['right'].set_color(MODERN_COLORS['danger'])
-    except Exception as e:
-        print(f"Aviso: Não foi possível adicionar curva de densidade para {column}: {e}")
-    
-    # Estatísticas no gráfico
-    mean_val = valid_data.mean()
-    median_val = valid_data.median()
-    std_val = valid_data.std()
-    
-    # Linhas de referência
-    ax.axvline(mean_val, color=MODERN_COLORS['success'], 
-               linestyle='--', linewidth=2, alpha=0.8, label=f'Media: {mean_val:.1f}')
-    ax.axvline(median_val, color=MODERN_COLORS['warning'], 
-               linestyle='--', linewidth=2, alpha=0.8, label=f'Mediana: {median_val:.1f}')
-    
-    # Caixa de estatísticas (SEM EMOJIS PROBLEMÁTICOS)
-    stats_text = f"""Estatisticas:
-    • Media: {mean_val:.2f}
-    • Mediana: {median_val:.2f}
-    • Desvio Padrao: {std_val:.2f}
-    • Min: {valid_data.min():.2f}
-    • Max: {valid_data.max():.2f}
-    • Registros: {len(valid_data):,}"""
-    
-    ax.text(0.98, 0.98, stats_text, transform=ax.transAxes,
-           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
-           verticalalignment='top', horizontalalignment='right',
-           fontsize=10, fontfamily='monospace')
-    
-    # Aplicar estilo moderno
-    apply_modern_style(ax, title=title or f"Distribuicao de {column}")
-    
-    # Labels
-    ax.set_xlabel(column.replace('-', ' ').replace('_', ' ').title(), 
-                 fontsize=12, fontweight='bold')
-    ax.set_ylabel('Frequencia', fontsize=12, fontweight='bold')
-    
-    # Legenda
-    ax.legend(loc='upper left', framealpha=0.9)
-    
-    return fig, ax
-
-def create_modern_barplot(data, column, title="", top_n=15, horizontal=True):
-    """Criar gráfico de barras moderno - SEM EMOJIS PROBLEMÁTICOS"""
-    
-    # Preparar dados
-    value_counts = data[column].value_counts().head(top_n)
-    
-    if len(value_counts) == 0:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.text(0.5, 0.5, f'Sem dados para {column}', 
-               ha='center', va='center', transform=ax.transAxes)
-        return fig, ax
-    
-    if horizontal:
-        fig, ax = plt.subplots(figsize=(12, max(8, len(value_counts) * 0.6)))
-        
-        # Criar gradiente de cores
-        colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(value_counts)))
-        
-        bars = ax.barh(range(len(value_counts)), value_counts.values, 
-                      color=colors, edgecolor='white', linewidth=1)
-        
-        # Adicionar valores nas barras
-        for i, (bar, value) in enumerate(zip(bars, value_counts.values)):
-            width = bar.get_width()
-            ax.text(width + value * 0.01, bar.get_y() + bar.get_height()/2,
-                   f'{value:,}', ha='left', va='center', fontweight='bold')
-        
-        # Configurar eixos
-        ax.set_yticks(range(len(value_counts)))
-        ax.set_yticklabels(value_counts.index, fontsize=10)
-        ax.set_xlabel('Frequencia', fontsize=12, fontweight='bold')
-        
-        # Inverter ordem (maior no topo)
-        ax.invert_yaxis()
-        
-    else:
-        fig, ax = plt.subplots(figsize=(max(12, len(value_counts) * 0.8), 8))
-        
-        colors = plt.cm.plasma(np.linspace(0.2, 0.8, len(value_counts)))
-        
-        bars = ax.bar(range(len(value_counts)), value_counts.values,
-                     color=colors, edgecolor='white', linewidth=1)
-        
-        # Adicionar valores nas barras
-        for bar, value in zip(bars, value_counts.values):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2, height + value * 0.01,
-                   f'{value:,}', ha='center', va='bottom', fontweight='bold')
-        
-        # Configurar eixos
-        ax.set_xticks(range(len(value_counts)))
-        ax.set_xticklabels(value_counts.index, rotation=45, ha='right')
-        ax.set_ylabel('Frequencia', fontsize=12, fontweight='bold')
-    
-    # Percentuais
-    total = value_counts.sum()
-    percentages = (value_counts / total * 100).round(1)
-    
-    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
-    info_text = f"""Top {len(value_counts)} categorias:
-    • Total registros: {total:,}
-    • Categorias unicas: {data[column].nunique()}
-    • Categoria mais comum: {value_counts.index[0]} ({percentages.iloc[0]:.1f}%)"""
-    
-    ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
-           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                    edgecolor=MODERN_COLORS['info'], alpha=0.9),
-           verticalalignment='top', fontsize=10, fontfamily='monospace')
-    
-    # Aplicar estilo moderno
-    apply_modern_style(ax, title=title or f"Distribuicao de {column}")
-    
-    return fig, ax
-
-def create_modern_correlation_matrix(data, title="Matriz de Correlacao"):
-    """Criar matriz de correlação moderna - CORRIGIDA"""
-    
-    # Selecionar apenas colunas numéricas
-    numeric_data = data.select_dtypes(include=[np.number])
-    
-    if numeric_data.empty:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.text(0.5, 0.5, 'Nenhuma variavel numerica encontrada', 
-               ha='center', va='center', transform=ax.transAxes)
-        return fig, ax
-    
-    correlation_matrix = numeric_data.corr()
-    
-    fig, ax = plt.subplots(figsize=(14, 12))
-    
-    # Criar máscara para triângulo superior
-    mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
-    
-    # Heatmap com estilo moderno
-    sns.heatmap(correlation_matrix, 
-                mask=mask,
-                annot=True, 
-                cmap='RdBu_r',
-                center=0,
-                square=True,
-                fmt='.2f',
-                cbar_kws={"shrink": 0.8, "label": "Correlacao"},
-                linewidths=0.5,
-                linecolor='white',
-                ax=ax)
-    
-    # Estilo moderno
-    ax.set_title(title, fontsize=18, fontweight='bold', pad=30)
-    
-    # Rotacionar labels
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-    plt.setp(ax.get_yticklabels(), rotation=0)
-    
-    # CORREÇÃO: Usar gt() e lt() em vez de between()
-    strong_corr_mask = correlation_matrix.abs() > 0.7
-    moderate_corr_mask = (correlation_matrix.abs() > 0.3) & (correlation_matrix.abs() <= 0.7)
-    
-    strong_corr = strong_corr_mask.sum().sum() - len(correlation_matrix)  # Subtrair diagonal
-    moderate_corr = moderate_corr_mask.sum().sum()
-    
-    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
-    info_text = f"""Analise de Correlacao:
-    • Correlacoes fortes (|r| > 0.7): {strong_corr}
-    • Correlacoes moderadas (0.3 < |r| < 0.7): {moderate_corr}
-    • Variaveis analisadas: {len(correlation_matrix)}"""
-    
-    ax.text(1.02, 0.98, info_text, transform=ax.transAxes,
-           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
-           verticalalignment='top', fontsize=10, fontfamily='monospace')
-    
-    return fig, ax
-
-def create_modern_feature_importance(importance_data, feature_names, title="Importancia das Features", top_n=20):
-    """Criar gráfico moderno de importância das features - SEM EMOJIS PROBLEMÁTICOS"""
-    
-    # Preparar dados
-    feature_df = pd.DataFrame({
-        'feature': feature_names,
-        'importance': importance_data
-    }).sort_values('importance', ascending=True).tail(top_n)
-    
-    fig, ax = plt.subplots(figsize=(12, max(8, len(feature_df) * 0.4)))
-    
-    # Gradiente de cores baseado na importância
-    norm = plt.Normalize(feature_df['importance'].min(), feature_df['importance'].max())
-    colors = plt.cm.viridis(norm(feature_df['importance']))
-    
-    bars = ax.barh(range(len(feature_df)), feature_df['importance'], 
-                   color=colors, edgecolor='white', linewidth=1.2)
-    
-    # Adicionar valores nas barras
-    for i, (bar, importance) in enumerate(zip(bars, feature_df['importance'])):
-        width = bar.get_width()
-        ax.text(width + importance * 0.01, bar.get_y() + bar.get_height()/2,
-               f'{importance:.3f}', ha='left', va='center', 
-               fontweight='bold', fontsize=9)
-    
-    # Configurar eixos
-    ax.set_yticks(range(len(feature_df)))
-    ax.set_yticklabels(feature_df['feature'], fontsize=10)
-    ax.set_xlabel('Importancia', fontsize=12, fontweight='bold')
-    
-    # Destacar top 3
-    for i in range(max(0, len(bars)-3), len(bars)):
-        bars[i].set_edgecolor(MODERN_COLORS['danger'])
-        bars[i].set_linewidth(2)
-    
-    # Informações estatísticas
-    total_importance = feature_df['importance'].sum()
-    top3_importance = feature_df['importance'].tail(3).sum()
-    
-    # Caixa de informações (SEM EMOJIS PROBLEMÁTICOS)
-    info_text = f"""Analise de Importancia:
-    • Top 3 features: {top3_importance/total_importance*100:.1f}% da importancia
-    • Feature mais importante: {feature_df.iloc[-1]['feature']}
-    • Importancia maxima: {feature_df['importance'].max():.3f}
-    • Features analisadas: {len(feature_df)}"""
-    
-    ax.text(0.98, 0.02, info_text, transform=ax.transAxes,
-           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                    edgecolor=MODERN_COLORS['success'], alpha=0.9),
-           verticalalignment='bottom', horizontalalignment='right',
-           fontsize=10, fontfamily='monospace')
-    
-    # Aplicar estilo moderno
-    apply_modern_style(ax, title=title)
-    
-    return fig, ax
-
-def create_modern_confusion_matrix(y_true, y_pred, model_name="Modelo"):
-    """Criar matriz de confusão moderna - SEM EMOJIS PROBLEMÁTICOS"""
-    from sklearn.metrics import confusion_matrix
-    
-    cm = confusion_matrix(y_true, y_pred)
-    
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Heatmap da matriz de confusão
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                square=True, linewidths=0.5,
-                cbar_kws={"shrink": 0.8},
-                annot_kws={"size": 14, "weight": "bold"},
-                ax=ax)
-    
-    # Labels
-    ax.set_xlabel('Predicao', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Real', fontsize=12, fontweight='bold')
-    ax.set_title(f'Matriz de Confusao - {model_name}', fontsize=16, fontweight='bold', pad=20)
-    
-    # Configurar ticks
-    ax.set_xticklabels(['≤ 50K', '> 50K'])
-    ax.set_yticklabels(['≤ 50K', '> 50K'])
-    
-    # Calcular métricas
-    tn, fp, fn, tp = cm.ravel() if cm.size == 4 else (cm[0,0], 0, 0, cm[1,1])
-    
-    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    
-    # Caixa de métricas (SEM EMOJIS PROBLEMÁTICOS)
-    metrics_text = f"""Metricas:
-    • Accuracy: {accuracy:.3f}
-    • Precision: {precision:.3f}
-    • Recall: {recall:.3f}
-    • F1-Score: {f1:.3f}
-    
-    Matriz:
-    • VP: {tp}  |  FP: {fp}
-    • FN: {fn}  |  VN: {tn}"""
-    
-    ax.text(1.05, 0.5, metrics_text, transform=ax.transAxes,
-           bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                    edgecolor=MODERN_COLORS['primary'], alpha=0.9),
-           verticalalignment='center', fontsize=10, fontfamily='monospace')
-    
-    return fig, ax
-
-# ================================================
-# 3. ANÁLISE EXPLORATÓRIA DE DADOS (EDA) - VERSÃO CORRIGIDA
-# ================================================
-logging.info("\n" + "="*60)
-logging.info("GERANDO VISUALIZAÇÕES MODERNAS")
-logging.info("="*60)
-
-# Criar diretório para imagens se não existir
-os.makedirs("imagens", exist_ok=True)
-
-try:
-    # 1. Histogramas modernos para variáveis numéricas
-    logging.info("📊 Gerando histogramas modernos...")
-    numerical_cols = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
-    for col in numerical_cols:
-        if col in df.columns:
-            logging.info(f"  📈 Processando {col}")
-            try:
-                fig, ax = create_modern_histogram(df, col, title=f"Distribuicao de {col.replace('-', ' ').title()}")
-                save_modern_plot(f"hist_{col}.png")
-            except Exception as e:
-                logging.warning(f"Erro ao gerar histograma para {col}: {e}")
-
-    # 2. Gráficos categóricos modernos
-    logging.info("📊 Gerando gráficos categóricos modernos...")
-    categorical_cols = ['workclass', 'education', 'marital-status', 'occupation', 
-                        'relationship', 'race', 'sex', 'native-country']
-
-    for col in categorical_cols:
-        if col in df.columns and df[col].nunique() < 50:
-            logging.info(f"  📈 Processando {col}")
-            try:
-                fig, ax = create_modern_barplot(df, col, title=f"Distribuicao de {col.replace('-', ' ').title()}")
-                save_modern_plot(f"{col}_distribution.png")
-            except Exception as e:
-                logging.warning(f"Erro ao gerar gráfico para {col}: {e}")
-
-    # 3. Distribuição da variável target
-    logging.info("📊 Gerando distribuição da variável target...")
-    try:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        salary_counts = df['salary'].value_counts()
-        
-        if len(salary_counts) > 1:
-            colors = [MODERN_COLORS['success'], MODERN_COLORS['danger']]
-            wedges, texts, autotexts = ax.pie(salary_counts.values, 
-                                             labels=['≤ 50K', '> 50K'] if 0 in salary_counts.index else salary_counts.index,
-                                             autopct='%1.1f%%',
-                                             colors=colors,
-                                             explode=(0.05, 0.05),
-                                             shadow=True,
-                                             startangle=90)
+    def load_data(self, file_path='4-Carateristicas_salario.csv'):
+        """Carregar dados do CSV"""
+        try:
+            if Path(file_path).exists():
+                self.df = pd.read_csv(file_path)
+            elif Path(f"data/raw/{file_path}").exists():
+                self.df = pd.read_csv(f"data/raw/{file_path}")
+            else:
+                raise FileNotFoundError(f"Arquivo {file_path} não encontrado")
             
-            for autotext in autotexts:
-                autotext.set_color('white')
-                autotext.set_fontweight('bold')
-                autotext.set_fontsize(12)
+            logging.info(f"✅ Dados carregados: {self.df.shape}")
+            return self.df
+        except Exception as e:
+            logging.error(f"❌ Erro ao carregar dados: {e}")
+            raise
+    
+    def clean_data(self):
+        """Limpeza e preprocessamento dos dados"""
+        if self.df is None:
+            raise ValueError("Carregue os dados primeiro com load_data()")
+        
+        logging.info("🧹 Iniciando limpeza dos dados...")
+        
+        # Remover espaços em branco
+        for col in self.df.select_dtypes(include=['object']).columns:
+            self.df[col] = self.df[col].astype(str).str.strip()
+        
+        # Substituir '?' por NaN
+        self.df = self.df.replace('?', np.nan)
+        
+        # Remover linhas com muitos valores ausentes
+        missing_threshold = 0.5
+        self.df = self.df.dropna(thresh=len(self.df.columns) * missing_threshold)
+        
+        # Tratar valores ausentes específicos
+        if 'workclass' in self.df.columns:
+            self.df['workclass'].fillna('Unknown', inplace=True)
+        if 'occupation' in self.df.columns:
+            self.df['occupation'].fillna('Unknown', inplace=True)
+        if 'native-country' in self.df.columns:
+            self.df['native-country'].fillna('United-States', inplace=True)
+        
+        logging.info(f"✅ Dados limpos: {self.df.shape}")
+        return self.df
+    
+    def create_features(self):
+        """Criar novas features"""
+        logging.info("🔧 Criando novas features...")
+        
+        # Feature de faixa etária
+        if 'age' in self.df.columns:
+            self.df['age_group'] = pd.cut(self.df['age'], 
+                                        bins=[0, 25, 35, 45, 55, 100],
+                                        labels=['muito_jovem', 'jovem', 'adulto', 'maduro', 'senior'])
+        
+        # Feature de horas trabalhadas
+        if 'hours-per-week' in self.df.columns:
+            self.df['work_intensity'] = pd.cut(self.df['hours-per-week'],
+                                             bins=[0, 35, 45, 60, 100],
+                                             labels=['part_time', 'normal', 'overtime', 'workaholic'])
+        
+        # Feature de ganho/perda de capital
+        if 'capital-gain' in self.df.columns and 'capital-loss' in self.df.columns:
+            self.df['net_capital'] = self.df['capital-gain'] - self.df['capital-loss']
+            self.df['has_capital_gain'] = (self.df['capital-gain'] > 0).astype(int)
+            self.df['has_capital_loss'] = (self.df['capital-loss'] > 0).astype(int)
+        
+        # Feature de educação combinada
+        if 'education' in self.df.columns and 'education-num' in self.df.columns:
+            self.df['education_level'] = pd.cut(self.df['education-num'],
+                                              bins=[0, 9, 12, 16, 20],
+                                              labels=['basico', 'medio', 'superior', 'pos_graduacao'])
+        
+        logging.info("✅ Novas features criadas")
+        return self.df
+
+# =============================================================================
+# 2. ANÁLISE EXPLORATÓRIA
+# =============================================================================
+
+class ExploratoryAnalysis:
+    """Análise exploratória completa dos dados"""
+    
+    def __init__(self, df):
+        self.df = df
+        self.setup_style()
+    
+    def setup_style(self):
+        """Configurar estilo dos gráficos"""
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
+        
+    def generate_basic_statistics(self):
+        """Estatísticas descritivas básicas"""
+        logging.info("📊 Gerando estatísticas descritivas...")
+        
+        # Criar diretório de saída
+        output_dir = Path("output/analysis")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Estatísticas numéricas
+        numeric_stats = self.df.describe()
+        numeric_stats.to_csv(output_dir / "numeric_statistics.csv")
+        
+        # Estatísticas categóricas
+        categorical_cols = self.df.select_dtypes(include=['object']).columns
+        categorical_stats = {}
+        
+        for col in categorical_cols:
+            categorical_stats[col] = {
+                'unique_values': self.df[col].nunique(),
+                'most_frequent': self.df[col].mode().iloc[0] if not self.df[col].mode().empty else 'N/A',
+                'missing_values': self.df[col].isnull().sum()
+            }
+        
+        categorical_df = pd.DataFrame(categorical_stats).T
+        categorical_df.to_csv(output_dir / "categorical_statistics.csv")
+        
+        # Distribuição da variável target
+        if 'salary' in self.df.columns:
+            salary_dist = self.df['salary'].value_counts(normalize=True)
+            logging.info(f"📈 Distribuição salarial: {salary_dist.to_dict()}")
+        
+        logging.info("✅ Estatísticas básicas geradas")
+    
+    def create_visualizations(self):
+        """Criar visualizações exploratórias"""
+        logging.info("🎨 Gerando visualizações exploratórias...")
+        
+        # Criar diretório de imagens
+        images_dir = Path("output/images")
+        images_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 1. Distribuição da variável target
+        if 'salary' in self.df.columns:
+            fig, axes = plt.subplots(2, 2, figsize=(15, 12))
             
-            ax.set_title('Distribuicao de Salarios', fontsize=16, fontweight='bold', pad=20)
+            # Distribuição de salário
+            self.df['salary'].value_counts().plot(kind='bar', ax=axes[0,0])
+            axes[0,0].set_title('Distribuição de Salário')
+            axes[0,0].set_ylabel('Frequência')
+            
+            # Salário por idade
+            if 'age' in self.df.columns:
+                sns.boxplot(data=self.df, x='salary', y='age', ax=axes[0,1])
+                axes[0,1].set_title('Distribuição de Idade por Salário')
+            
+            # Salário por sexo
+            if 'sex' in self.df.columns:
+                salary_sex = pd.crosstab(self.df['sex'], self.df['salary'], normalize='index')
+                salary_sex.plot(kind='bar', ax=axes[1,0])
+                axes[1,0].set_title('Distribuição de Salário por Sexo')
+                axes[1,0].legend(title='Salário')
+            
+            # Salário por educação
+            if 'education' in self.df.columns:
+                top_education = self.df['education'].value_counts().head(8).index
+                education_salary = self.df[self.df['education'].isin(top_education)]
+                salary_edu = pd.crosstab(education_salary['education'], education_salary['salary'], normalize='index')
+                salary_edu.plot(kind='bar', ax=axes[1,1])
+                axes[1,1].set_title('Distribuição de Salário por Educação (Top 8)')
+                axes[1,1].tick_params(axis='x', rotation=45)
+            
+            plt.tight_layout()
+            plt.savefig(images_dir / "exploratory_analysis.png", dpi=300, bbox_inches='tight')
+            plt.close()
+        
+        # 2. Matriz de correlação
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            plt.figure(figsize=(12, 10))
+            correlation_matrix = self.df[numeric_cols].corr()
+            sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)
+            plt.title('Matriz de Correlação - Variáveis Numéricas')
+            plt.tight_layout()
+            plt.savefig(images_dir / "correlation_matrix.png", dpi=300, bbox_inches='tight')
+            plt.close()
+        
+        logging.info("✅ Visualizações exploratórias criadas")
+
+# =============================================================================
+# 3. MODELAGEM DE MACHINE LEARNING
+# =============================================================================
+
+class ModelTrainer:
+    """Treinamento e avaliação de modelos de ML"""
+    
+    def __init__(self):
+        self.models = {}
+        self.results = {}
+        self.preprocessor = None
+    
+    def prepare_data(self, df):
+        """Preparar dados para modelagem"""
+        logging.info("🔧 Preparando dados para modelagem...")
+        
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
+        from sklearn.compose import ColumnTransformer
+        from sklearn.pipeline import Pipeline
+        
+        # Separar features e target
+        X = df.drop('salary', axis=1)
+        y = df['salary']
+        
+        # Identificar colunas numéricas e categóricas
+        numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_features = X.select_dtypes(include=['object']).columns.tolist()
+        
+        # Criar preprocessador
+        self.preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', StandardScaler(with_mean=False), numeric_features),  # with_mean=False para evitar erro com matrizes esparsas
+                ('cat', OneHotEncoder(drop='first', handle_unknown='ignore'), categorical_features)
+            ])
+        
+        # Dividir dados
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
+        
+        logging.info(f"✅ Dados preparados: {X_train.shape} treino, {X_test.shape} teste")
+        
+        return X_train, X_test, y_train, y_test
+    
+    def train_models(self, X_train, X_test, y_train, y_test):
+        """Treinar múltiplos modelos"""
+        logging.info("🤖 Treinando modelos de ML...")
+        
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.svm import SVC
+        from sklearn.pipeline import Pipeline
+        from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+        import joblib
+        
+        # Definir modelos
+        models_config = {
+            'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42),
+            'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
+            'SVM': SVC(probability=True, random_state=42)
+        }
+        
+        # Treinar cada modelo
+        for name, model in models_config.items():
+            logging.info(f"  🔄 Treinando {name}...")
+            
+            # Criar pipeline
+            pipeline = Pipeline([
+                ('preprocessor', self.preprocessor),
+                ('classifier', model)
+            ])
+            
+            # Treinar
+            pipeline.fit(X_train, y_train)
+            
+            # Predizer
+            y_pred = pipeline.predict(X_test)
+            y_pred_proba = pipeline.predict_proba(X_test)
+            
+            # Calcular métricas
+            accuracy = accuracy_score(y_test, y_pred)
+            roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
+            
+            # Armazenar resultados
+            self.models[name] = pipeline
+            self.results[name] = {
+                'accuracy': accuracy,
+                'roc_auc': roc_auc,
+                'y_test': y_test,
+                'y_pred': y_pred,
+                'y_pred_proba': y_pred_proba,
+                'classification_report': classification_report(y_test, y_pred)
+            }
+            
+            logging.info(f"  ✅ {name}: Accuracy={accuracy:.4f}, ROC-AUC={roc_auc:.4f}")
+        
+        # Salvar modelos
+        self._save_models()
+        
+        return self.models, self.results
+    
+    def _save_models(self):
+        """Salvar modelos treinados"""
+        import joblib
+        
+        models_dir = Path("data/processed")
+        models_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Salvar preprocessador
+        joblib.dump(self.preprocessor, models_dir / "preprocessor.joblib")
+        
+        # Salvar cada modelo
+        for name, model in self.models.items():
+            filename = f"model_{name.lower().replace(' ', '_')}.joblib"
+            joblib.dump(model, models_dir / filename)
+        
+        logging.info("💾 Modelos salvos em data/processed/")
+
+# =============================================================================
+# 4. ANÁLISE DE CLUSTERING
+# =============================================================================
+
+class SalaryClusteringAnalysis:
+    """Análise de clustering para segmentação de perfis salariais"""
+    
+    def __init__(self):
+        self.kmeans_model = None
+        self.dbscan_model = None
+        self.pca = None
+        self.scaler = None
+        
+    def perform_kmeans_analysis(self, X, max_clusters=8):
+        """Análise K-Means com método do cotovelo"""
+        logging.info("🔍 Iniciando análise K-Means...")
+        
+        from sklearn.cluster import KMeans
+        from sklearn.metrics import silhouette_score
+        from sklearn.preprocessing import StandardScaler
+        
+        # Tratar matriz esparsa
+        if hasattr(X, 'sparse') and X.sparse:
+            X_scaled = X.toarray()
+            self.scaler = StandardScaler()
+            X_scaled = self.scaler.fit_transform(X_scaled)
         else:
-            ax.bar(['Classe Unica'], [len(df)], color=MODERN_COLORS['primary'])
-            ax.set_title('Distribuicao de Salarios (Apenas uma classe)', fontsize=16, fontweight='bold')
+            try:
+                self.scaler = StandardScaler()
+                X_scaled = self.scaler.fit_transform(X)
+            except ValueError as e:
+                if "sparse" in str(e).lower():
+                    self.scaler = StandardScaler(with_mean=False)
+                    X_scaled = self.scaler.fit_transform(X)
+                else:
+                    raise e
+        
+        inertias = []
+        silhouette_scores = []
+        
+        for k in range(2, max_clusters + 1):
+            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+            kmeans.fit(X_scaled)
+            
+            inertias.append(kmeans.inertia_)
+            silhouette_scores.append(silhouette_score(X_scaled, kmeans.labels_))
+            
+            logging.info(f"  📊 K={k}: Inércia={kmeans.inertia_:.2f}, Silhouette={silhouette_scores[-1]:.3f}")
+        
+        # Gráfico do cotovelo e silhouette
+        self._plot_clustering_analysis(range(2, max_clusters + 1), inertias, silhouette_scores)
+        
+        # Escolher melhor k
+        best_k = range(2, max_clusters + 1)[np.argmax(silhouette_scores)]
+        logging.info(f"✅ Melhor número de clusters: {best_k} (Silhouette: {max(silhouette_scores):.3f})")
+        
+        # Treinar modelo final
+        self.kmeans_model = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+        clusters = self.kmeans_model.fit_predict(X_scaled)
+        
+        return clusters, best_k
+    
+    def _plot_clustering_analysis(self, k_range, inertias, silhouette_scores):
+        """Plotar análise do cotovelo e silhouette"""
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        
+        # Método do cotovelo
+        ax1.plot(k_range, inertias, 'bo-', linewidth=2, markersize=8)
+        ax1.set_xlabel('Número de Clusters')
+        ax1.set_ylabel('Inércia')
+        ax1.set_title('Método do Cotovelo')
+        ax1.grid(True, alpha=0.3)
+        
+        # Análise silhouette
+        ax2.plot(k_range, silhouette_scores, 'ro-', linewidth=2, markersize=8)
+        ax2.set_xlabel('Número de Clusters')
+        ax2.set_ylabel('Silhouette Score')
+        ax2.set_title('Análise Silhouette')
+        ax2.grid(True, alpha=0.3)
+        
+        # Marcar melhor k
+        best_k_idx = np.argmax(silhouette_scores)
+        best_k = k_range[best_k_idx]
+        ax2.axvline(best_k, color='green', linestyle='--', alpha=0.7, label=f'Melhor K={best_k}')
+        ax2.legend()
+        
+        plt.tight_layout()
+        
+        # Salvar
+        images_dir = Path("output/images")
+        images_dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(images_dir / "clustering_analysis.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        logging.info("📈 Gráficos de análise de clustering salvos")
+    
+    def visualize_clusters_pca(self, X, clusters, target=None):
+        """Visualizar clusters com PCA 2D"""
+        logging.info("🎨 Gerando visualizações PCA dos clusters...")
+        
+        from sklearn.decomposition import PCA
+        
+        # Aplicar PCA
+        self.pca = PCA(n_components=2, random_state=42)
+        if hasattr(X, 'toarray'):
+            X_pca = self.pca.fit_transform(X.toarray())
+        else:
+            X_pca = self.pca.fit_transform(X)
+        
+        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        
+        # Clusters
+        scatter1 = axes[0].scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, 
+                                  cmap='viridis', alpha=0.7, s=50)
+        axes[0].set_title('Clusters K-Means')
+        axes[0].set_xlabel(f'PC1 ({self.pca.explained_variance_ratio_[0]:.1%} variância)')
+        axes[0].set_ylabel(f'PC2 ({self.pca.explained_variance_ratio_[1]:.1%} variância)')
+        plt.colorbar(scatter1, ax=axes[0])
+        
+        # Target real (se disponível)
+        if target is not None:
+            target_encoded = (target == '>50K').astype(int) if hasattr(target, 'str') else target
+            scatter2 = axes[1].scatter(X_pca[:, 0], X_pca[:, 1], c=target_encoded, 
+                                      cmap='RdYlBu', alpha=0.7, s=50)
+            axes[1].set_title('Classes Reais (Salário)')
+            axes[1].set_xlabel(f'PC1 ({self.pca.explained_variance_ratio_[0]:.1%} variância)')
+            axes[1].set_ylabel(f'PC2 ({self.pca.explained_variance_ratio_[1]:.1%} variância)')
+            plt.colorbar(scatter2, ax=axes[1])
+        
+        plt.tight_layout()
+        
+        images_dir = Path("output/images")
+        plt.savefig(images_dir / "clusters_pca_visualization.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        logging.info("📈 Visualizações PCA dos clusters salvas")
 
-        save_modern_plot("salary_distribution.png")
-    except Exception as e:
-        logging.warning(f"Erro ao gerar distribuição de salários: {e}")
+# =============================================================================
+# 5. REGRAS DE ASSOCIAÇÃO
+# =============================================================================
 
-    # 4. Matriz de correlação moderna
-    logging.info("📊 Gerando matriz de correlação moderna...")
+class AssociationRulesAnalysis:
+    """Análise de regras de associação para padrões salariais"""
+    
+    def __init__(self):
+        self.rules = None
+        self.frequent_itemsets = None
+    
+    def prepare_transaction_data(self, df):
+        """Preparar dados para análise de associação"""
+        logging.info("🔧 Preparando dados para análise de associação...")
+        
+        # Verificar se mlxtend está disponível
+        try:
+            from mlxtend.frequent_patterns import apriori, association_rules
+            from mlxtend.preprocessing import TransactionEncoder
+        except ImportError:
+            logging.warning("⚠️ mlxtend não disponível. Execute: pip install mlxtend")
+            return []
+        
+        # Discretizar variáveis numéricas
+        df_discrete = df.copy()
+        
+        # Idade em faixas
+        if 'age' in df.columns:
+            df_discrete['age_group'] = pd.cut(df['age'], 
+                                            bins=[0, 30, 40, 50, 100], 
+                                            labels=['jovem', 'adulto', 'maduro', 'senior'])
+        
+        # Horas em faixas
+        if 'hours-per-week' in df.columns:
+            df_discrete['hours_group'] = pd.cut(df['hours-per-week'], 
+                                              bins=[0, 35, 45, 100], 
+                                              labels=['part_time', 'full_time', 'overtime'])
+        
+        # Educação em faixas
+        if 'education-num' in df.columns:
+            df_discrete['education_level'] = pd.cut(df['education-num'], 
+                                                  bins=[0, 9, 12, 16, 20], 
+                                                  labels=['basico', 'medio', 'superior', 'pos_grad'])
+        
+        # Criar transações
+        transactions = []
+        for _, row in df_discrete.iterrows():
+            transaction = []
+            
+            # Adicionar características categóricas disponíveis
+            categorical_features = [
+                ('workclass', 'workclass'),
+                ('education', 'education'), 
+                ('marital-status', 'marital'),
+                ('occupation', 'occupation'),
+                ('sex', 'sex'),
+                ('age_group', 'age'),
+                ('hours_group', 'hours'),
+                ('education_level', 'edu_level'),
+                ('salary', 'salary')
+            ]
+            
+            for col, prefix in categorical_features:
+                if col in row and pd.notna(row[col]):
+                    transaction.append(f"{prefix}_{row[col]}")
+            
+            # Adicionar apenas se temos items suficientes
+            if len(transaction) >= 3:
+                transactions.append(transaction)
+        
+        logging.info(f"✅ {len(transactions)} transações preparadas")
+        return transactions
+    
+    def find_association_rules(self, transactions, min_support=0.03, min_confidence=0.5):
+        """Encontrar regras de associação"""
+        try:
+            from mlxtend.frequent_patterns import apriori, association_rules
+            from mlxtend.preprocessing import TransactionEncoder
+        except ImportError:
+            logging.error("❌ mlxtend necessário para regras de associação")
+            return pd.DataFrame()
+        
+        if not transactions:
+            return pd.DataFrame()
+        
+        logging.info("🔍 Buscando regras de associação...")
+        
+        try:
+            # Codificar transações
+            te = TransactionEncoder()
+            te_ary = te.fit(transactions).transform(transactions)
+            df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+            
+            logging.info(f"  📊 Dataset codificado: {df_encoded.shape}")
+            
+            # Encontrar itens frequentes
+            self.frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
+            
+            if self.frequent_itemsets.empty:
+                logging.warning(f"⚠️ Nenhum itemset frequente encontrado com suporte >= {min_support}")
+                return pd.DataFrame()
+            
+            logging.info(f"  📊 {len(self.frequent_itemsets)} itemsets frequentes encontrados")
+            
+            # Gerar regras
+            self.rules = association_rules(self.frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+            
+            if self.rules.empty:
+                logging.warning(f"⚠️ Nenhuma regra encontrada com confiança >= {min_confidence}")
+                return pd.DataFrame()
+            
+            # Filtrar regras relacionadas com salário
+            salary_rules = self.rules[
+                self.rules['consequents'].astype(str).str.contains('salary_') |
+                self.rules['antecedents'].astype(str).str.contains('salary_')
+            ]
+            
+            logging.info(f"✅ {len(self.rules)} regras totais, {len(salary_rules)} relacionadas a salário")
+            
+            # Salvar análise
+            self._save_rules_analysis(salary_rules)
+            
+            return salary_rules.sort_values('lift', ascending=False)
+            
+        except Exception as e:
+            logging.error(f"❌ Erro na análise de associação: {e}")
+            return pd.DataFrame()
+    
+    def _save_rules_analysis(self, rules):
+        """Salvar análise das regras"""
+        output_dir = Path("output/analysis")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        if not rules.empty:
+            # Salvar CSV
+            rules.to_csv(output_dir / "association_rules_salary.csv", index=False)
+            
+            # Criar relatório
+            report = []
+            report.append("# RELATÓRIO DE REGRAS DE ASSOCIAÇÃO\n\n")
+            report.append(f"**Data:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+            report.append(f"**Total de regras:** {len(rules)}\n\n")
+            
+            # Top 5 regras
+            top_rules = rules.head(5)
+            report.append("## TOP 5 REGRAS:\n\n")
+            
+            for idx, rule in top_rules.iterrows():
+                antecedents = ", ".join(list(rule['antecedents']))
+                consequents = ", ".join(list(rule['consequents']))
+                
+                report.append(f"**Regra {idx + 1}:**\n")
+                report.append(f"- SE: {antecedents}\n")
+                report.append(f"- ENTÃO: {consequents}\n")
+                report.append(f"- Confiança: {rule['confidence']:.3f}\n")
+                report.append(f"- Lift: {rule['lift']:.3f}\n\n")
+            
+            # Salvar relatório
+            with open(output_dir / "association_rules_report.md", 'w', encoding='utf-8') as f:
+                f.writelines(report)
+        
+        logging.info("📊 Análise de regras de associação salva")
+
+# =============================================================================
+# 6. MÉTRICAS AVANÇADAS
+# =============================================================================
+
+class AdvancedMetrics:
+    """Métricas avançadas para avaliação rigorosa"""
+    
+    def __init__(self):
+        self.metrics_summary = {}
+        self.business_kpis = {}
+    
+    def calculate_comprehensive_metrics(self, y_true, y_pred, y_pred_proba, model_name="Model"):
+        """Calcular métricas abrangentes"""
+        from sklearn.metrics import (
+            accuracy_score, precision_score, recall_score, f1_score,
+            roc_auc_score, precision_recall_curve, auc, roc_curve, confusion_matrix
+        )
+        
+        # Converter para binário se necessário
+        if hasattr(y_true, 'iloc') and isinstance(y_true.iloc[0], str):
+            y_true_binary = (y_true == '>50K').astype(int)
+        else:
+            y_true_binary = y_true
+            
+        if isinstance(y_pred[0], str):
+            y_pred_binary = (y_pred == '>50K').astype(int)
+        else:
+            y_pred_binary = y_pred
+        
+        # Calcular métricas
+        metrics = {
+            'model_name': model_name,
+            'accuracy': accuracy_score(y_true_binary, y_pred_binary),
+            'precision': precision_score(y_true_binary, y_pred_binary),
+            'recall': recall_score(y_true_binary, y_pred_binary),
+            'f1_score': f1_score(y_true_binary, y_pred_binary),
+            'roc_auc': roc_auc_score(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba)
+        }
+        
+        # Curva Precision-Recall
+        precision, recall, _ = precision_recall_curve(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba)
+        metrics['pr_auc'] = auc(recall, precision)
+        
+        # Especificidade
+        tn, fp, fn, tp = confusion_matrix(y_true_binary, y_pred_binary).ravel()
+        metrics['specificity'] = tn / (tn + fp) if (tn + fp) > 0 else 0
+        
+        self.metrics_summary[model_name] = metrics
+        
+        # Gerar visualizações
+        self._plot_roc_pr_curves(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba, model_name)
+        
+        logging.info(f"✅ Métricas avançadas calculadas para {model_name}")
+        return metrics
+    
+    def generate_business_kpis(self, df, predictions, model_name="Model"):
+        """Gerar KPIs orientados ao negócio"""
+        y_true = df['salary']
+        y_pred = predictions
+        
+        kpis = {
+            'total_samples': len(df),
+            'high_salary_rate': (y_true == '>50K').mean(),
+            'prediction_accuracy': (y_pred == y_true).mean(),
+            'false_positive_rate': ((y_pred == '>50K') & (y_true == '<=50K')).mean(),
+            'false_negative_rate': ((y_pred == '<=50K') & (y_true == '>50K')).mean(),
+        }
+        
+        # KPIs por segmento demográfico
+        if 'sex' in df.columns:
+            for sex in df['sex'].unique():
+                if pd.notna(sex):
+                    mask = df['sex'] == sex
+                    if mask.sum() > 0:
+                        kpis[f'accuracy_{sex.lower()}'] = (y_pred[mask] == y_true.loc[mask]).mean()
+        
+        self.business_kpis[model_name] = kpis
+        self._save_kpi_report(kpis, model_name)
+        
+        logging.info(f"✅ KPIs de negócio calculados para {model_name}")
+        return kpis
+    
+    def _plot_roc_pr_curves(self, y_true, y_prob, model_name):
+        """Plotar curvas ROC e Precision-Recall"""
+        from sklearn.metrics import roc_curve, precision_recall_curve, auc
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        
+        # Curva ROC
+        fpr, tpr, _ = roc_curve(y_true, y_prob)
+        roc_auc = auc(fpr, tpr)
+        
+        ax1.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.3f})')
+        ax1.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random')
+        ax1.set_xlim([0.0, 1.0])
+        ax1.set_ylim([0.0, 1.05])
+        ax1.set_xlabel('Taxa de Falsos Positivos')
+        ax1.set_ylabel('Taxa de Verdadeiros Positivos')
+        ax1.set_title(f'Curva ROC - {model_name}')
+        ax1.legend(loc="lower right")
+        ax1.grid(True, alpha=0.3)
+        
+        # Curva Precision-Recall
+        precision, recall, _ = precision_recall_curve(y_true, y_prob)
+        pr_auc = auc(recall, precision)
+        
+        ax2.plot(recall, precision, color='darkgreen', lw=2, label=f'PR curve (AUC = {pr_auc:.3f})')
+        ax2.set_xlim([0.0, 1.0])
+        ax2.set_ylim([0.0, 1.05])
+        ax2.set_xlabel('Recall')
+        ax2.set_ylabel('Precisão')
+        ax2.set_title(f'Curva Precision-Recall - {model_name}')
+        ax2.legend(loc="lower left")
+        ax2.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Salvar
+        output_dir = Path("output/images")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_dir / f"roc_pr_curves_{model_name.lower().replace(' ', '_')}.png", 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+    
+    def _save_kpi_report(self, kpis, model_name):
+        """Salvar relatório de KPIs"""
+        output_dir = Path("output/analysis")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        report = []
+        report.append(f"# RELATÓRIO DE KPIs - {model_name}\n\n")
+        report.append(f"**Data:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        
+        # KPIs Gerais
+        report.append("## 📊 KPIs Gerais\n")
+        for key, value in kpis.items():
+            if isinstance(value, float):
+                report.append(f"- **{key.replace('_', ' ').title()}:** {value:.3f}\n")
+            else:
+                report.append(f"- **{key.replace('_', ' ').title()}:** {value:,}\n")
+        
+        # Salvar relatório
+        report_file = output_dir / f"kpi_report_{model_name.lower().replace(' ', '_')}.md"
+        with open(report_file, 'w', encoding='utf-8') as f:
+            f.writelines(report)
+    
+    def generate_comparison_report(self):
+        """Gerar relatório comparativo entre modelos"""
+        if not self.metrics_summary:
+            logging.warning("⚠️ Nenhuma métrica disponível para comparação")
+            return
+        
+        # Criar DataFrame com métricas
+        df_metrics = pd.DataFrame(self.metrics_summary).T
+        
+        # Salvar CSV
+        output_dir = Path("output/analysis")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        df_metrics.to_csv(output_dir / "model_comparison.csv")
+        
+        # Gerar gráfico comparativo
+        self._plot_model_comparison(df_metrics)
+        
+        # Gerar relatório em markdown
+        self._save_comparison_report(df_metrics)
+        
+        logging.info("✅ Relatório comparativo gerado")
+    
+    def _plot_model_comparison(self, df_metrics):
+        """Plotar comparação entre modelos"""
+        metrics_to_plot = ['accuracy', 'precision', 'recall', 'f1_score', 'roc_auc']
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        x = np.arange(len(df_metrics))
+        width = 0.15
+        
+        for i, metric in enumerate(metrics_to_plot):
+            if metric in df_metrics.columns:
+                ax.bar(x + i * width, df_metrics[metric], width, label=metric.title())
+        
+        ax.set_xlabel('Modelos')
+        ax.set_ylabel('Score')
+        ax.set_title('Comparação de Performance entre Modelos')
+        ax.set_xticks(x + width * 2)
+        ax.set_xticklabels(df_metrics.index, rotation=45)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        output_dir = Path("output/images")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_dir / "model_comparison.png", dpi=300, bbox_inches='tight')
+        plt.close()
+    
+    def _save_comparison_report(self, df_metrics):
+        """Salvar relatório comparativo em markdown"""
+        output_dir = Path("output/analysis")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        report = []
+        report.append("# RELATÓRIO COMPARATIVO DE MODELOS\n\n")
+        report.append(f"**Data:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        
+        # Tabela de métricas
+        report.append("## 📊 Comparação de Métricas\n\n")
+        report.append("| Modelo | Accuracy | Precision | Recall | F1-Score | ROC-AUC |\n")
+        report.append("|--------|----------|-----------|--------|----------|----------|\n")
+        
+        for model_name, row in df_metrics.iterrows():
+            report.append(f"| {model_name} |")
+            for metric in ['accuracy', 'precision', 'recall', 'f1_score', 'roc_auc']:
+                if metric in row:
+                    report.append(f" {row[metric]:.4f} |")
+                else:
+                    report.append(" N/A |")
+            report.append("\n")
+        
+        # Melhor modelo por métrica
+        report.append("\n## 🏆 Melhor Modelo por Métrica\n\n")
+        for metric in ['accuracy', 'precision', 'recall', 'f1_score', 'roc_auc']:
+            if metric in df_metrics.columns:
+                best_model = df_metrics[metric].idxmax()
+                best_score = df_metrics[metric].max()
+                report.append(f"- **{metric.title()}**: {best_model} ({best_score:.4f})\n")
+        
+        # Salvar relatório
+        report_file = output_dir / "model_comparison_report.md"
+        with open(report_file, 'w', encoding='utf-8') as f:
+            f.writelines(report)
+        
+        logging.info(f"📊 Relatório comparativo salvo: {report_file}")
+
+# =============================================================================
+# 7. PIPELINE PRINCIPAL
+# =============================================================================
+
+def main():
+    """Pipeline principal completo - Versão Académica Final"""
+    logging.info("🚀 Iniciando Sistema Completo de Análise Salarial - Versão Académica Final")
+    logging.info("="*80)
+    
     try:
-        fig, ax = create_modern_correlation_matrix(df, title="Matriz de Correlacao - Variaveis Numericas")
-        save_modern_plot("correlacao.png")
+        # 1. Processamento de Dados
+        logging.info("📊 FASE 1: PROCESSAMENTO DE DADOS")
+        logging.info("="*50)
+        
+        processor = DataProcessor()
+        df = processor.load_data()
+        df = processor.clean_data()
+        df = processor.create_features()
+        
+        # 2. Análise Exploratória
+        logging.info("\n📈 FASE 2: ANÁLISE EXPLORATÓRIA")
+        logging.info("="*50)
+        
+        explorer = ExploratoryAnalysis(df)
+        explorer.generate_basic_statistics()
+        explorer.create_visualizations()
+        
+        # 3. Modelagem de Machine Learning
+        logging.info("\n🤖 FASE 3: MODELAGEM DE MACHINE LEARNING")
+        logging.info("="*50)
+        
+        trainer = ModelTrainer()
+        X_train, X_test, y_train, y_test = trainer.prepare_data(df)
+        models, results = trainer.train_models(X_train, X_test, y_train, y_test)
+        
+        # 4. Análise de Clustering
+        logging.info("\n🎯 FASE 4: ANÁLISE DE CLUSTERING")
+        logging.info("="*50)
+        
+        clustering = SalaryClusteringAnalysis()
+        
+        # Usar preprocessador salvo
+        import joblib
+        preprocessor_path = Path("data/processed/preprocessor.joblib")
+        if preprocessor_path.exists():
+            try:
+                preprocessor = joblib.load(preprocessor_path)
+                X_features = df.drop('salary', axis=1)
+                X_processed = preprocessor.transform(X_features)
+                
+                clusters, best_k = clustering.perform_kmeans_analysis(X_processed)
+                clustering.visualize_clusters_pca(X_processed, clusters, df['salary'])
+                
+                logging.info(f"✅ Clustering concluído: {best_k} clusters identificados")
+            except Exception as e:
+                logging.error(f"❌ Erro no clustering: {e}")
+        else:
+            logging.warning("⚠️ Preprocessador não encontrado")
+        
+        # 5. Regras de Associação
+        logging.info("\n📋 FASE 5: REGRAS DE ASSOCIAÇÃO")
+        logging.info("="*50)
+        
+        association = AssociationRulesAnalysis()
+        transactions = association.prepare_transaction_data(df)
+        
+        if transactions:
+            rules = association.find_association_rules(transactions, min_support=0.03, min_confidence=0.5)
+            logging.info(f"✅ {len(rules)} regras de associação encontradas")
+        else:
+            logging.warning("⚠️ Nenhuma transação válida para análise")
+            rules = pd.DataFrame()
+        
+        # 6. Métricas Avançadas
+        logging.info("\n📊 FASE 6: MÉTRICAS AVANÇADAS")
+        logging.info("="*50)
+        
+        advanced_metrics = AdvancedMetrics()
+        
+        # Calcular métricas para cada modelo
+        for model_name, result in results.items():
+            if all(key in result for key in ['y_test', 'y_pred', 'y_pred_proba']):
+                try:
+                    metrics = advanced_metrics.calculate_comprehensive_metrics(
+                        result['y_test'], 
+                        result['y_pred'], 
+                        result['y_pred_proba'],
+                        model_name
+                    )
+                    
+                    # Gerar KPIs de negócio
+                    kpis = advanced_metrics.generate_business_kpis(df, result['y_pred'], model_name)
+                    
+                    logging.info(f"✅ Métricas avançadas calculadas para {model_name}")
+                except Exception as e:
+                    logging.error(f"❌ Erro ao calcular métricas para {model_name}: {e}")
+        
+        # Gerar relatório comparativo
+        try:
+            advanced_metrics.generate_comparison_report()
+            logging.info("✅ Relatório comparativo gerado")
+        except Exception as e:
+            logging.error(f"❌ Erro ao gerar relatório comparativo: {e}")
+        
+        # 7. Relatório Final
+        logging.info("\n📋 RELATÓRIO FINAL COMPLETO")
+        logging.info("="*80)
+        
+        logging.info(f"📊 Dataset final: {len(df)} registros, {len(df.columns)} colunas")
+        logging.info("🤖 Modelos treinados:")
+        for name, result in results.items():
+            logging.info(f"  • {name}: Accuracy={result['accuracy']:.4f}")
+        
+        if 'best_k' in locals():
+            logging.info(f"🎯 Clustering: {best_k} clusters identificados")
+        
+        logging.info(f"📋 Regras de associação: {len(rules) if not rules.empty else 0}")
+        
+        logging.info("\n📂 Estrutura de saídas geradas:")
+        logging.info("  📈 Visualizações: output/images/")
+        logging.info("  📊 Dados processados: data/processed/")
+        logging.info("  🤖 Modelos (.joblib): data/processed/")
+        logging.info("  📋 Análises avançadas: output/analysis/")
+        logging.info("  📝 Relatórios: output/")
+        
+        # Listar arquivos gerados
+        _list_generated_files()
+        
+        logging.info("\n🎉 PIPELINE ACADÉMICO COMPLETO CONCLUÍDO COM SUCESSO!")
+        logging.info("🎓 Projeto pronto para avaliação académica de mestrado!")
+        logging.info("\n💡 Próximos passos:")
+        logging.info("  1. Execute: streamlit run dashboard_app.py")
+        logging.info("  2. Revise os relatórios em output/analysis/")
+        logging.info("  3. Analise as visualizações em output/images/")
+        
     except Exception as e:
-        logging.warning(f"Erro ao gerar matriz de correlação: {e}")
+        logging.error(f"❌ Erro crítico durante execução: {e}")
+        raise
 
-    logging.info("✅ Todas as visualizações modernas foram geradas!")
+def _list_generated_files():
+    """Listar todos os arquivos gerados"""
+    
+    # Arquivos .joblib
+    processed_dir = Path("data/processed")
+    if processed_dir.exists():
+        joblib_files = list(processed_dir.glob("*.joblib"))
+        if joblib_files:
+            logging.info("\n📁 Modelos e preprocessadores (.joblib):")
+            for file in joblib_files:
+                logging.info(f"  • {file.name}")
+    
+    # Visualizações
+    images_dir = Path("output/images")
+    if images_dir.exists():
+        image_files = list(images_dir.glob("*.png"))
+        if image_files:
+            logging.info(f"\n🎨 Visualizações geradas:")
+            for img in sorted(image_files):
+                logging.info(f"  • {img.name}")
+    
+    # Análises
+    analysis_dir = Path("output/analysis")
+    if analysis_dir.exists():
+        analysis_files = list(analysis_dir.glob("*"))
+        if analysis_files:
+            logging.info(f"\n🔍 Análises e relatórios:")
+            for file in sorted(analysis_files):
+                logging.info(f"  • {file.name}")
 
-except Exception as e:
-    logging.error(f"Erro geral na geração de visualizações: {e}")
+if __name__ == "__main__":
+    main()
