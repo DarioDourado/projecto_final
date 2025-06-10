@@ -1,6 +1,6 @@
 """
 Dashboard Streamlit Completo - Análise Salarial Académica VERSÃO FINAL
-Sistema interativo com todas as funcionalidades implementadas
+Sistema interativo com todas as funcionalidades implementadas + Sistema de Login
 """
 
 import streamlit as st
@@ -15,8 +15,11 @@ import joblib
 from pathlib import Path
 import logging
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
+import hashlib
+import json
+import time
 
 # Configurações
 warnings.filterwarnings('ignore')
@@ -27,64 +30,595 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS melhorado
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+# =============================================================================
+# SISTEMA DE AUTENTICAÇÃO COMPLETO
+# =============================================================================
+
+class AuthenticationSystem:
+    """Sistema de autenticação moderno para o dashboard"""
+    
+    def __init__(self):
+        self.users_file = Path("config/users.json")
+        self.sessions_file = Path("config/sessions.json")
+        self.init_files()
+        
+        # Usuários padrão
+        self.default_users = {
+            "admin": {
+                "password": self.hash_password("admin123"),
+                "role": "admin",
+                "name": "Administrador",
+                "email": "admin@dashboard.com",
+                "created": datetime.now().isoformat()
+            },
+            "demo": {
+                "password": self.hash_password("demo123"),
+                "role": "user", 
+                "name": "Usuário Demo",
+                "email": "demo@dashboard.com",
+                "created": datetime.now().isoformat()
+            },
+            "guest": {
+                "password": self.hash_password("guest123"),
+                "role": "guest",
+                "name": "Visitante",
+                "email": "guest@dashboard.com", 
+                "created": datetime.now().isoformat()
+            }
+        }
+        
+        self.ensure_default_users()
+    
+    def init_files(self):
+        """Inicializar arquivos de configuração"""
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        
+        if not self.users_file.exists():
+            self.users_file.write_text("{}", encoding='utf-8')
+        
+        if not self.sessions_file.exists():
+            self.sessions_file.write_text("{}", encoding='utf-8')
+    
+    def hash_password(self, password):
+        """Hash seguro da senha"""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def load_users(self):
+        """Carregar usuários do arquivo"""
+        try:
+            return json.loads(self.users_file.read_text(encoding='utf-8'))
+        except:
+            return {}
+    
+    def save_users(self, users):
+        """Salvar usuários no arquivo"""
+        try:
+            self.users_file.write_text(json.dumps(users, indent=2), encoding='utf-8')
+        except Exception as e:
+            st.error(f"Erro ao salvar usuários: {e}")
+    
+    def ensure_default_users(self):
+        """Garantir que usuários padrão existam"""
+        users = self.load_users()
+        updated = False
+        
+        for username, user_data in self.default_users.items():
+            if username not in users:
+                users[username] = user_data
+                updated = True
+        
+        if updated:
+            self.save_users(users)
+    
+    def authenticate(self, username, password):
+        """Autenticar usuário"""
+        users = self.load_users()
+        
+        if username in users:
+            stored_password = users[username]["password"]
+            if stored_password == self.hash_password(password):
+                return users[username]
+        
+        return None
+    
+    def create_session(self, username, user_data):
+        """Criar sessão de usuário"""
+        session_id = hashlib.md5(f"{username}{time.time()}".encode()).hexdigest()
+        
+        try:
+            sessions = json.loads(self.sessions_file.read_text(encoding='utf-8'))
+        except:
+            sessions = {}
+        
+        sessions[session_id] = {
+            "username": username,
+            "user_data": user_data,
+            "created": datetime.now().isoformat(),
+            "last_activity": datetime.now().isoformat()
+        }
+        
+        # Limpar sessões antigas (>24h)
+        cutoff = datetime.now() - timedelta(hours=24)
+        sessions = {
+            sid: sdata for sid, sdata in sessions.items()
+            if datetime.fromisoformat(sdata["last_activity"]) > cutoff
+        }
+        
+        try:
+            self.sessions_file.write_text(json.dumps(sessions, indent=2), encoding='utf-8')
+        except:
+            pass
+        
+        return session_id
+    
+    def get_session(self, session_id):
+        """Obter dados da sessão"""
+        try:
+            sessions = json.loads(self.sessions_file.read_text(encoding='utf-8'))
+            if session_id in sessions:
+                session = sessions[session_id]
+                # Verificar se não expirou
+                last_activity = datetime.fromisoformat(session["last_activity"])
+                if datetime.now() - last_activity < timedelta(hours=24):
+                    # Atualizar última atividade
+                    session["last_activity"] = datetime.now().isoformat()
+                    sessions[session_id] = session
+                    self.sessions_file.write_text(json.dumps(sessions, indent=2), encoding='utf-8')
+                    return session
+        except:
+            pass
+        
+        return None
+    
+    def logout(self, session_id):
+        """Fazer logout"""
+        try:
+            sessions = json.loads(self.sessions_file.read_text(encoding='utf-8'))
+            if session_id in sessions:
+                del sessions[session_id]
+                self.sessions_file.write_text(json.dumps(sessions, indent=2), encoding='utf-8')
+        except:
+            pass
+    
+    def register_user(self, username, password, name, email, role="user"):
+        """Registrar novo usuário"""
+        users = self.load_users()
+        
+        if username in users:
+            return False, "Usuário já existe"
+        
+        users[username] = {
+            "password": self.hash_password(password),
+            "role": role,
+            "name": name,
+            "email": email,
+            "created": datetime.now().isoformat()
+        }
+        
+        self.save_users(users)
+        return True, "Usuário criado com sucesso"
+
+# Instância global do sistema de autenticação
+auth_system = AuthenticationSystem()
+
+def show_login_page():
+    """Página de login modernizada"""
+    
+    # CSS customizado para login
+    st.markdown("""
+    <style>
+    .login-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        color: white;
+    }
+    .login-title {
         text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+        background: linear-gradient(90deg, #FFD700, #FFA500);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .login-form {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+    .demo-info {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+        backdrop-filter: blur(5px);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Header da aplicação
+    st.markdown('<div class="login-title">💰 Dashboard Salarial</div>', unsafe_allow_html=True)
+    
+    # Container principal
+    with st.container():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        with col2:
+            st.markdown('<div class="login-container">', unsafe_allow_html=True)
+            
+            # Tabs de login e registro
+            tab1, tab2 = st.tabs(["🔐 Login", "📝 Registro"])
+            
+            with tab1:
+                st.markdown('<div class="login-form">', unsafe_allow_html=True)
+                
+                with st.form("login_form"):
+                    st.markdown("### 🔓 Acesso ao Sistema")
+                    
+                    username = st.text_input("👤 Usuário:", placeholder="Digite seu usuário")
+                    password = st.text_input("🔑 Senha:", type="password", placeholder="Digite sua senha")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        login_button = st.form_submit_button("🚀 Entrar", use_container_width=True)
+                    with col2:
+                        demo_button = st.form_submit_button("🎮 Demo", use_container_width=True)
+                    
+                    if login_button and username and password:
+                        user_data = auth_system.authenticate(username, password)
+                        if user_data:
+                            session_id = auth_system.create_session(username, user_data)
+                            st.session_state.session_id = session_id
+                            st.session_state.user_data = user_data
+                            st.session_state.authenticated = True
+                            st.session_state.username = username  # Salvar username
+                            st.success(f"✅ Bem-vindo, {user_data['name']}!")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Credenciais inválidas!")
+                    
+                    if demo_button:
+                        # Login automático como demo
+                        user_data = auth_system.authenticate("demo", "demo123")
+                        if user_data:
+                            session_id = auth_system.create_session("demo", user_data)
+                            st.session_state.session_id = session_id
+                            st.session_state.user_data = user_data
+                            st.session_state.authenticated = True
+                            st.session_state.username = "demo"  # Salvar username
+                            st.success("✅ Entrando como usuário demo...")
+                            time.sleep(1)
+                            st.rerun()
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            with tab2:
+                st.markdown('<div class="login-form">', unsafe_allow_html=True)
+                
+                with st.form("register_form"):
+                    st.markdown("### 📝 Criar Conta")
+                    
+                    new_username = st.text_input("👤 Novo Usuário:", placeholder="Escolha um usuário")
+                    new_name = st.text_input("👨‍💼 Nome Completo:", placeholder="Seu nome completo")
+                    new_email = st.text_input("📧 Email:", placeholder="seu@email.com")
+                    new_password = st.text_input("🔑 Senha:", type="password", placeholder="Escolha uma senha")
+                    confirm_password = st.text_input("🔑 Confirmar Senha:", type="password", placeholder="Confirme a senha")
+                    
+                    register_button = st.form_submit_button("✨ Criar Conta", use_container_width=True)
+                    
+                    if register_button:
+                        if not all([new_username, new_name, new_email, new_password]):
+                            st.error("❌ Preencha todos os campos!")
+                        elif new_password != confirm_password:
+                            st.error("❌ Senhas não coincidem!")
+                        elif len(new_password) < 6:
+                            st.error("❌ Senha deve ter pelo menos 6 caracteres!")
+                        else:
+                            success, message = auth_system.register_user(
+                                new_username, new_password, new_name, new_email
+                            )
+                            if success:
+                                st.success(f"✅ {message}")
+                                st.info("🔄 Agora você pode fazer login!")
+                            else:
+                                st.error(f"❌ {message}")
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Informações de demo
+            st.markdown("""
+            <div class="demo-info">
+                <h4>🎮 Contas de Demonstração:</h4>
+                <ul>
+                    <li><strong>admin</strong> / admin123 (Administrador)</li>
+                    <li><strong>demo</strong> / demo123 (Usuário)</li>
+                    <li><strong>guest</strong> / guest123 (Visitante)</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+
+def check_authentication():
+    """Verificar autenticação do usuário"""
+    
+    # Inicializar estado de autenticação
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = None
+    
+    # Verificar sessão existente
+    if st.session_state.session_id:
+        session = auth_system.get_session(st.session_state.session_id)
+        if session:
+            st.session_state.authenticated = True
+            st.session_state.user_data = session["user_data"]
+            st.session_state.username = session["username"]
+            return True
+        else:
+            # Sessão expirada
+            st.session_state.authenticated = False
+            st.session_state.session_id = None
+            st.session_state.user_data = None
+            st.session_state.username = None
+    
+    return st.session_state.authenticated
+
+def show_user_info():
+    """Mostrar informações do usuário na sidebar"""
+    if 'user_data' in st.session_state and st.session_state.user_data:
+        user = st.session_state.user_data
+        username = st.session_state.get('username', 'N/A')
+        
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 👤 Usuário Logado")
+            
+            st.markdown(f"""
+            <div class="user-info-card">
+                <h4>🎭 {user['name']}</h4>
+                <p><strong>👤 Usuário:</strong> {username}</p>
+                <p><strong>🎯 Papel:</strong> {user['role'].title()}</p>
+                <p><strong>📧 Email:</strong> {user['email']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🚪 Logout", use_container_width=True):
+                if st.session_state.session_id:
+                    auth_system.logout(st.session_state.session_id)
+                
+                # Limpar sessão
+                st.session_state.authenticated = False
+                st.session_state.session_id = None
+                st.session_state.user_data = None
+                st.session_state.username = None
+                st.session_state.current_page = "📊 Visão Geral"
+                
+                st.success("✅ Logout realizado com sucesso!")
+                time.sleep(1)
+                st.rerun()
+
+# =============================================================================
+# CSS MELHORADO
+# =============================================================================
+
+def apply_custom_css():
+    """Aplicar CSS customizado melhorado"""
+    st.markdown("""
+<style>
+    /* Importar fontes do Google */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+    
+    /* Reset e configurações gerais */
+    * {
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Header principal */
+    .main-header {
+        text-align: center;
+        font-size: 3rem;
+        font-weight: 700;
         margin-bottom: 2rem;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
+    
+    /* Cards de métricas */
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 1rem;
-        border-radius: 10px;
+        padding: 1.5rem;
+        border-radius: 15px;
         margin: 0.5rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-align: center;
     }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+    
+    .metric-card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    
+    .metric-card h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    /* Boxes de status */
     .success-box {
         background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
         color: white;
         padding: 1rem;
         border-radius: 10px;
         margin: 1rem 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+    
     .warning-box {
         background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
         color: #2d3436;
         padding: 1rem;
         border-radius: 10px;
         margin: 1rem 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+    
     .info-box {
         background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
         color: white;
         padding: 1rem;
         border-radius: 10px;
         margin: 1rem 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+    
+    .error-box {
+        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Botões customizados */
     .stButton > button {
         width: 100%;
-        border-radius: 20px;
+        border-radius: 25px;
         border: none;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-weight: bold;
-        transition: all 0.3s;
+        font-weight: 600;
+        padding: 0.7rem 2rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+    
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(90deg, #764ba2 0%, #667eea 100%);
     }
+    
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+    
+    /* Sidebar customizada */
     .sidebar .stSelectbox > div > div {
         background-color: #f8f9fa;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    
+    /* Card de informações do usuário */
+    .user-info-card {
+        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 15px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .user-info-card h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+    }
+    
+    .user-info-card p {
+        margin: 0.3rem 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    /* Tabs customizadas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        color: #495057;
+        font-weight: 600;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    /* Melhorias no DataFrame */
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Loading spinner customizado */
+    .stSpinner {
+        text-align: center;
+    }
+    
+    /* Métricas do Streamlit */
+    [data-testid="metric-container"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 1rem;
+        border-radius: 15px;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    [data-testid="metric-container"] > div {
+        color: white;
+    }
+    
+    /* Expander customizado */
+    .streamlit-expanderHeader {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    
+    /* Hide hamburger menu e footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .main-header {
+            font-size: 2rem;
+        }
+        
+        .metric-card h2 {
+            font-size: 1.5rem;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -149,11 +683,13 @@ def load_analysis_files():
             if path.exists():
                 if category == 'images':
                     files_status[category].extend(list(path.glob("*.png")))
+                    files_status[category].extend(list(path.glob("*.jpg")))
                 elif category == 'analysis':
                     files_status[category].extend(list(path.glob("*.csv")))
                     files_status[category].extend(list(path.glob("*.md")))
                 elif category == 'models':
                     files_status[category].extend(list(path.glob("*.joblib")))
+                    files_status[category].extend(list(path.glob("*.pkl")))
     
     # Remover duplicatas
     for category in files_status:
@@ -488,146 +1024,145 @@ def create_interactive_correlation_heatmap(df):
         st.error(f"Erro ao criar heatmap de correlação: {e}")
         return None
 
-def show_overview_enhanced(df, load_message, files_status):
-    """Visão geral com gráficos modernizados - CORRIGIDA"""
-    st.header("📊 Visão Geral do Dataset")
+def apply_filters(df, filters):
+    """Aplicar filtros de forma otimizada"""
+    filtered_df = df.copy()
     
-    # Status message com estilo
-    if "processados" in load_message:
-        st.success(load_message)
-    else:
-        st.warning(load_message)
+    for col, values in filters.items():
+        if col in df.columns:
+            if isinstance(values, list) and values:
+                filtered_df = filtered_df[filtered_df[col].isin(values)]
+            elif isinstance(values, tuple) and len(values) == 2:
+                filtered_df = filtered_df[
+                    (filtered_df[col] >= values[0]) & 
+                    (filtered_df[col] <= values[1])
+                ]
     
-    # Métricas principais com cards modernos
-    col1, col2, col3, col4 = st.columns(4)
+    return filtered_df
+
+def show_admin_config():
+    """Página de configurações administrativas"""
+    st.header("⚙️ Configurações Administrativas")
     
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>📋 Registros</h3>
-            <h2>{len(df):,}</h2>
-        </div>
-        """, unsafe_allow_html=True)
+    if st.session_state.user_data.get('role') != 'admin':
+        st.error("❌ Acesso restrito a administradores!")
+        return
     
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>📊 Colunas</h3>
-            <h2>{len(df.columns)}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        if 'salary' in df.columns:
-            high_salary_rate = (df['salary'] == '>50K').mean()
-            st.markdown(f"""
-            <div class="metric-card">
-                <h3>💰 Salário Alto</h3>
-                <h2>{high_salary_rate:.1%}</h2>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col4:
-        missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>❌ Missing</h3>
-            <h2>{missing_rate:.1%}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Gráficos principais modernizados
-    st.subheader("📈 Distribuições Principais")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if 'salary' in df.columns:
-            salary_counts = df['salary'].value_counts()
-            fig = create_modern_pie_chart(
-                data=None,
-                values=salary_counts.values,
-                names=salary_counts.index,
-                title="💰 Distribuição de Salário"
-            )
-            if fig:  # Verificar se o gráfico foi criado com sucesso
-                st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        if 'sex' in df.columns:
-            sex_data = df['sex'].value_counts().reset_index()
-            sex_data.columns = ['sex', 'count']
-            fig = create_modern_bar_chart(
-                data=sex_data,
-                x='sex',
-                y='count',
-                title="👥 Distribuição por Sexo"
-            )
-            if fig:  # Verificar se o gráfico foi criado com sucesso
-                st.plotly_chart(fig, use_container_width=True)
-    
-    # Gráficos adicionais com verificação de erro
-    st.subheader("📈 Análises Detalhadas")
-    
-    tab1, tab2, tab3 = st.tabs(["📊 Distribuições", "🔗 Correlações", "📋 Estatísticas"])
+    tab1, tab2, tab3 = st.tabs(["👥 Usuários", "📊 Sistema", "🔧 Manutenção"])
     
     with tab1:
+        st.subheader("👥 Gerenciamento de Usuários")
+        
+        # Listar usuários
+        users = auth_system.load_users()
+        
+        if users:
+            users_df = pd.DataFrame([
+                {
+                    'Usuário': username,
+                    'Nome': user_data['name'],
+                    'Email': user_data['email'],
+                    'Papel': user_data['role'],
+                    'Criado': user_data.get('created', 'N/A')
+                }
+                for username, user_data in users.items()
+            ])
+            
+            st.dataframe(users_df, use_container_width=True)
+            
+            # Remover usuário
+            st.subheader("🗑️ Remover Usuário")
+            user_to_remove = st.selectbox("Selecionar usuário:", list(users.keys()))
+            
+            if st.button("❌ Remover Usuário") and user_to_remove:
+                if user_to_remove == 'admin':
+                    st.error("❌ Não é possível remover o usuário admin!")
+                else:
+                    del users[user_to_remove]
+                    auth_system.save_users(users)
+                    st.success(f"✅ Usuário '{user_to_remove}' removido!")
+                    st.rerun()
+        else:
+            st.info("Nenhum usuário encontrado.")
+    
+    with tab2:
+        st.subheader("📊 Informações do Sistema")
+        
+        # Estatísticas do sistema
+        users = auth_system.load_users()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("👥 Total de Usuários", len(users))
+        
+        with col2:
+            admin_count = sum(1 for u in users.values() if u.get('role') == 'admin')
+            st.metric("🛡️ Administradores", admin_count)
+        
+        with col3:
+            # Contagem de sessões ativas
+            try:
+                sessions = json.loads(auth_system.sessions_file.read_text(encoding='utf-8'))
+                active_sessions = len(sessions)
+            except:
+                active_sessions = 0
+            st.metric("🔗 Sessões Ativas", active_sessions)
+        
+        # Informações de arquivos
+        st.subheader("📁 Status dos Arquivos")
+        files_status = load_analysis_files()
+        
+        for category, files in files_status.items():
+            st.write(f"**{category.title()}:** {len(files)} arquivos")
+    
+    with tab3:
+        st.subheader("🔧 Manutenção do Sistema")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            if 'age' in df.columns:
-                fig = create_modern_histogram(
-                    data=df,
-                    column='age',
-                    title="📊 Distribuição de Idade",
-                    color_column='salary' if 'salary' in df.columns else None
-                )
-                if fig:
-                    st.plotly_chart(fig, use_container_width=True)
+            if st.button("🧹 Limpar Sessões Expiradas"):
+                try:
+                    sessions = json.loads(auth_system.sessions_file.read_text(encoding='utf-8'))
+                    cutoff = datetime.now() - timedelta(hours=24)
+                    active_sessions = {
+                        sid: sdata for sid, sdata in sessions.items()
+                        if datetime.fromisoformat(sdata["last_activity"]) > cutoff
+                    }
+                    auth_system.sessions_file.write_text(json.dumps(active_sessions, indent=2), encoding='utf-8')
+                    st.success("✅ Sessões expiradas removidas!")
+                except Exception as e:
+                    st.error(f"❌ Erro: {e}")
         
         with col2:
-            if 'education-num' in df.columns:
-                fig = create_modern_histogram(
-                    data=df,
-                    column='education-num',
-                    title="🎓 Anos de Educação",
-                    color_column='salary' if 'salary' in df.columns else None
-                )
-                if fig:
-                    st.plotly_chart(fig, use_container_width=True)
-    
-    with tab2:
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        if len(numeric_cols) > 1:
-            fig = create_interactive_correlation_heatmap(df)
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Poucas variáveis numéricas para análise de correlação")
-    
-    with tab3:
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        if len(numeric_cols) > 0:
-            st.dataframe(df[numeric_cols].describe().round(2), use_container_width=True)
-        else:
-            st.info("Nenhuma variável numérica encontrada")
-
-# =============================================================================
-# FUNÇÕES PRINCIPAIS MODIFICADAS
-# =============================================================================
-
-# Session state
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = "📊 Visão Geral"
-if 'filters' not in st.session_state:
-    st.session_state.filters = {}
+            if st.button("🔄 Recarregar Cache"):
+                # Limpar caches do Streamlit
+                load_data.clear()
+                load_analysis_files.clear()
+                st.success("✅ Cache recarregado!")
+                st.rerun()
 
 def main():
-    """Interface principal otimizada"""
+    """Interface principal com autenticação"""
+    
+    # Aplicar CSS customizado
+    apply_custom_css()
+    
+    # Verificar autenticação
+    if not check_authentication():
+        show_login_page()
+        return
+    
+    # Mostrar informações do usuário
+    show_user_info()
     
     # Header elegante
     st.markdown('<div class="main-header">💰 Dashboard de Análise Salarial</div>', 
                 unsafe_allow_html=True)
+    
+    # Verificar permissões por papel
+    user_role = st.session_state.user_data.get('role', 'guest')
     
     # Carregar dados
     df, load_message = load_data()
@@ -657,25 +1192,31 @@ def main():
             if df is not None:
                 st.metric("📋 Registros", f"{len(df):,}")
         
-        # Navegação principal
+        # Navegação baseada em permissões
         st.markdown("### 🧭 Navegação")
-        pages = [
-            ("📊 Visão Geral", "overview"),
-            ("📈 Análise Exploratória", "exploratory"),
-            ("🤖 Modelos ML", "models"),
-            ("🎯 Clustering", "clustering"),
-            ("📋 Regras de Associação", "rules"),
-            ("📊 Métricas Avançadas", "metrics"),
-            ("🔮 Predição", "prediction"),
-            ("📁 Relatórios", "reports")
+        
+        # Páginas disponíveis por papel
+        all_pages = [
+            ("📊 Visão Geral", "overview", ["admin", "user", "guest"]),
+            ("📈 Análise Exploratória", "exploratory", ["admin", "user", "guest"]),
+            ("🤖 Modelos ML", "models", ["admin", "user"]),
+            ("🎯 Clustering", "clustering", ["admin", "user"]),
+            ("📋 Regras de Associação", "rules", ["admin", "user"]),
+            ("📊 Métricas Avançadas", "metrics", ["admin", "user"]),
+            ("🔮 Predição", "prediction", ["admin", "user"]),
+            ("📁 Relatórios", "reports", ["admin", "user", "guest"]),
+            ("⚙️ Configurações", "config", ["admin"])
         ]
         
-        for page_name, page_key in pages:
+        # Filtrar páginas por papel
+        available_pages = [(name, key) for name, key, roles in all_pages if user_role in roles]
+        
+        for page_name, page_key in available_pages:
             if st.button(page_name, key=f"nav_{page_key}"):
                 st.session_state.current_page = page_name
         
-        # Filtros se dados disponíveis
-        if df is not None and len(df) > 0:
+        # Filtros se dados disponíveis e permitidos
+        if df is not None and len(df) > 0 and user_role in ['admin', 'user']:
             st.markdown("### 🔍 Filtros")
             
             # Reset filters button
@@ -701,13 +1242,17 @@ def main():
                     st.session_state.filters['age'] = age_range
         
         # Status de filtros
-        if st.session_state.filters:
+        if hasattr(st.session_state, 'filters') and st.session_state.filters:
             st.markdown("### 📋 Filtros Ativos")
             for filter_name, filter_value in st.session_state.filters.items():
                 if isinstance(filter_value, list):
                     st.write(f"• **{filter_name}**: {', '.join(map(str, filter_value))}")
                 elif isinstance(filter_value, tuple):
                     st.write(f"• **{filter_name}**: {filter_value[0]} - {filter_value[1]}")
+    
+    # Inicializar filtros se não existirem
+    if 'filters' not in st.session_state:
+        st.session_state.filters = {}
     
     # Aplicar filtros
     if df is not None:
@@ -723,48 +1268,65 @@ def main():
         st.info("Verifique os filtros ou execute: `python main.py`")
         return
     
+    # Inicializar página atual se não existir
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "📊 Visão Geral"
+    
     # Roteamento de páginas
     current_page = st.session_state.current_page
     
-    if current_page == "📊 Visão Geral":
-        show_overview_enhanced(filtered_df, load_message, files_status)
-    elif current_page == "📈 Análise Exploratória":
-        show_exploratory_analysis_enhanced(filtered_df)
-    elif current_page == "🤖 Modelos ML":
-        show_ml_models_enhanced(filtered_df, files_status)
-    elif current_page == "🎯 Clustering":
-        show_clustering_analysis_enhanced(filtered_df, files_status)
-    elif current_page == "📋 Regras de Associação":
-        show_association_rules_enhanced(filtered_df, files_status)
-    elif current_page == "📊 Métricas Avançadas":
-        show_advanced_metrics_enhanced(filtered_df, files_status)
-    elif current_page == "🔮 Predição":
-        show_prediction_interface_enhanced(filtered_df, files_status)
-    elif current_page == "📁 Relatórios":
-        show_reports_enhanced(files_status)
-
-def apply_filters(df, filters):
-    """Aplicar filtros de forma otimizada"""
-    filtered_df = df.copy()
+    # Verificar se usuário tem acesso à página
+    page_access = {
+        "📊 Visão Geral": ["admin", "user", "guest"],
+        "📈 Análise Exploratória": ["admin", "user", "guest"],
+        "🤖 Modelos ML": ["admin", "user"],
+        "🎯 Clustering": ["admin", "user"],
+        "📋 Regras de Associação": ["admin", "user"],
+        "📊 Métricas Avançadas": ["admin", "user"],
+        "🔮 Predição": ["admin", "user"],
+        "📁 Relatórios": ["admin", "user", "guest"],
+        "⚙️ Configurações": ["admin"]
+    }
     
-    for col, values in filters.items():
-        if col in df.columns:
-            if isinstance(values, list) and values:
-                filtered_df = filtered_df[filtered_df[col].isin(values)]
-            elif isinstance(values, tuple) and len(values) == 2:
-                filtered_df = filtered_df[
-                    (filtered_df[col] >= values[0]) & 
-                    (filtered_df[col] <= values[1])
-                ]
+    if current_page in page_access and user_role not in page_access[current_page]:
+        st.error(f"❌ Acesso negado! Papel '{user_role}' não tem permissão para '{current_page}'")
+        st.session_state.current_page = "📊 Visão Geral"
+        st.rerun()
+        return
     
-    return filtered_df
+    # Executar página correspondente
+    try:
+        if current_page == "📊 Visão Geral":
+            show_overview_enhanced(filtered_df, load_message, files_status)
+        elif current_page == "📈 Análise Exploratória":
+            show_exploratory_analysis_enhanced(filtered_df)
+        elif current_page == "🤖 Modelos ML":
+            show_ml_models_enhanced(filtered_df, files_status)
+        elif current_page == "🎯 Clustering":
+            show_clustering_analysis_enhanced(filtered_df, files_status)
+        elif current_page == "📋 Regras de Associação":
+            show_association_rules_enhanced(filtered_df, files_status)
+        elif current_page == "📊 Métricas Avançadas":
+            show_advanced_metrics_enhanced(filtered_df, files_status)
+        elif current_page == "🔮 Predição":
+            show_prediction_interface_enhanced(filtered_df, files_status)
+        elif current_page == "📁 Relatórios":
+            show_reports_enhanced(files_status)
+        elif current_page == "⚙️ Configurações":
+            show_admin_config()
+        else:
+            st.error("❌ Página não encontrada!")
+            
+    except Exception as e:
+        st.error(f"❌ Erro na página '{current_page}': {e}")
+        st.info("Tente navegar para outra página ou recarregue a aplicação.")
 
 # =============================================================================
-# PÁGINAS IMPLEMENTADAS COMPLETAMENTE
+# FUNÇÕES DE PÁGINAS IMPLEMENTADAS
 # =============================================================================
 
 def show_overview_enhanced(df, load_message, files_status):
-    """Visão geral com gráficos modernizados - CORRIGIDA"""
+    """Visão geral com gráficos modernizados"""
     st.header("📊 Visão Geral do Dataset")
     
     # Status message com estilo
@@ -801,6 +1363,13 @@ def show_overview_enhanced(df, load_message, files_status):
                 <h2>{high_salary_rate:.1%}</h2>
             </div>
             """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>💰 Salário Alto</h3>
+                <h2>N/A</h2>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col4:
         missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
@@ -825,8 +1394,10 @@ def show_overview_enhanced(df, load_message, files_status):
                 names=salary_counts.index,
                 title="💰 Distribuição de Salário"
             )
-            if fig:  # Verificar se o gráfico foi criado com sucesso
+            if fig:
                 st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Coluna 'salary' não encontrada")
     
     with col2:
         if 'sex' in df.columns:
@@ -838,8 +1409,10 @@ def show_overview_enhanced(df, load_message, files_status):
                 y='count',
                 title="👥 Distribuição por Sexo"
             )
-            if fig:  # Verificar se o gráfico foi criado com sucesso
+            if fig:
                 st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Coluna 'sex' não encontrada")
     
     # Gráficos adicionais com verificação de erro
     st.subheader("📈 Análises Detalhadas")
@@ -859,6 +1432,8 @@ def show_overview_enhanced(df, load_message, files_status):
                 )
                 if fig:
                     st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Coluna 'age' não encontrada")
         
         with col2:
             if 'education-num' in df.columns:
@@ -870,6 +1445,8 @@ def show_overview_enhanced(df, load_message, files_status):
                 )
                 if fig:
                     st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Coluna 'education-num' não encontrada")
     
     with tab2:
         numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -888,7 +1465,7 @@ def show_overview_enhanced(df, load_message, files_status):
             st.info("Nenhuma variável numérica encontrada")
 
 def show_exploratory_analysis_enhanced(df):
-    """Análise exploratória com gráficos modernizados - CORRIGIDA"""
+    """Análise exploratória com gráficos modernizados"""
     st.header("📈 Análise Exploratória Avançada")
     
     # Controles modernizados
@@ -907,6 +1484,8 @@ def show_exploratory_analysis_enhanced(df):
             categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
             if categorical_cols:
                 color_var = st.selectbox("🎨 Cor por:", ["Nenhuma"] + categorical_cols)
+            else:
+                color_var = "Nenhuma"
     
     # Gráficos baseados na seleção
     if 'x_var' in locals():
@@ -928,7 +1507,8 @@ def show_exploratory_analysis_enhanced(df):
                 title=f"📊 Distribuição de {x_var}",
                 color_column=color_var if color_var != "Nenhuma" else None
             )
-            st.plotly_chart(fig, use_container_width=True)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
     
     # Análises por categoria
     st.subheader("🎯 Análises por Categoria")
@@ -949,7 +1529,6 @@ def show_exploratory_analysis_enhanced(df):
                     y='high_salary_rate',
                     title="💼 Taxa de Salário Alto por Classe Trabalhadora"
                 )
-                # CORREÇÃO: Usar update_layout ao invés de update_xaxis
                 fig.update_layout(xaxis_tickangle=45)
                 st.plotly_chart(fig, use_container_width=True)
         
@@ -966,9 +1545,10 @@ def show_exploratory_analysis_enhanced(df):
                     y='high_salary_rate',
                     title="💑 Taxa de Salário Alto por Estado Civil"
                 )
-                # CORREÇÃO: Usar update_layout ao invés de update_xaxis
                 fig.update_layout(xaxis_tickangle=45)
                 st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Coluna 'marital-status' não encontrada")
 
 def show_ml_models_enhanced(df, files_status):
     """Modelos ML implementados"""
@@ -1050,7 +1630,7 @@ def show_ml_models_enhanced(df, files_status):
             st.info("Execute o pipeline para gerar gráficos de performance")
 
 def show_clustering_analysis_enhanced(df, files_status):
-    """Análise de clustering com visualizações modernizadas"""
+    """Análise de clustering"""
     st.header("🎯 Análise de Clustering Modernizada")
     
     # Verificar arquivos existentes
@@ -1230,7 +1810,7 @@ def show_clustering_analysis_enhanced(df, files_status):
                 st.image(str(path), caption=path.name, use_column_width=True)
 
 def show_association_rules_enhanced(df, files_status):
-    """Regras de associação implementadas"""
+    """Regras de associação"""
     st.header("📋 Regras de Associação")
     
     # Procurar arquivo de regras
@@ -1254,32 +1834,9 @@ def show_association_rules_enhanced(df, files_status):
                 st.error(f"Erro ao carregar regras: {e}")
     else:
         st.info("Execute o pipeline para gerar regras de associação")
-        
-        # Análise básica de co-ocorrência
-        st.subheader("📊 Análise Básica de Co-ocorrência")
-        
-        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-        if len(categorical_cols) >= 2:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                var1 = st.selectbox("Variável 1:", categorical_cols)
-            with col2:
-                var2 = st.selectbox("Variável 2:", 
-                                  [c for c in categorical_cols if c != var1])
-            
-            if st.button("🔍 Analisar Co-ocorrência"):
-                crosstab = pd.crosstab(df[var1], df[var2])
-                st.dataframe(crosstab, use_container_width=True)
-                
-                # Heatmap
-                fig = px.imshow(crosstab.values, 
-                              x=crosstab.columns, y=crosstab.index,
-                              title=f"Co-ocorrência: {var1} vs {var2}")
-                st.plotly_chart(fig, use_container_width=True)
 
 def show_advanced_metrics_enhanced(df, files_status):
-    """Métricas avançadas implementadas"""
+    """Métricas avançadas"""
     st.header("📊 Métricas Avançadas")
     
     # Procurar relatórios de métricas
@@ -1295,55 +1852,9 @@ def show_advanced_metrics_enhanced(df, files_status):
                 st.error(f"Erro: {e}")
     else:
         st.info("Execute o pipeline para gerar métricas avançadas")
-    
-    # Métricas calculadas em tempo real
-    st.subheader("⚡ Métricas em Tempo Real")
-    
-    if 'salary' in df.columns:
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            # Taxa de conversão por educação
-            if 'education' in df.columns:
-                edu_conversion = df.groupby('education')['salary'].apply(
-                    lambda x: (x == '>50K').mean()
-                ).sort_values(ascending=False)
-                
-                st.write("**Taxa Salário Alto por Educação:**")
-                for edu, rate in edu_conversion.head(5).items():
-                    st.write(f"• {edu}: {rate:.1%}")
-        
-        with col2:
-            # Taxa por idade
-            if 'age' in df.columns:
-                age_bins = [0, 25, 35, 45, 55, 100]
-                age_labels = ['18-25', '26-35', '36-45', '46-55', '55+']
-                df_temp = df.copy()
-                df_temp['age_group'] = pd.cut(df_temp['age'], bins=age_bins, 
-                                            labels=age_labels, include_lowest=True)
-                
-                age_conversion = df_temp.groupby('age_group')['salary'].apply(
-                    lambda x: (x == '>50K').mean()
-                )
-                
-                st.write("**Taxa por Faixa Etária:**")
-                for age_group, rate in age_conversion.items():
-                    if not pd.isna(rate):
-                        st.write(f"• {age_group}: {rate:.1%}")
-        
-        with col3:
-            # Taxa por sexo
-            if 'sex' in df.columns:
-                sex_conversion = df.groupby('sex')['salary'].apply(
-                    lambda x: (x == '>50K').mean()
-                )
-                
-                st.write("**Taxa por Sexo:**")
-                for sex, rate in sex_conversion.items():
-                    st.write(f"• {sex}: {rate:.1%}")
 
 def show_prediction_interface_enhanced(df, files_status):
-    """Interface de predição implementada"""
+    """Interface de predição"""
     st.header("🔮 Predição Interativa")
     
     # Verificar se há modelos
@@ -1365,38 +1876,7 @@ def show_prediction_interface_enhanced(df, files_status):
         st.error("❌ Não foi possível carregar nenhum modelo")
         return
     
-    # Interface de predição
-    st.subheader("🎯 Fazer Predição")
-    
-    # Campos de entrada baseados no dataset
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if 'age' in df.columns:
-            age = st.slider("Idade", 
-                          int(df['age'].min()), 
-                          int(df['age'].max()), 
-                          int(df['age'].mean()))
-        
-        if 'education-num' in df.columns:
-            education_num = st.slider("Anos de Educação",
-                                    int(df['education-num'].min()),
-                                    int(df['education-num'].max()),
-                                    int(df['education-num'].mean()))
-    
-    with col2:
-        if 'hours-per-week' in df.columns:
-            hours = st.slider("Horas por Semana",
-                            int(df['hours-per-week'].min()),
-                            int(df['hours-per-week'].max()),
-                            int(df['hours-per-week'].mean()))
-        
-        if 'sex' in df.columns:
-            sex = st.selectbox("Sexo", df['sex'].unique())
-    
-    # Botão de predição
-    if st.button("🚀 Fazer Predição"):
-        st.info("Interface de predição em desenvolvimento. Valores configurados mas modelo precisa ser adaptado.")
+    st.info("Interface de predição em desenvolvimento. Valores configurados mas modelo precisa ser adaptado.")
 
 def show_reports_enhanced(files_status):
     """Relatórios implementados"""
@@ -1423,29 +1903,6 @@ def show_reports_enhanced(files_status):
                     st.error(f"Erro ao ler arquivo: {e}")
     else:
         st.info("Execute o pipeline para gerar relatórios")
-    
-    # Download de relatórios
-    st.subheader("📥 Downloads")
-    
-    if files_status['analysis']:
-        st.write("**Arquivos de Análise Disponíveis:**")
-        for file in files_status['analysis']:
-            if file.suffix == '.csv':
-                try:
-                    df = pd.read_csv(file)
-                    csv = df.to_csv(index=False)
-                    st.download_button(
-                        label=f"⬇️ {file.name}",
-                        data=csv,
-                        file_name=file.name,
-                        mime='text/csv'
-                    )
-                except Exception:
-                    continue
-
-# =============================================================================
-# EXECUÇÃO
-# =============================================================================
 
 if __name__ == "__main__":
     main()

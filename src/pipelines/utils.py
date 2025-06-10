@@ -82,7 +82,7 @@ def check_data_structure():
         logger.info("🔧 Execute: python setup_data_structure.py")
         
         try:
-            import setup_data_structure
+            import setup_scripts.setup_data_structure as setup_data_structure
             setup_data_structure.setup_data_structure()
             if data_file.exists():
                 logger.info("✅ Estrutura configurada automaticamente!")

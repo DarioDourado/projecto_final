@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """Script de teste do sistema"""
 
+import sys
+import os
+from pathlib import Path
+
 def test_system():
     """Testar todos os componentes"""
+    # Voltar para diretório raiz se executado da pasta setup_scripts
+    if Path.cwd().name == "setup_scripts":
+        os.chdir("..")
+    
     print("🧪 TESTE DO SISTEMA")
     print("=" * 30)
     
@@ -19,9 +27,6 @@ def test_system():
     
     # Teste 2: Conexão MySQL
     try:
-        from pathlib import Path
-        import os
-        
         # Carregar .env
         env_file = Path(".env")
         if env_file.exists():

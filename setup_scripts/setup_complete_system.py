@@ -483,6 +483,9 @@ def main():
     return True
 
 if __name__ == "__main__":
+    # Ajustar paths para execução da pasta setup_scripts
+    os.chdir("..")  # Voltar para diretório raiz do projeto
+    
     try:
         success = main()
         if success:
