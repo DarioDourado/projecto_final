@@ -1,55 +1,38 @@
-"""Sistema de logging configurado"""
+"""Configuração de logging melhorada"""
 
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 
 def setup_logging(level=logging.INFO):
-    """Configurar sistema de logging"""
+    """Configurar logging detalhado"""
     
     # Criar diretório de logs
-    logs_dir = Path("output/logs")
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
     
-    # Nome do arquivo de log com timestamp
-    log_filename = logs_dir / f"pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    
-    # Configurar formatação
+    # Configurar formato
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Configurar handler para arquivo
-    file_handler = logging.FileHandler(log_filename)
-    file_handler.setLevel(level)
+    # Handler para arquivo
+    file_handler = logging.FileHandler(log_dir / "ml_pipeline.log")
     file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.DEBUG)
     
-    # Configurar handler para console
+    # Handler para console
     console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
     console_handler.setLevel(level)
-    console_formatter = logging.Formatter('%(levelname)s - %(message)s')
-    console_handler.setFormatter(console_formatter)
     
-    # Configurar logger principal
-    logger = logging.getLogger()
-    logger.setLevel(level)
+    # Configurar logger raiz
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
     
-    # Remover handlers existentes para evitar duplicatas
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-    
-    # Adicionar novos handlers
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
-    # Configurar loggers específicos para reduzir ruído
-    logging.getLogger('matplotlib').setLevel(logging.WARNING)
-    logging.getLogger('PIL').setLevel(logging.WARNING)
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
-    
-    return logger
+    return root_logger
 
 def log_success(message):
     """Log com checkmark verde"""
