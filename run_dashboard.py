@@ -16,22 +16,21 @@ def check_requirements():
     
     required_packages = [
         'streamlit', 'pandas', 'numpy', 'plotly', 
-        'scikit-learn', 'mlxtend'
+        'mysql-connector-python', 'scikit-learn'
     ]
     
-    missing_packages = []
-    
+    missing = []
     for package in required_packages:
         try:
-            __import__(package)
-            print(f"✅ {package}")
+            __import__(package.replace('-', '_'))
+            print(f"   ✅ {package}")
         except ImportError:
-            missing_packages.append(package)
-            print(f"❌ {package}")
+            print(f"   ❌ {package}")
+            missing.append(package)
     
-    if missing_packages:
-        print(f"\n⚠️ Pacotes faltantes: {', '.join(missing_packages)}")
-        print("Execute: pip install -r requirements.txt")
+    if missing:
+        print(f"\n❌ Dependências em falta: {missing}")
+        print("💡 Execute: pip install -r requirements.txt")
         return False
     
     print("✅ Todas as dependências estão instaladas!")
@@ -43,31 +42,21 @@ def create_directories():
     print("📁 Criando diretórios...")
     
     directories = [
-        "config",
-        "translate", 
-        "data/raw",
-        "data/processed",
-        "output/images",
-        "output/analysis",
-        "output/reports",
-        "output/logs",
-        "src/utils",
-        "src/auth",
-        "src/components",
-        "src/pages"
+        "config", "logs", "translate", "data/raw", "data/processed",
+        "output/images", "output/analysis", "models", "cache"
     ]
     
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
-        print(f"✅ {directory}")
+        print(f"   ✅ {directory}")
 
 
 def run_dashboard():
     """Executar o dashboard"""
     print("🚀 Iniciando Dashboard Multilingual...")
     
-    # Verificar se o arquivo principal existe
-    main_file = "app_multilingual.py"
+    # ✅ ATUALIZADO: Usar app.py como arquivo principal
+    main_file = "app.py"
     
     if not Path(main_file).exists():
         print(f"❌ Arquivo {main_file} não encontrado!")
@@ -78,7 +67,8 @@ def run_dashboard():
         subprocess.run([
             sys.executable, "-m", "streamlit", "run", main_file,
             "--server.port", "8501",
-            "--server.address", "localhost"
+            "--server.address", "localhost",
+            "--server.headless", "true"
         ])
     except KeyboardInterrupt:
         print("\n👋 Dashboard encerrado pelo usuário")
@@ -93,7 +83,7 @@ def main():
     """Função principal"""
     print("=" * 60)
     print("🌍 DASHBOARD MULTILINGUAL - ANÁLISE SALARIAL")
-    print("📊 Versão 4.0 - Enhanced & Multilingual")
+    print("📊 Versão 6.1 - Sistema Modular Consolidado")
     print("=" * 60)
     
     # Verificações
