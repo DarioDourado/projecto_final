@@ -1,6 +1,6 @@
 # RELATÓRIO DE PERFORMANCE DOS MODELOS
 
-**Data:** 2025-06-10 19:01:54
+**Data:** 2025-06-13 20:29:39
 
 ## 📊 Resumo dos Modelos
 
