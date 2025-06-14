@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 🚀 Pipeline Principal - Sistema Híbrido SQL→CSV
-Otimizado para Streamlit Community Cloud com fallback automático
+Resultados completos no terminal (como no app.py)
 """
 
 import os
@@ -46,18 +46,16 @@ def setup_logging():
     return logger
 
 class HybridPipelineSQL:
-    """
-    Pipeline Híbrido com Fallback Automático SQL→CSV
-    Otimizado para Streamlit Community Cloud
-    """
+    """Pipeline Híbrido com Relatórios Completos no Terminal"""
     
-    def __init__(self, force_csv=False, log_level="INFO"):
+    def __init__(self, force_csv=False, log_level="INFO", show_results=True):
         """Inicializar pipeline híbrido"""
         self.logger = setup_logging()
         self.logger.setLevel(getattr(logging, log_level.upper()))
         
         self.force_csv = force_csv
-        self.data_source = None  # 'sql' ou 'csv'
+        self.show_results = show_results
+        self.data_source = None
         self.results = {}
         self.models = {}
         self.df = None
@@ -76,6 +74,7 @@ class HybridPipelineSQL:
         self.logger.info(f"🔧 Pipeline híbrido inicializado:")
         self.logger.info(f"   • Forçar CSV: {force_csv}")
         self.logger.info(f"   • Nível de log: {log_level}")
+        self.logger.info(f"   • Mostrar resultados: {show_results}")
         
         self._initialize_components()
 
@@ -85,7 +84,6 @@ class HybridPipelineSQL:
             # 1. Tentar pipeline SQL primeiro (se não forçar CSV)
             if not self.force_csv:
                 try:
-                    # ✅ CORREÇÃO: Import correto
                     from src.pipelines.data_pipeline import DataPipelineSQL
                     self.sql_pipeline = DataPipelineSQL(force_migration=False)
                     self.logger.info("✅ Pipeline SQL disponível")
@@ -132,7 +130,7 @@ class HybridPipelineSQL:
             self.logger.info("ℹ️ Pipeline Association não disponível")
 
     def run(self) -> Dict[str, Any]:
-        """Executar pipeline completo com fallback automático"""
+        """Executar pipeline completo com relatórios no terminal"""
         try:
             self.logger.info("🚀 INICIANDO PIPELINE HÍBRIDO")
             self.logger.info("=" * 60)
@@ -151,6 +149,10 @@ class HybridPipelineSQL:
             
             # 4. Finalizar
             self._finalize_pipeline()
+            
+            # 5. 🎯 EXIBIR RESULTADOS COMPLETOS (como app.py)
+            if self.show_results:
+                self._display_complete_results()
             
             return self._prepare_results()
             
@@ -423,6 +425,272 @@ class HybridPipelineSQL:
         # Salvar resultados
         self._save_results()
 
+    def _display_complete_results(self):
+        """🎯 EXIBIR RESULTADOS COMPLETOS NO TERMINAL - Como app.py"""
+        print("\n" + "🎯" * 80)
+        print("🎯 RELATÓRIO COMPLETO DE RESULTADOS - ANÁLISE DE SALÁRIOS")
+        print("🎯" * 80)
+        
+        # 1. OVERVIEW DOS DADOS
+        self._display_data_overview()
+        
+        # 2. ANÁLISE EXPLORATÓRIA
+        self._display_eda_results()
+        
+        # 3. MACHINE LEARNING
+        self._display_ml_results()
+        
+        # 4. MÉTRICAS DE PERFORMANCE
+        self._display_performance_metrics()
+        
+        # 5. INSIGHTS E CONCLUSÕES
+        self._display_insights()
+        
+        print("\n" + "🎯" * 80)
+        print("✅ RELATÓRIO COMPLETO EXIBIDO COM SUCESSO!")
+        print("🎯" * 80)
+
+    def _display_data_overview(self):
+        """Exibir overview dos dados"""
+        print(f"\n📊 1. OVERVIEW DOS DADOS")
+        print("-" * 50)
+        
+        if self.df is not None:
+            print(f"📋 Total de Registros: {len(self.df):,}")
+            print(f"📊 Total de Colunas: {len(self.df.columns)}")
+            print(f"💾 Tamanho em Memória: {self.df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+            print(f"🗄️ Fonte dos Dados: {self.data_source.upper()}")
+            
+            # Tipos de dados
+            numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+            categorical_cols = self.df.select_dtypes(include=['object']).columns
+            
+            print(f"\n📈 TIPOS DE VARIÁVEIS:")
+            print(f"   🔢 Numéricas: {len(numeric_cols)} ({', '.join(numeric_cols[:3])}{'...' if len(numeric_cols) > 3 else ''})")
+            print(f"   📝 Categóricas: {len(categorical_cols)} ({', '.join(categorical_cols[:3])}{'...' if len(categorical_cols) > 3 else ''})")
+            
+            # Qualidade dos dados
+            missing_data = self.df.isnull().sum()
+            duplicates = self.df.duplicated().sum()
+            
+            print(f"\n🧹 QUALIDADE DOS DADOS:")
+            if missing_data.sum() > 0:
+                cols_with_missing = missing_data[missing_data > 0]
+                print(f"   ⚠️ Dados Ausentes: {missing_data.sum():,} valores em {len(cols_with_missing)} colunas")
+                for col, count in cols_with_missing.head(3).items():
+                    percentage = (count / len(self.df)) * 100
+                    print(f"      • {col}: {count:,} ({percentage:.1f}%)")
+            else:
+                print(f"   ✅ Dados Ausentes: Nenhum")
+            
+            if duplicates > 0:
+                print(f"   ⚠️ Duplicatas: {duplicates:,} ({duplicates/len(self.df)*100:.1f}%)")
+            else:
+                print(f"   ✅ Duplicatas: Nenhuma")
+
+    def _display_eda_results(self):
+        """Exibir resultados da análise exploratória"""
+        print(f"\n🔍 2. ANÁLISE EXPLORATÓRIA")
+        print("-" * 50)
+        
+        if self.df is not None and 'salary' in self.df.columns:
+            # Distribuição da variável target
+            target_dist = self.df['salary'].value_counts()
+            target_dist_pct = self.df['salary'].value_counts(normalize=True)
+            
+            print(f"🎯 DISTRIBUIÇÃO DA VARIÁVEL TARGET (salary):")
+            for value, count in target_dist.items():
+                percentage = target_dist_pct[value] * 100
+                bar_length = int(percentage / 2)  # Escala para visualização
+                bar = "█" * bar_length + "░" * (50 - bar_length)
+                print(f"   {value:<8}: {count:>8,} ({percentage:>5.1f}%) {bar}")
+            
+            # Estatísticas das variáveis numéricas
+            numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+            if len(numeric_cols) > 0:
+                print(f"\n📊 ESTATÍSTICAS DAS VARIÁVEIS NUMÉRICAS:")
+                stats = self.df[numeric_cols].describe()
+                
+                for col in numeric_cols[:4]:  # Mostrar apenas as primeiras 4
+                    if col in stats.columns:
+                        mean_val = stats.loc['mean', col]
+                        std_val = stats.loc['std', col]
+                        min_val = stats.loc['min', col]
+                        max_val = stats.loc['max', col]
+                        
+                        print(f"   {col:<15}: Média={mean_val:>8.1f} | Desvio={std_val:>8.1f} | Min={min_val:>8.0f} | Max={max_val:>8.0f}")
+            
+            # Top categorias das variáveis categóricas
+            categorical_cols = self.df.select_dtypes(include=['object']).columns
+            important_cats = ['workclass', 'education', 'occupation', 'sex']
+            
+            print(f"\n📝 TOP CATEGORIAS DAS PRINCIPAIS VARIÁVEIS:")
+            for col in important_cats:
+                if col in categorical_cols and col in self.df.columns:
+                    top_values = self.df[col].value_counts().head(3)
+                    print(f"   {col:<12}: {dict(top_values)}")
+
+    def _display_ml_results(self):
+        """Exibir resultados de Machine Learning"""
+        print(f"\n🤖 3. RESULTADOS DE MACHINE LEARNING")
+        print("-" * 50)
+        
+        if self.models and len(self.models) > 0:
+            print(f"✅ Modelos Treinados: {len(self.models)}")
+            
+            # Extrair métricas dos modelos
+            model_metrics = {}
+            for name, model_info in self.models.items():
+                if isinstance(model_info, dict):
+                    model_metrics[name] = model_info
+                else:
+                    # Se for o objeto do modelo diretamente, pegar dos resultados
+                    if name in self.results.get('ml_results', {}):
+                        model_metrics[name] = self.results['ml_results'][name]
+            
+            # Exibir performance de cada modelo
+            print(f"\n📈 PERFORMANCE DOS MODELOS:")
+            sorted_models = []
+            
+            for name, metrics in model_metrics.items():
+                if 'accuracy' in metrics:
+                    accuracy = metrics['accuracy']
+                    sorted_models.append((name, accuracy, metrics))
+            
+            # Ordenar por accuracy
+            sorted_models.sort(key=lambda x: x[1], reverse=True)
+            
+            for i, (name, accuracy, metrics) in enumerate(sorted_models, 1):
+                # Barra de progresso visual
+                bar_length = int(accuracy * 50)
+                bar = "█" * bar_length + "░" * (50 - bar_length)
+                
+                # Classificação de performance
+                if accuracy > 0.90:
+                    grade = "🏆 EXCELENTE"
+                elif accuracy > 0.85:
+                    grade = "✅ MUITO BOM"
+                elif accuracy > 0.80:
+                    grade = "⚠️ BOM"
+                else:
+                    grade = "❓ REGULAR"
+                
+                print(f"   {i}. {name:<20}: {accuracy:.4f} ({accuracy*100:5.1f}%) {bar} {grade}")
+                
+                # Métricas adicionais se disponíveis
+                additional_metrics = []
+                for metric in ['precision', 'recall', 'f1_score', 'roc_auc']:
+                    if metric in metrics:
+                        additional_metrics.append(f"{metric}={metrics[metric]:.3f}")
+                
+                if additional_metrics:
+                    print(f"      📊 {' | '.join(additional_metrics)}")
+            
+            # Melhor modelo
+            if sorted_models:
+                best_name, best_accuracy, _ = sorted_models[0]
+                print(f"\n🏆 MELHOR MODELO: {best_name}")
+                print(f"🎯 ACCURACY: {best_accuracy:.4f} ({best_accuracy*100:.1f}%)")
+        else:
+            print("❌ Nenhum modelo foi treinado com sucesso")
+
+    def _display_performance_metrics(self):
+        """Exibir métricas de performance do pipeline"""
+        print(f"\n⏱️ 4. MÉTRICAS DE PERFORMANCE DO PIPELINE")
+        print("-" * 50)
+        
+        metrics = self.performance_metrics
+        
+        print(f"📊 TEMPOS DE EXECUÇÃO:")
+        print(f"   ⏱️ Carregamento de dados: {metrics.get('data_load_time', 0):.2f}s")
+        print(f"   🤖 Treinamento ML: {metrics.get('ml_training_time', 0):.2f}s")
+        print(f"   🏁 Tempo total: {metrics.get('total_time', 0):.2f}s")
+        
+        print(f"\n📈 PROCESSAMENTO:")
+        print(f"   📋 Registros processados: {metrics.get('records_processed', 0):,}")
+        print(f"   🗄️ Fonte de dados: {metrics.get('data_source', 'N/A').upper()}")
+        
+        # Taxa de processamento
+        if metrics.get('total_time', 0) > 0 and metrics.get('records_processed', 0) > 0:
+            rate = metrics['records_processed'] / metrics['total_time']
+            print(f"   🚀 Taxa de processamento: {rate:,.0f} registros/segundo")
+        
+        # Eficiência de memória
+        if self.df is not None:
+            memory_mb = self.df.memory_usage(deep=True).sum() / 1024**2
+            print(f"   💾 Uso de memória: {memory_mb:.2f} MB")
+
+    def _display_insights(self):
+        """Exibir insights e conclusões"""
+        print(f"\n💡 5. INSIGHTS E CONCLUSÕES")
+        print("-" * 50)
+        
+        insights = []
+        
+        # Insights sobre os dados
+        if self.df is not None:
+            total_records = len(self.df)
+            
+            if 'salary' in self.df.columns:
+                high_salary_pct = (self.df['salary'] == '>50K').mean() * 100
+                
+                if high_salary_pct < 30:
+                    insights.append(f"📊 Apenas {high_salary_pct:.1f}% ganham mais de $50K - dataset desbalanceado")
+                
+                # Insights por idade
+                if 'age' in self.df.columns:
+                    avg_age = self.df['age'].mean()
+                    insights.append(f"👥 Idade média: {avg_age:.1f} anos")
+                
+                # Insights por educação
+                if 'education-num' in self.df.columns:
+                    high_earners_edu = self.df[self.df['salary'] == '>50K']['education-num'].mean()
+                    low_earners_edu = self.df[self.df['salary'] == '<=50K']['education-num'].mean()
+                    
+                    if high_earners_edu > low_earners_edu:
+                        diff = high_earners_edu - low_earners_edu
+                        insights.append(f"🎓 Quem ganha mais tem {diff:.1f} anos a mais de educação em média")
+                
+                # Insights por horas trabalhadas
+                if 'hours-per-week' in self.df.columns:
+                    high_earners_hours = self.df[self.df['salary'] == '>50K']['hours-per-week'].mean()
+                    low_earners_hours = self.df[self.df['salary'] == '<=50K']['hours-per-week'].mean()
+                    
+                    if high_earners_hours > low_earners_hours:
+                        diff = high_earners_hours - low_earners_hours
+                        insights.append(f"⏰ Quem ganha mais trabalha {diff:.1f} horas/semana a mais")
+        
+        # Insights sobre modelos
+        if self.models and len(self.models) > 0:
+            best_model, best_score = self._find_best_model()
+            if best_model and best_score > 0.80:
+                insights.append(f"🤖 {best_model} alcançou {best_score:.1%} de accuracy - bom desempenho")
+            elif best_model:
+                insights.append(f"🤖 {best_model} alcançou {best_score:.1%} de accuracy - necessita melhorias")
+        
+        # Insights sobre performance
+        if self.performance_metrics.get('total_time', 0) < 5:
+            insights.append(f"⚡ Pipeline executou em {self.performance_metrics['total_time']:.1f}s - muito eficiente")
+        
+        # Exibir insights
+        if insights:
+            for i, insight in enumerate(insights, 1):
+                print(f"   {i}. {insight}")
+        else:
+            print("   ℹ️ Análise concluída - execute com mais dados para insights detalhados")
+        
+        # Recomendações
+        print(f"\n🎯 PRÓXIMOS PASSOS RECOMENDADOS:")
+        recommendations = [
+            "📊 Execute o dashboard: streamlit run app.py",
+            "🔍 Analise os gráficos interativos no Streamlit",
+            "🤖 Teste diferentes algoritmos de ML",
+            "📈 Colete mais dados para melhorar os modelos"
+        ]
+        
+        for i, rec in enumerate(recommendations, 1):
+            print(f"   {i}. {rec}")
+
     def _save_results(self):
         """Salvar resultados do pipeline"""
         try:
@@ -492,23 +760,37 @@ class HybridPipelineSQL:
             return "❌ Falha no carregamento de dados"
 
 def setup_database():
-    """Configurar banco de dados"""
+    """Configurar banco de dados (placeholder)"""
     print("🗄️ Configuração de Banco de Dados")
     print("=" * 40)
     
     try:
-        from src.database.setup import setup_database as setup_db
-        setup_db()
+        # Tentar importar e usar setup real
+        from src.database.connection import create_connection
+        from src.database.migration import run_migration
+        
+        print("📋 Testando conexão...")
+        conn = create_connection()
+        if conn:
+            print("✅ Conexão com banco OK")
+            
+            print("🔄 Executando migração...")
+            success = run_migration()
+            if success:
+                print("✅ Migração concluída com sucesso")
+            else:
+                print("⚠️ Problemas na migração")
+            
+            conn.close()
+        else:
+            print("❌ Erro na conexão com banco")
+            
     except ImportError:
         print("⚠️ Módulos de banco não encontrados")
         print("💡 Sistema funcionará em modo CSV")
-        print("\nPara habilitar SQL:")
-        print("  1. pip install mysql-connector-python")
-        print("  2. Configure variáveis de ambiente:")
-        print("     export DB_HOST=localhost")
-        print("     export DB_NAME=salary_analysis") 
-        print("     export DB_USER=salary_user")
-        print("     export DB_PASSWORD=senha_forte")
+    except Exception as e:
+        print(f"❌ Erro na configuração: {e}")
+        print("💡 Sistema funcionará em modo CSV")
 
 def main():
     """Função principal com argumentos otimizados"""
@@ -516,6 +798,7 @@ def main():
     parser.add_argument('--csv-only', action='store_true', help='Forçar uso apenas de CSV')
     parser.add_argument('--log-level', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
     parser.add_argument('--setup-db', action='store_true', help='Configurar banco de dados')
+    parser.add_argument('--no-results', action='store_true', help='Não exibir relatório completo')
     
     args = parser.parse_args()
     
@@ -527,7 +810,8 @@ def main():
         # Executar pipeline principal
         pipeline = HybridPipelineSQL(
             force_csv=args.csv_only,
-            log_level=args.log_level
+            log_level=args.log_level,
+            show_results=not args.no_results
         )
         
         results = pipeline.run()
