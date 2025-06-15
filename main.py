@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 🚀 Sistema de Análise Salarial com Fallback SQL → CSV
 Implementa: DBSCAN, APRIORI, FP-GROWTH, ECLAT
@@ -21,7 +20,7 @@ def main():
         
         # Pipeline com fallback automático
         pipeline = HybridPipelineSQL(
-            force_csv=False,        # False = tenta SQL primeiro
+            force_csv=False,
             log_level="INFO",       
             show_results=True,      
             auto_optimize=True      
@@ -53,6 +52,17 @@ def main():
         traceback.print_exc()
         return False
 
+def show_results():
+    """Mostrar resultados após execução do pipeline"""
+    try:
+        from src.analysis.results_presenter import ResultsPresenter
+        presenter = ResultsPresenter()
+        presenter.generate_final_report()
+    except Exception as e:
+        print(f"❌ Erro ao mostrar resultados: {e}")
+
 if __name__ == "__main__":
     success = main()
-    print(f"🔍 DEBUG: Script finalizado com sucesso: {success}")
+    if success:
+        print("\n🎨 Gerando apresentação dos resultados...")
+        show_results()
