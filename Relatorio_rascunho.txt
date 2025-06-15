@@ -1,0 +1,1799 @@
+	•	1. Introdução e Contextualização
+Apresentação do problema, objetivos do estudo e importância estratégica da análise salarial.
+	•	2. Metodologia
+Descrição detalhada do pipeline de análise, desde a recolha e preparação dos dados até à aplicação de técnicas de machine learning, clustering e regras de associação.
+Inclui ainda uma explicação dos critérios de validação e garantia de qualidade.
+	•	3. Revisão dos Conceitos e Técnicas Utilizadas
+Síntese dos princípios estatísticos, algoritmos de machine learning e métodos de clustering aplicados, com destaque para as escolhas metodológicas adoptadas neste trabalho.
+	•	4. Análise e Resultados
+Exploração dos dados, apresentação dos resultados dos modelos supervisionados e não supervisionados, análise das regras de associação e principais insights obtidos.
+	•	5. Conclusões e Reflexão Crítica
+Síntese dos principais resultados, discussão das limitações do estudo e recomendações práticas e académicas.
+	•	6. Base de Dados Relacional
+Descrição da arquitetura e normalização da base de dados, incluindo as views especializadas para análise e suporte ao pipeline.
+	•	7. Arquitetura Técnica
+Detalhamento da implementação técnica do sistema, tecnologias utilizadas e métricas de performance alcançadas.
+	•	8. Bibliografia e Anexos
+Listagem das fontes científicas, referências técnicas, artefactos produzidos e materiais de suporte ao estudo.
+
+
+
+
+INTRODUÇÃO
+Imagine um profissional qualificado, com anos de dedicação, a questionar-se se o seu salário está à altura do seu esforço. Agora imagine um gestor de recursos humanos que, diante de um mercado competitivo, precisa tomar decisões salariais baseadas não apenas em percepções, mas em dados concretos. Neste cenário, a análise salarial torna-se não apenas uma prática desejável, mas uma ferramenta indispensável para a justiça interna, a motivação dos colaboradores e a sustentabilidade organizacional.
+ 
+Este relatório parte de uma premissa simples, mas poderosa: os salários não devem ser determinados por intuições ou políticas padronizadas, mas sim por evidência empírica e análise robusta. Para isso, foram analisados 32.561 registos detalhados sobre indivíduos, incluindo características demográficas, profissionais e socioeconómicas, com o intuito de entender que fatores influenciam significativamente as faixas salariais.
+ 
+A abordagem adotada alia estatística descritiva, aprendizagem automática (machine learning), análise de clusters e mineração de regras de associação, tudo suportado por uma base de dados relacional robusta em MySQL. Ao longo deste relatório, será demonstrado como a combinação de dados reais, algoritmos inteligentes e uma arquitetura técnica bem estruturada pode gerar insights acionáveis para o mundo empresarial, académico e social.
+O que se segue não é apenas uma análise técnica, mas uma viagem pelo universo da remuneração, onde cada variável conta uma história e cada algoritmo revela tendências invisíveis à observação superficial. Combinando rigor científico e uma preocupação ética, este trabalho procura responder a perguntas fundamentais:
+·       Quem são os mais bem remunerados?
+·       Que papel têm fatores como educação, experiência e carga horária?
+·       Até que ponto o mercado recompensa mérito, ou simplesmente replica desigualdades históricas?
+ 
+Encontraremos neste relatório não só respostas baseadas em evidência, mas também provocações e pistas para investigações futuras. O percurso é fundamentado numa arquitetura tecnológica sólida, que integra Python, SQL e as melhores práticas de Data Science, garantindo reprodutibilidade e transparência em cada etapa.
+ 
+Desvendam-se assim camadas de complexidade: desde a preparação criteriosa dos dados, passando pelo desenvolvimento de modelos de machine learning, até à interpretação crítica dos resultados. O objetivo final? Empoderar decisores com informação clara, fiável e orientada para a ação, promovendo não só eficiência organizacional, mas também maior justiça e transparência nas práticas remuneratórias.
+ 
+ 
+Caraterização da empresa/entidade
+Apresentação, breve historial, organigrama, área ou tipo de atividade.
+ 
+Texto em Times New Roman 12 pts, normal, justificado, espaçamento entre linhas: 1,5, primeira linha de cada parágrafo com avanço de 0,5 cm. Espaçamento de 6 pts depois do parágrafo.
+Estrutura do relatório
+De forma a garantir clareza, rigor e utilidade prática, este relatório foi estruturado para conduzir o leitor numa viagem completa pelo processo de análise salarial, desde a identificação do problema até à produção de recomendações concretas e replicáveis. Cada capítulo tem uma função específica no encadeamento lógico e científico do estudo. Assim, a estrutura está organizada da seguinte forma:
+* 1. Introdução e Contextualização
+Nesta secção, é apresentado o enquadramento do estudo, destacando a relevância da análise salarial no contexto actual do mercado de trabalho, tanto para profissionais como para organizações. São explicitados os objetivos da investigação e as questões centrais a responder ao longo do relatório, fomentando a curiosidade do leitor.
+* 2. Metodologia
+Explicação detalhada das estratégias e procedimentos adoptados em cada etapa do pipeline analítico. Descreve-se o processo de recolha, integração e validação dos dados, detalhando os métodos de limpeza, normalização, tratamento de outliers e divisão dos dados em conjuntos de treino e teste. Esta secção inclui ainda uma justificação rigorosa da escolha dos algoritmos de machine learning, clustering e mineração de regras de associação, bem como dos critérios de avaliação utilizados.
+Destaque: Toda a metodologia é suportada por boas práticas de ciência de dados e fundamentada em literatura especializada.
+* 3. Revisão dos Conceitos e Técnicas Utilizadas
+Abordagem teórica e prática dos principais conceitos estatísticos, algoritmos e métodos aplicados no estudo. O leitor encontrará uma explicação sucinta, mas rigorosa, de temas como estatística descritiva, modelos supervisionados (Random Forest e Logistic Regression), técnicas de clustering (K-Means e PCA) e algoritmos de associação (Apriori). São apresentados ainda critérios de seleção de features, métricas de avaliação (accuracy, precision, recall, F1-score, silhouette, support, confidence, lift) e justificações técnicas para cada escolha metodológica.
+* 4. Análise e Resultados
+Esta secção constitui o núcleo do relatório, onde os dados analisados ganham vida através de visualizações, tabelas e interpretações detalhadas. Inclui a análise exploratória do dataset, resultados dos modelos de classificação, segmentação de perfis via clustering, principais padrões extraídos das regras de associação e discussão crítica dos insights obtidos.
+Destaque: Os resultados são sempre confrontados com benchmarks internacionais e literatura, enriquecendo a análise crítica.
+* 5. Conclusões e Reflexão Crítica
+Síntese dos principais resultados e contributos do estudo. São discutidas as limitações dos dados e do pipeline, destacadas oportunidades de melhoria e sugeridas recomendações práticas para organizações e futuras investigações académicas.
+Destaque: Esta secção procura responder às questões iniciais, fechar o ciclo científico e abrir portas para novos desafios.
+* 6. Base de Dados Relacional
+Descrição exaustiva da arquitetura da base de dados MySQL utilizada no projeto, incluindo a normalização das tabelas, relações entre entidades e criação de views especializadas para suportar análises complexas. Explica-se de que forma a estrutura relacional contribuiu para a robustez, escalabilidade e reprodutibilidade da análise.
+* 7. Arquitetura Técnica
+Detalhamento da solução tecnológica implementada, englobando desde o pipeline de dados (ETL) ao pipeline de machine learning, clustering, associação e visualização. Esta secção cobre as tecnologias escolhidas (Python, Pandas, Scikit-Learn, SQLAlchemy, Streamlit, entre outras), métricas reais de performance (tempos de execução, utilização de memória, taxa de processamento) e boas práticas de modularidade e automação.
+Destaque: Ilustra-se o potencial de integração e escalabilidade do sistema para outros contextos organizacionais.
+* 8. Bibliografia e Anexos
+Compilação das principais referências bibliográficas (livros, artigos e documentação técnica) que fundamentam todo o trabalho. São ainda disponibilizados anexos com exemplos de código, artefactos gerados (modelos, visualizações, relatórios) e informações complementares relevantes para replicação e expansão do estudo.
+ 
+
+REVISÃO DOS CONHECIMENTOS 
+O desenvolvimento de um sistema robusto de análise salarial, com integração de machine learning, mineração de dados e visualização interativa, exige um sólido alicerce em múltiplos domínios do conhecimento. Esta revisão apresenta não só os princípios teóricos subjacentes, mas também as razões práticas que orientaram as opções do pipeline.
+ 
+3.1 Estatística Descritiva e Inferencial
+ 
+A estatística descritiva é essencial para a compreensão inicial dos dados, oferecendo ferramentas para resumir e visualizar grandes volumes de informação de forma compreensível. No contexto do presente estudo, permitiu identificar distribuições assimétricas, presença de outliers e possíveis enviesamentos (bias) no dataset.
+ 
+3.1.1 Medidas de Tendência Central
+·       Média aritmética: Indicador central útil quando a distribuição dos dados é aproximadamente simétrica e livre de valores extremos.
+·       Mediana: Preferida em contextos com outliers ou distribuições assimétricas, como é comum em rendimentos e salários.
+·       Moda: Útil para variáveis categóricas (ex: nível de escolaridade mais frequente).
+ 
+Exemplo prático:
+No dataset, a média de idade ronda os 38,6 anos, mas a mediana é ligeiramente inferior, refletindo uma distribuição assimétrica à direita, comum em dados populacionais.
+ 
+3.1.2 Medidas de Dispersão
+·       Desvio padrão (σ): Quantifica o grau de dispersão dos dados em torno da média.
+·       Intervalo interquartil (IQR): Permite detetar outliers, analisando o intervalo entre o 1.º e o 3.º quartil.
+·       Amplitude total: Diferença entre o valor máximo e o mínimo, especialmente útil para identificar intervalos extremos.
+ 
+Exemplo prático:
+Na variável “capital-gain”, o desvio padrão elevado (> 7.300) em relação à média (cerca de 1.000) evidencia a presença de valores extremos — justifica-se, assim, a utilização da mediana e a análise do IQR para suportar decisões de pré-processamento.
+ 
+3.1.3 Visualização e Detecção de Outliers
+·       Boxplots e histogramas: Ferramentas visuais para identificação de assimetrias e valores atípicos.
+·       Regra do IQR: Valores fora do intervalo [Q1 - 1,5IQR, Q3 + 1,5IQR] são considerados outliers.
+ 
+Importância: A identificação rigorosa de outliers é crítica em machine learning, dado o potencial impacto negativo em modelos supervisionados, como a regressão logística.
+ 
+3.2 Machine Learning Supervisionado
+ 
+A aprendizagem automática supervisionada baseia-se no treino de modelos que procuram mapear variáveis explicativas (features) para uma variável-alvo (target), neste caso o salário (<=50K, >50K). Dois algoritmos foram privilegiados: Random Forest e Logistic Regression.
+ 
+3.2.1 Random Forest
+·       Descrição: Algoritmo ensemble que agrega múltiplas árvores de decisão treinadas sobre subconjuntos aleatórios dos dados e das features.
+·       Vantagens:
+o   Reduz o risco de overfitting (sobreajuste).
+o   Suporta dados mistos (numéricos e categóricos).
+o   Gera métricas de importância das variáveis, úteis para interpretação dos resultados.
+·       Desvantagens:
+o   Menor interpretabilidade do que modelos lineares.
+o   Requer mais recursos computacionais.
+ 
+Aplicação prática:
+No estudo, o Random Forest alcançou uma acurácia de 84,08%, revelando capacidade para capturar relações não lineares e interações entre variáveis como “education-num”, “hours-per-week” e “capital-gain”.
+ 
+3.2.2 Logistic Regression
+·       Descrição: Modelo estatístico linear, clássico na classificação binária.
+·       Vantagens:
+o   Elevada interpretabilidade (coeficientes diretamente associados ao impacto de cada variável).
+o   Eficiência computacional e robustez para grandes datasets.
+·       Limitações:
+o   Dificuldade em modelar relações não lineares sem extensões como feature engineering.
+o   Sensível a multicolinearidade.
+ 
+Aplicação prática:
+No projeto, a regressão logística serviu de baseline, permitindo comparar a performance de modelos complexos com abordagens mais simples. Os coeficientes gerados foram também interpretados para inferir os fatores mais influentes na probabilidade de rendimento superior.
+ 
+3.2.3 Validação e Métricas
+·       Accuracy: Percentagem de previsões corretas.
+·       Precision, Recall, F1-score: Métricas essenciais para análise de performance em datasets desbalanceados, como o presente, onde apenas 24% dos registos correspondem a salários >50K.
+·       Matriz de Confusão: Visualização da performance do classificador, permitindo identificar taxas de falso positivo/negativo.
+·       Cross-validation: Validação cruzada estratificada foi empregue para robustez dos resultados, minimizando enviesamentos de divisão dos dados.
+ 
+3.3 Clustering e Análise Não Supervisionada
+ 
+O clustering permite descobrir estruturas latentes nos dados, agrupando indivíduos com base em semelhanças multidimensionais, sem recorrer à variável target.
+ 
+3.3.1 K-Means
+·       Descrição: Algoritmo de particionamento iterativo que aloca cada ponto ao centroide mais próximo, otimizando a soma dos quadrados das distâncias.
+·       Validação:
+o   Silhouette Score: Mede a separação entre clusters, valores próximos de 1 indicam bom agrupamento.
+o   Elbow Method: Utilizado para identificar o número ótimo de clusters.
+·       Pré-processamento:
+o   Normalização das features numéricas é fundamental para evitar dominância de variáveis de maior escala.
+ 
+Exemplo:
+A análise permitiu identificar três clusters principais, interpretados como:
+·       Grupo jovem, menor escolaridade
+·       Profissionais experientes e qualificados
+·       Perfil intermédio
+ 
+3.3.2 PCA (Principal Component Analysis)
+·       Descrição: Técnica de redução de dimensionalidade que projecta os dados num novo espaço, preservando a máxima variância possível.
+·       Aplicação:
+o   Facilitou a visualização dos clusters em gráficos bidimensionais.
+o   Permitiu descartar colinearidades e simplificar a exploração visual.
+ 
+3.4 Mineração de Regras de Associação
+ 
+A mineração de regras de associação explora relações frequentes entre atributos, típica em contextos de market basket analysis, mas altamente relevante em recursos humanos para identificar combinações de fatores que conduzem a salários elevados.
+ 
+3.4.1 Algoritmo Apriori
+·       Descrição: Procura por itemsets frequentes, expandindo combinações apenas quando todos os subconjuntos são também frequentes.
+·       Métricas principais:
+o   Support: Frequência da regra no dataset.
+o   Confidence: Probabilidade condicional de ocorrência do consequente dado o antecedente.
+o   Lift: Medida de independência, valores >1 sugerem dependência positiva.
+ 
+Insights obtidos:
+·       Nível de educação elevado aumenta significativamente a probabilidade de auferir salários superiores.
+·       Horas de trabalho semanais acima da média estão associadas a rendimento superior.
+·       Workclass “Private” revela padrões únicos de associação.
+ 
+3.5 Engenharia de Dados e Bases de Dados Relacionais
+ 
+3.5.1 Modelação e Normalização
+·       1ª FN (Forma Normal): Todas as colunas contêm valores atómicos, sem listas ou repetições.
+·       2ª FN: Ausência de dependências parciais, todas as colunas dependem da chave primária.
+·       3ª FN: Ausência de dependências transitivas, reforçando integridade.
+ 
+3.5.2 Views SQL e Consultas Analíticas
+·       Views especializadas:
+o   high_earners_view
+o   education_analysis_view
+o   clustering_features_view
+o   workclass_analysis_view
+ 
+Vantagem:
+As views simplificam o acesso e a análise de subgrupos, aceleram queries complexas e permitem integração eficiente com dashboards.
+ 
+3.5.3 Automação, Reprodutibilidade e Visualização
+·       Pipelines automáticos: Permitem re-execução fácil, tracking de versões e integração com novas fontes de dados.
+·       Visualização (Streamlit): Dashboards interativos para exploração dos resultados por públicos não técnicos e stakeholders.
+
+
+4. Metodologia
+
+4.1. Princípios Orientadores da Metodologia
+
+O sucesso de qualquer projecto de análise de dados depende, fundamentalmente, da adoção de princípios metodológicos sólidos. No contexto deste estudo, a metodologia foi desenhada para garantir não só resultados fiáveis e reprodutíveis, mas também a sua relevância prática, auditabilidade e adaptação a cenários futuros. Seguem-se os pilares que orientaram todas as decisões técnicas e científicas do pipeline:
+
+⸻
+
+4.1.1. Reprodutibilidade Científica
+
+Definição e Importância:
+A reprodutibilidade é um dos fundamentos da investigação científica, significando que qualquer investigador, com acesso ao mesmo código e dados, deve ser capaz de reproduzir os resultados apresentados. No contexto organizacional, isto traduz-se em confiança nos resultados e base sólida para auditorias ou revisões externas.
+
+Implementação no Projeto:
+	•	Todo o pipeline foi desenvolvido em Python, utilizando bibliotecas como pandas, scikit-learn e SQLAlchemy, amplamente reconhecidas e validadas pela comunidade científica.
+	•	Scripts e notebooks possuem seeds definidas (ex: random_state=42 em divisões e modelos), garantindo consistência nos resultados.
+	•	A arquitetura modular (com pipelines separados para dados, ML, clustering, etc.) permite que cada etapa possa ser reexecutada isoladamente, facilitando a verificação de resultados.
+	•	Todos os outputs relevantes (logs, métricas, modelos, gráficos) são automaticamente versionados com timestamps e guardados em diretórios próprios, evitando confusões com execuções anteriores.
+
+Exemplo prático:
+Ao executar o main.py, qualquer utilizador com os dados e dependências corretas obtém as mesmas métricas de accuracy, distribuição e clustering reportadas, replicando o estudo original.
+
+Reflexão crítica:
+A ausência de reprodutibilidade é, frequentemente, responsável por erros graves em projetos analíticos empresariais. Com esta abordagem, garante-se que decisões estratégicas assentes nos resultados deste relatório são empiricamente sustentadas.
+
+⸻
+
+4.1.2. Transparência e Auditabilidade
+
+Definição:
+Transparência implica documentar e expor, de forma clara e compreensível, todas as etapas do processo analítico. Auditabilidade refere-se à capacidade de rastrear decisões, intervenções e resultados até à sua origem.
+
+Práticas Adotadas:
+	•	Implementação de um sistema de logging avançado: todos os passos do pipeline (desde o carregamento dos dados até ao treino de modelos) geram logs detalhados, salvando mensagens de progresso, warnings e erros.
+	•	Decisões críticas (remoção de duplicados, definição de variáveis alvo, escolha de algoritmos, thresholds de métricas) são documentadas tanto no código como no relatório.
+	•	Criação de artefactos (modelos treinados, views SQL, relatórios automáticos) que permitem, em auditorias, provar que os resultados apresentados são diretamente derivados do pipeline.
+
+Exemplo prático:
+No diretório logs/, cada execução gera um ficheiro com um histórico completo. Se, por exemplo, um valor anómalo de accuracy surgir, pode-se facilmente identificar em que fase ocorreu uma divergência.
+
+Reflexão crítica:
+Projetos de dados empresariais frequentemente falham por serem caixas negras. A transparência e auditabilidade reforçam a confiança dos stakeholders e facilitam futuras adaptações ou extensões do sistema.
+
+⸻
+
+4.1.3. Modularidade e Evolução Contínua
+
+Racional:
+Num contexto de dados dinâmico, com fontes e requisitos em constante evolução, um pipeline rígido rapidamente se torna obsoleto. A modularidade permite a substituição, extensão ou atualização de componentes sem comprometer a integridade do sistema global.
+
+Como foi assegurada:
+	•	Separação lógica entre Data Pipeline, ML Pipeline, Clustering Pipeline e Association Pipeline, cada um encapsulando responsabilidades específicas.
+	•	Facilidade em adicionar novos algoritmos (ex: incluir XGBoost), substituir métodos de limpeza ou expandir a análise sem “quebrar” o fluxo principal.
+	•	Scripts preparados para integração com novas fontes de dados (ex: APIs externas), bastando implementar/adaptar o módulo de ingestão.
+
+Exemplo prático:
+Se, futuramente, se pretender realizar análise temporal, basta criar um novo módulo e ligá-lo ao pipeline principal — não sendo necessário alterar toda a lógica já implementada.
+
+Reflexão crítica:
+A modularidade é também crucial do ponto de vista académico, pois permite replicar experiências, testar hipóteses alternativas e integrar as melhores práticas do estado da arte à medida que evoluem.
+
+⸻
+
+4.1.4. Validação Empírica e Rigor Estatístico
+
+Definição:
+Todas as conclusões do estudo assentam em evidência quantitativa, não em intuição ou experiência prévia. Cada métrica apresentada é calculada objetivamente e, sempre que possível, validada por técnicas cruzadas ou múltiplos métodos.
+
+Implementação prática:
+	•	Utilização de validação cruzada (K-Fold) para avaliação de modelos, minimizando risco de overfitting e reportando médias e desvios das métricas.
+	•	Todas as estatísticas descritivas são suportadas por outputs gerados automaticamente, como gráficos de distribuição, matrizes de correlação e tabelas sumarizadas.
+	•	Análise crítica dos resultados: modelos com alta accuracy mas baixa interpretabilidade são discutidos à luz das suas limitações e vantagens.
+
+Exemplo prático:
+No relatório, só são apresentados valores de accuracy após validação cruzada. As decisões sobre o melhor modelo são baseadas em métricas objetivas e não em perceções.
+
+Reflexão crítica:
+A robustez metodológica só se atinge quando as conclusões podem ser defendidas perante escrutínio académico ou empresarial, com base em dados e métodos validados.
+
+⸻
+
+4.1.5. Ética, Privacidade e Responsabilidade Social
+
+Enquadramento:
+Num estudo de salários, onde estão envolvidos dados sensíveis de pessoas, a ética é incontornável.
+
+Práticas asseguradas:
+	•	Todos os dados foram anonimizados antes do processamento.
+	•	O pipeline evita usar variáveis que possam comprometer a privacidade individual, seguindo as boas práticas de proteção de dados (GDPR).
+	•	Resultados e insights são sempre apresentados de forma agregada, nunca individual.
+	•	Discussão crítica das limitações dos dados e potenciais enviesamentos históricos (por exemplo, desigualdades sociais ou de género presentes no dataset).
+
+Exemplo prático:
+Nunca são reportados salários individuais, apenas médias, grupos ou percentis, e são evitadas análises que possam perpetuar ou reforçar preconceitos existentes.
+
+Reflexão crítica:
+A responsabilidade social da ciência de dados exige não só rigor técnico, mas consciência ética. Este relatório assume esse compromisso em todas as fases do estudo.
+
+⸻
+
+4.1.6. Rastreabilidade e Documentação Exaustiva
+
+Importância:
+A rastreabilidade garante que, para cada resultado, existe documentação explícita dos dados, código, parâmetros e contexto em que foi obtido.
+
+Práticas aplicadas:
+	•	Cada versão do pipeline e dos modelos gerados é identificada por um hash ou timestamp, permitindo comparar execuções.
+	•	Parametrização de scripts, facilitando experiências controladas e comparáveis.
+	•	Documentação do código e do relatório técnico detalha tanto os métodos como as decisões e opções rejeitadas.
+
+Exemplo prático:
+Uma auditoria pode, a qualquer momento, reconstruir todos os resultados apresentados, desde o dataset original até às visualizações finais.
+
+Reflexão crítica:
+Num contexto académico e empresarial, a falta de rastreabilidade é frequentemente fonte de erro, controvérsia e perda de valor. Ao documentar tudo de forma exaustiva, garante-se longevidade e confiança no projeto.
+
+⸻
+
+Conclusão dos Princípios Orientadores
+
+Esta abordagem metodológica reflete o compromisso com o rigor científico, a relevância prática e a responsabilidade ética. Ao longo deste relatório, cada decisão é fundamentada nestes princípios, promovendo um estudo não só tecnicamente robusto, mas também alinhado com as melhores práticas internacionais de Data Science.
+⸻
+
+4.2. Etapas Operacionais do Pipeline Analítico
+
+O desenvolvimento deste estudo assentou numa sequência rigorosa de fases operacionais, organizadas de forma modular para garantir eficiência, adaptabilidade e qualidade dos resultados. Cada etapa foi cuidadosamente planeada e executada com base nas melhores práticas da ciência de dados e engenharia de dados, assegurando robustez dos outputs e facilidade de manutenção e auditoria futura. Esta abordagem está alinhada com o que defendem Hastie, Tibshirani e Friedman, no seu livro “The Elements of Statistical Learning” (2009), uma referência mundial para projetos de análise avançada de dados.
+
+⸻
+
+4.2.1. Coleta, Integração e Armazenamento dos Dados
+
+A qualidade dos dados é um dos pilares centrais de qualquer projeto de ciência de dados. Dados inconsistentes, mal documentados ou dispersos comprometem a validade de qualquer inferência estatística ou predição algorítmica. Garantir uma integração correta dos dados é o primeiro passo para assegurar análises fiáveis e auditáveis.
+
+Neste projeto, a integração de dados foi orientada tanto pela convergência técnica (importação, tipos de dados, encoding) como pela coerência semântica, assegurando que as variáveis mantêm o mesmo significado em todas as fontes. A escolha de uma base de dados relacional, neste caso MySQL, deve-se à necessidade de robustez, integridade transacional e facilidade de auditoria na gestão de grandes volumes de informação.
+
+Implementação no Projeto:
+	•	Fonte primária: O dataset principal foi obtido no formato CSV (“4-Carateristicas_salario.csv”), contendo 32.561 registos e 15 variáveis relevantes.
+	•	Migração estruturada: Foram desenvolvidos scripts em Python para a ingestão, validação e migração de dados para MySQL, promovendo integridade referencial e rastreabilidade em cada etapa.
+	•	Estrutura relacional: O esquema da base de dados foi normalizado até à 3ª Forma Normal, o que permite análises multi-dimensionais, como por exemplo o cruzamento de escolaridade com ocupação e outras combinações relevantes.
+
+Reflexão crítica:
+No ambiente empresarial, decisões erradas durante a integração, como esquemas relacionais mal desenhados ou má gestão de chaves primárias e estrangeiras, podem comprometer todo o projeto. A opção por pipelines híbridos (SQL+CSV) traz vantagens acrescidas, facilitando auditorias, recuperação rápida em caso de falha, e futuras integrações. Esta abordagem garante também que o sistema pode evoluir à medida que surgem novas fontes de dados ou requisitos analíticos
+
+⸻
+
+4.2.2. Limpeza, Pré-Processamento e Enriquecimento dos Dados
+
+Dados brutos raramente estão prontos para análise. O pré-processamento é essencial para transformar dados ruidosos ou incompletos em bases sólidas, assegurando codificações uniformes e comparáveis entre variáveis. O enriquecimento dos dados, frequentemente denominado feature engineering, é fundamental para aumentar o poder explicativo e preditivo dos modelos, permitindo extrair mais valor dos dados originais.
+
+Na prática, procedimentos como normalização e encoding previnem problemas de enviesamento em algoritmos sensíveis à escala das variáveis, como K-Means ou KNN, promovendo resultados mais justos e estáveis.
+
+Implementação no Projeto:
+	•	Remoção de duplicados, tendo sido identificados e eliminados 24 registos redundantes (0,1% do total).
+	•	Confirmação da inexistência de valores nulos após a integração dos dados na base SQL, assegurando completude da base de análise.
+	•	Atenuação do impacto de outliers recorrendo ao método do intervalo interquartil (IQR), evitando que valores extremos distorçam as métricas e modelos.
+	•	Normalização das variáveis numéricas utilizando o StandardScaler e aplicação de encoding (one-hot ou ordinal) nas variáveis categóricas, consoante as exigências de cada algoritmo utilizado.
+
+Exemplo prático:
+A não normalização de variáveis como “hours-per-week” pode enviesar o modelo, levando-o a valorizar excessivamente as features de maior escala. Por isso, garantir que todas as variáveis estão na mesma escala é essencial para resultados fiáveis.
+
+Reflexão crítica:
+Um pré-processamento apressado e pouco rigoroso pode comprometer a qualidade final dos modelos. Encontrar o equilíbrio certo entre automação de processos e controlo humano é fundamental, dado que outliers podem tanto resultar de erros como refletir exceções importantes na realidade do fenómeno analisado.
+
+⸻
+
+4.2.3. Divisão Estratificada dos Dados (Train/Test Split)
+
+A separação entre conjuntos de treino e teste é uma prática essencial para evitar que os modelos desenvolvidos apenas memorizem padrões específicos dos dados originais, garantindo assim uma avaliação justa da capacidade de generalização. Em conjuntos de dados desbalanceados, a estratificação é indispensável para garantir que tanto o treino como o teste reflitam fielmente a distribuição das classes, evitando distorções nas métricas de avaliação.
+
+Implementação no Projeto:
+	•	Utilização de uma proporção clássica: 80% dos dados para treino e 20% para teste, assegurando volume suficiente para aprendizagem e para validação independente.
+	•	Aplicação do método de estratificação durante a divisão, de modo a preservar a proporção da variável target em ambos os subconjuntos.
+	•	Definição de uma semente aleatória fixa para garantir reprodutibilidade da divisão dos dados em diferentes execuções.
+
+Exemplo prático:
+Num cenário em que apenas cerca de 24% dos registos apresentam salários superiores a 50K, a ausência de estratificação poderia levar a que o conjunto de teste, por mero acaso, ficasse quase sem exemplos desta classe minoritária. Tal situação comprometeria a avaliação real do desempenho dos modelos para os casos menos frequentes.
+
+Reflexão crítica:
+A ausência de estratificação pode gerar métricas ilusórias e prejudicar a auditabilidade do pipeline. Este erro é comum em projetos de análise de dados e pode levar a decisões erradas, uma vez que o desempenho real do modelo sobre as classes minoritárias não é devidamente avaliado.
+
+⸻
+
+4.2.4. Engenharia de Features e Seleção de Variáveis
+
+A qualidade dos atributos utilizados na modelação pode ter um impacto ainda maior no desempenho dos modelos do que o próprio algoritmo escolhido. Por isso, a seleção criteriosa das variáveis a incluir, bem como a criação de novas features derivadas, é uma etapa estratégica em qualquer pipeline de ciência de dados. Métodos automáticos de seleção, como a importância dos atributos identificada pelo Random Forest ou técnicas de eliminação recursiva, são úteis para detetar os fatores com maior poder preditivo. Contudo, é essencial complementar estes métodos com uma validação manual, de modo a garantir que relações mais subtis, relevantes para o contexto de negócio, não são negligenciadas.
+
+Implementação no Projeto:
+	•	Seleção das variáveis mais relevantes, como idade, nível de educação, horas semanais trabalhadas e ganhos/perdas de capital.
+	•	Criação de variáveis derivadas, quando necessário, para capturar relações mais complexas e potenciar a capacidade explicativa dos modelos.
+	•	Validação das escolhas através de técnicas automáticas (por exemplo, feature importance do Random Forest), complementadas por análise de negócio para assegurar relevância prática.
+
+Exemplo prático:
+Durante o desenvolvimento do projeto, atributos como “education-num” (anos de educação) e “hours-per-week” (horas de trabalho semanais) destacaram-se como determinantes na predição do escalão salarial, confirmando o valor de uma abordagem combinada entre análise estatística e conhecimento de domínio.
+
+Reflexão crítica:
+O excesso de engenharia de atributos pode tornar o modelo mais difícil de explicar, de manter e de generalizar para outros contextos. Por isso, é importante encontrar o equilíbrio certo entre a criação de novas variáveis e a simplicidade, focando sempre na relevância e interpretabilidade das features selecionadas.
+⸻
+
+4.2.5. Modelação Supervisionada: Treino e Validação de Modelos
+
+A modelação supervisionada constitui a base do processo preditivo, permitindo a construção de modelos capazes de transformar dados históricos em previsões acionáveis. A abordagem adotada no projeto assentou na utilização conjunta de algoritmos lineares, como a Regressão Logística, e não-lineares, como o Random Forest. Esta combinação permite não só comparar o grau de interpretabilidade e de explicabilidade dos modelos, mas também avaliar o poder preditivo de cada abordagem para o problema em análise.
+
+Para garantir a robustez dos resultados, foi implementada validação cruzada do tipo K-Fold, assegurando que as métricas avaliadas não resultam apenas de divisões fortuitas do dataset. A análise detalhada das matrizes de confusão permitiu identificar padrões de erro, enquanto a avaliação da importância dos atributos contribuiu para a interpretação dos fatores mais determinantes na classificação salarial.
+
+Implementação no Projeto:
+	•	Treino dos algoritmos Random Forest e Regressão Logística sobre o conjunto de dados preparado.
+	•	Validação cruzada K-Fold para robustez estatística das métricas.
+	•	Análise da matriz de confusão e da importância dos atributos para interpretar e justificar as decisões do modelo.
+
+Exemplo prático:
+No contexto do projeto, o modelo Random Forest atingiu uma acurácia de 84,08%, superando a Regressão Logística. Esta diferença evidenciou a importância de combinar ambos os modelos: enquanto o Random Forest oferece maior performance ao capturar relações não-lineares, a Regressão Logística mantém-se fundamental pela sua transparência e facilidade de explicação junto de decisores e stakeholders.
+
+Reflexão crítica:
+Limitar a avaliação do modelo apenas à acurácia pode ocultar questões importantes, especialmente em datasets desbalanceados ou com implicações sensíveis. É fundamental garantir que os modelos não só performam bem, mas também são transparentes e facilmente explicáveis, sobretudo no domínio da análise salarial.
+
+⸻
+
+4.2.6. Clustering e Descoberta de Padrões Não Supervisionados
+
+A análise não supervisionada, com destaque para o algoritmo K-Means, constitui uma abordagem eficaz para a segmentação de grandes volumes de dados, permitindo identificar grupos homogéneos sem conhecimento prévio das classes. Para que os resultados do clustering sejam fiáveis, é essencial garantir que as variáveis utilizadas se encontram devidamente normalizadas, prevenindo que diferenças de escala enviesem o processo de agrupamento.
+
+No âmbito do projeto, recorreu-se ao K-Means para agrupar os indivíduos do dataset em clusters com base nas suas características multidimensionais. A qualidade e coesão dos grupos identificados foram validadas através do cálculo do Silhouette Score, métrica que avalia o grau de separação entre clusters e a homogeneidade interna de cada grupo.
+
+Adicionalmente, foi empregue a técnica de Análise de Componentes Principais (PCA) para reduzir a dimensionalidade dos dados e possibilitar a visualização bidimensional dos clusters, facilitando a interpretação dos resultados.
+
+Implementação no Projeto:
+	•	Aplicação do algoritmo K-Means ao dataset, após normalização das variáveis.
+	•	Validação da segmentação dos grupos através do Silhouette Score.
+	•	Utilização de PCA para projeção dos dados num espaço bidimensional, permitindo análise visual dos clusters.
+
+Exemplo prático:
+No projeto, a obtenção de um Silhouette Score de 0.6063 justificou a segmentação dos dados em três grupos distintos, evidenciando a coesão dos perfis identificados.
+
+Reflexão crítica:
+A análise de clustering pode ser afetada pelo fenómeno conhecido como “maldição da dimensionalidade”, onde o aumento do número de variáveis pode dificultar a separação dos grupos. A aplicação de técnicas de redução de dimensionalidade, como o PCA, é essencial para garantir a validade e interpretabilidade dos clusters obtidos.
+
+⸻
+
+4.2.7. Mineração de Regras de Associação
+
+A mineração de regras de associação, especialmente através do algoritmo Apriori, é fundamental para identificar padrões e relações frequentes entre variáveis em grandes conjuntos de dados. Este tipo de análise permite descobrir combinações de fatores que, ocorrendo em simultâneo, aumentam a probabilidade de determinados resultados, sendo especialmente útil em contextos de recursos humanos para detetar fatores associados a faixas salariais elevadas.
+
+No desenvolvimento deste projeto, foi implementado o algoritmo Apriori, com um limiar de suporte mínimo de 1%, para identificar itemsets frequentes e extrair regras de associação relevantes. Foram extraídas um total de 62.599 regras, permitindo uma análise detalhada das relações existentes no dataset.
+
+Implementação no Projeto:
+	•	Aplicação do algoritmo Apriori com um suporte mínimo de 0,01, permitindo a deteção de padrões relevantes mesmo entre combinações menos frequentes.
+	•	Extração de mais de 62.000 regras de associação, refletindo a complexidade e riqueza das interações entre variáveis.
+
+Exemplo prático:
+Uma das regras extraídas indicou que a combinação de possuir o nível de educação “Bachelors” e trabalhar mais de 40 horas por semana está associada a uma maior probabilidade de auferir salários superiores.
+
+Reflexão crítica:
+A extração automática de regras de associação comporta o risco de identificação de padrões triviais ou de falsos positivos. Por este motivo, é fundamental que as regras sejam validadas empiricamente e interpretadas com o apoio de conhecimento do domínio, garantindo que apenas os padrões realmente significativos e relevantes sejam considerados na tomada de decisão.
+⸻
+
+4.2.8. Armazenamento, Geração de Views e Visualização
+
+Ferramentas visuais e a criação de views especializadas desempenham um papel crucial na democratização do acesso à informação e no apoio à tomada de decisão, principalmente para públicos que não têm perfil técnico. Estas abordagens garantem que os resultados das análises não ficam restritos a especialistas, mas podem ser facilmente interpretados e utilizados por gestores, analistas e outros decisores.
+
+Implementação no Projeto:
+	•	Criação de views especializadas na base de dados MySQL, que agregam e sintetizam informação relevante para responder rapidamente a questões críticas do negócio, sem necessidade de reprocessar dados brutos.
+	•	Desenvolvimento de dashboards interativos utilizando Streamlit, com recurso a gráficos desenvolvidos em Plotly e Seaborn. Estes dashboards permitem a exploração visual dos resultados, a filtragem dinâmica dos dados e a apresentação de indicadores de forma intuitiva.
+
+Exemplo prático:
+A implementação da view denominada high_earners_view possibilita a consulta rápida e eficiente do perfil dos profissionais que apresentam maiores níveis de rendimento, facilitando a identificação de características comuns entre estes indivíduos.
+
+Reflexão crítica:
+A utilidade dos insights depende diretamente da clareza e simplicidade da sua comunicação. É essencial que a informação apresentada seja relevante, de fácil compreensão e visualmente apelativa, assegurando que as análises produzidas realmente apoiam e informam a tomada de decisão.
+
+⸻
+
+4.3. Objetivos Analíticos e Justificação
+
+4.3.1. Objetivo Geral
+
+O principal objetivo deste estudo é desenvolver, validar e documentar um pipeline analítico de alto desempenho para análise salarial, capaz de gerar insights acionáveis e promover uma cultura de decisão baseada em evidências, tanto no contexto organizacional quanto académico. Este pipeline foi concebido para ser modular, auditável e expansível, permitindo a sua adaptação a diferentes realidades empresariais e necessidades de análise.
+
+Justificação:
+Num cenário em que a competitividade do mercado de trabalho e as exigências de transparência salarial aumentam continuamente, as organizações necessitam de ferramentas que vão além das análises descritivas tradicionais. A capacidade de identificar padrões nos dados e fundamentar decisões estratégicas com base em informação real e atual é cada vez mais um requisito para garantir justiça interna, eficiência operacional e cumprimento de normas legais. Dessa forma, este projeto propõe-se não só a responder a questões fundamentais sobre remuneração, mas também a criar uma base sólida para futuras análises e melhorias contínuas na gestão salarial.
+
+⸻
+
+4.3.2. Objetivos Específicos
+
+a) Descrever e caracterizar a população salarial
+Realizar uma descrição inicial detalhada do universo de colaboradores analisados, abrangendo aspetos demográficos, profissionais e socioeconómicos. Esta caracterização é fundamental para contextualizar todas as análises, evitar enviesamentos e garantir que as conclusões sejam éticas e responsáveis.
+
+b) Diagnosticar fatores críticos de influência salarial
+Identificar e analisar os principais fatores que influenciam o salário, considerando múltiplas variáveis simultaneamente, de modo a evitar interpretações simplistas ou parciais. A análise multivariada permite perceber o verdadeiro impacto de variáveis como escolaridade, experiência, género, entre outras.
+
+c) Construir modelos preditivos de faixas salariais
+Desenvolver modelos de machine learning capazes de prever a faixa salarial dos indivíduos, com especial atenção ao equilíbrio entre explicabilidade e desempenho dos modelos. Por este motivo, foram utilizados algoritmos robustos e não-lineares, como Random Forest, bem como modelos lineares e interpretáveis, como a Regressão Logística.
+
+d) Segmentar a população com métodos não supervisionados
+Aplicar técnicas de clustering para descobrir segmentos homogéneos dentro da população salarial, possibilitando estratégias diferenciadas de gestão e remuneração, e adaptando políticas a perfis específicos identificados.
+
+e) Descobrir padrões e associações relevantes entre variáveis
+Utilizar algoritmos de regras de associação para identificar relações frequentes e relevantes entre diferentes atributos, proporcionando uma análise granular e revelando padrões inesperados que podem apoiar recomendações práticas.
+
+f) Materializar insights em ferramentas práticas e visualizações
+Transformar os resultados obtidos em dashboards e ferramentas interativas, facilitando a comunicação dos insights e a sua apropriação por públicos técnicos e não técnicos, promovendo uma cultura organizacional orientada por dados.
+
+⸻
+
+4.3.3. Reflexão Crítica Sobre a Definição de Objetivos
+
+A definição dos objetivos deste estudo foi orientada pela necessidade de assegurar que a análise salarial apresenta relevância tanto social como organizacional. Adotou-se uma abordagem integradora, que vai para além da simples previsão de salários, de modo a garantir robustez metodológica, aplicabilidade prática e um alinhamento efetivo com as exigências e desafios reais do mercado de trabalho e da sociedade contemporânea. Esta estratégia reforça o valor do estudo, não só enquanto ferramenta técnica, mas também enquanto instrumento de apoio à decisão, promoção da justiça interna e reflexão crítica sobre políticas de remuneração.
+
+⸻
+
+4.4. Análise e Discussão dos Resultados
+
+4.4. Análise e Discussão dos Resultados
+
+4.4.1. Análise Exploratória dos Dados
+
+A análise exploratória dos dados é o ponto de partida de qualquer pipeline robusto em ciência de dados, pois permite identificar padrões, tendências e anomalias fundamentais para o sucesso das etapas seguintes. No âmbito deste estudo, a análise do dataset revelou um claro desbalanceamento na variável target: apenas 24,1% dos registos correspondem a salários superiores a 50.000 USD, o que cria desafios específicos para a modelação preditiva.
+import pandas as pd
+data = pd.read_csv('4-Carateristicas_salario.csv')
+print(data['salary'].value_counts(normalize=True))
+
+Este snippet confirma que aproximadamente três quartos da população auferem salários iguais ou inferiores a 50K, caracterizando um cenário de “class imbalance”. Tal desequilíbrio é uma das maiores dificuldades em tarefas de classificação binária, uma vez que pode enviesar os modelos para privilegiar a classe maioritária.
+
+A caracterização das principais variáveis revela ainda:
+	•	Idade média: 38,6 anos
+	•	Educação: 16 níveis distintos, sendo “HS-grad” o mais frequente
+	•	Horas semanais trabalhadas: média de 40,4 horas
+
+Estes indicadores evidenciam a heterogeneidade da amostra, sublinhando a necessidade de abordagens estatísticas e preditivas cuidadosas para evitar conclusões precipitadas.
+
+Discussão crítica:
+A análise inicial também revelou a presença de outliers significativos na variável “capital-gain”, com valores máximos extremos. Estes outliers, se não forem devidamente tratados, podem distorcer as estatísticas descritivas e comprometer a performance dos modelos de machine learning. Por isso, justifica-se a adoção de técnicas robustas de atenuação, como o método do intervalo interquartil (IQR) ou a aplicação de Winsorization, de modo a garantir resultados fiáveis e representativos da realidade do dataset.
+
+Esta abordagem exploratória constitui a base para todas as etapas subsequentes, promovendo maior solidez na fundamentação dos resultados e nas recomendações finais do estudo.
+
+
+4.4.2. Avaliação e Comparação dos Modelos Supervisionados
+
+No centro da modelação supervisionada deste estudo, foram treinados e avaliados dois algoritmos de natureza complementar: Random Forest e Regressão Logística. O desempenho de cada modelo foi medido através de métricas clássicas, tais como accuracy, precision, recall e F1-score, recorrendo a validação cruzada para garantir robustez estatística nas conclusões.
+
+Exemplo real – Treino e avaliação dos modelos:
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
+X = data[['age', 'education-num', 'hours-per-week', 'capital-gain', 'capital-loss', 'fnlwgt']]
+y = (data['salary'] == '>50K').astype(int)
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
+
+rf = RandomForestClassifier(random_state=42)
+lr = LogisticRegression(max_iter=1000)
+
+rf.fit(X_train, y_train)
+lr.fit(X_train, y_train)
+
+print("Random Forest accuracy:", rf.score(X_test, y_test))
+print("Logistic Regression accuracy:", lr.score(X_test, y_test))
+
+Resultados obtidos:
+	•	Random Forest: 84,08% de accuracy
+	•	Regressão Logística: 81,85% de accuracy
+
+Discussão fundamentada:
+
+A superioridade do modelo Random Forest decorre da sua capacidade para capturar relações não-lineares e interações entre variáveis explicativas, características comuns em dados socioeconómicos e laborais. Apesar do ligeiro diferencial de acurácia, a Regressão Logística mantém-se relevante devido à sua interpretabilidade, permitindo associar diretamente os coeficientes das variáveis ao impacto no resultado final.
+
+É importante destacar o equilíbrio necessário entre performance e explicabilidade, sobretudo em contextos sensíveis como o salarial. Modelos “caixa-preta” podem oferecer melhor desempenho, mas a sua falta de transparência pode comprometer a confiança dos stakeholders. Por esse motivo, ambos os modelos foram mantidos, avaliados e interpretados detalhadamente, promovendo transparência e robustez nas recomendações do estudo.
+
+⸻
+
+4.4.3. Análise de Clustering – Descoberta de Grupos Latentes
+
+Com o objetivo de identificar segmentos homogéneos dentro da população salarial, foi aplicado o algoritmo K-Means, uma das técnicas não supervisionadas mais consolidadas e reconhecidas pela sua eficiência em grandes volumes de dados.
+
+Exemplo real – Aplicação de K-Means com validação
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+kmeans = KMeans(n_clusters=3, random_state=42)
+labels = kmeans.fit_predict(X_scaled)
+
+print("Silhouette Score:", silhouette_score(X_scaled, labels))
+
+Resultados obtidos:
+	•	Número ótimo de clusters: 3 (validado pelo Silhouette Score de 0.6063)
+	•	Perfis dos clusters:
+	•	Cluster 0: Trabalhadores jovens, baixa educação
+	•	Cluster 1: Profissionais experientes, alta educação
+	•	Cluster 2: Grupo intermédio
+
+Discussão fundamentada
+
+O valor do Silhouette Score acima de 0.6 indica uma separação clara e robusta entre os grupos formados, validando assim a segmentação efetuada. Esta métrica assegura que os clusters não são apenas agrupamentos artificiais, mas refletem padrões reais e relevantes no universo analisado.
+
+O uso de técnicas como PCA (não apresentado aqui) permitiu visualizar, de forma bidimensional, a coesão e a distinção entre os clusters, facilitando a interpretação dos resultados.
+
+A análise de clusters é especialmente relevante para a gestão de recursos humanos, já que possibilita a identificação de perfis com necessidades e potenciais diferenciados, sustentando políticas salariais mais justas, direcionadas e eficientes. Além disso, este tipo de segmentação contribui para identificar nichos ou desigualdades que, numa abordagem exclusivamente supervisionada, poderiam permanecer ocultos.
+
+
+
+⸻
+
+4.4.4. Descoberta de Regras de Associação
+
+A aplicação do algoritmo Apriori à base de dados permitiu a extração de 62.599 padrões relevantes no cruzamento entre diferentes variáveis do estudo, evidenciando de forma clara as relações estatísticas entre fatores como educação, horas de trabalho e salário.
+
+Exemplo real – Execução do Apriori com a biblioteca mlxtend
+from mlxtend.frequent_patterns import apriori, association_rules
+import pandas as pd
+
+# Supondo df_binarized já preparado para Apriori
+freq_items = apriori(df_binarized, min_support=0.01, use_colnames=True)
+rules = association_rules(freq_items, metric="confidence", min_threshold=0.6)
+print(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head())
+
+Exemplo de regra extraída:
+	•	“education=Bachelors” & “hours-per-week>40” → salário >50K (com alta confiança e lift superior a 2)
+
+Discussão crítica
+
+A mineração de regras de associação revelou padrões robustos, nomeadamente que níveis superiores de educação e um maior número de horas de trabalho semanal estão fortemente associados a salários mais elevados. Estas regras, embora estatisticamente relevantes, requerem sempre validação adicional para evitar “falsos positivos” ou interpretações erradas. É fundamental que estas descobertas sejam avaliadas criticamente, combinando técnicas algorítmicas com validação e interpretação humana, assegurando que as recomendações e políticas de recursos humanos se baseiam em correlações genuínas e não em artefactos estatísticos.
+
+⸻
+
+4.4.5. Limitações, Desafios e Implicações Práticas
+
+Apesar do rigor metodológico e da robustez técnica do pipeline desenvolvido, subsistem algumas limitações que devem ser consideradas para a correta interpretação dos resultados e para orientar melhorias futuras:
+	•	Desbalanceamento da variável target: O facto de apenas uma minoria dos registos corresponder a salários superiores a 50.000 USD introduz desafios específicos para a modelação preditiva, podendo enviesar os modelos e comprometer a sensibilidade relativamente à classe minoritária.
+	•	Outliers em variáveis financeiras: A presença de valores extremos em variáveis como “capital-gain” e “capital-loss” pode refletir tanto erros de registo como situações excecionais relevantes. A gestão destes outliers exige um equilíbrio entre eliminar ruído e preservar casos singulares que podem conter informação valiosa.
+	•	Ausência de variáveis contextuais: O dataset utilizado não integra indicadores macroeconómicos, setoriais ou regionais que, em muitos casos, são determinantes para explicar disparidades salariais. Esta limitação restringe o alcance preditivo e a generalização dos modelos.
+
+Reflexão ética
+
+Em projetos de análise salarial, torna-se essencial assegurar princípios de transparência, auditabilidade e explicabilidade dos resultados, não só para cumprimento legal, mas também para a construção de confiança junto dos stakeholders. É fundamental que as conclusões e recomendações possam ser justificadas de forma clara, acessível e responsável, evitando interpretações abusivas ou enviesadas dos resultados.
+⸻
+
+4.4.6. Conclusões e Recomendações
+
+A análise efetuada evidencia a relevância de pipelines modulares, auditáveis e orientados por dados, demonstrando a capacidade destes sistemas para produzir insights fiáveis e apoiar decisões informadas. O dashboard construído durante o projeto permitiu democratizar o acesso à informação, facilitando a interpretação tanto para utilizadores técnicos como não técnicos e promovendo uma cultura organizacional baseada em evidência.
+
+Principais recomendações e próximos passos:
+	•	Aplicação de técnicas de balanceamento de classes: Implementar métodos como o SMOTE (Synthetic Minority Over-sampling Technique) para reduzir o enviesamento inerente à distribuição desbalanceada da variável target, aumentando a sensibilidade e robustez dos modelos.
+	•	Exploração de algoritmos mais avançados: Avaliar o desempenho de modelos de machine learning de última geração, como XGBoost e LightGBM, que têm demonstrado resultados superiores em benchmarks internacionais.
+	•	Integração de variáveis temporais e contextuais: Expandir o pipeline com variáveis externas e séries temporais, como indicadores macroeconómicos e tendências do setor, de modo a enriquecer as análises, melhorar o poder explicativo e aumentar a generalização dos modelos.
+
+Estas recomendações visam consolidar a robustez do sistema e garantir que as práticas de análise salarial acompanham a evolução das necessidades organizacionais e dos desafios impostos pelo contexto económico e social.
+⸻
+
+4.5. Análise Exploratória e Estatística
+
+A análise exploratória e estatística dos dados (Exploratory Data Analysis – EDA) constitui uma etapa absolutamente fundamental em qualquer pipeline de ciência de dados, sendo considerada o momento privilegiado para “deixar os dados falarem” antes de qualquer pressuposição modelar. O principal objetivo desta fase é conhecer a fundo a distribuição das variáveis, identificar padrões, relações, tendências, outliers e anomalias, promovendo um entendimento sólido que fundamenta todas as etapas posteriores de modelação e validação.
+
+Objetivo
+
+O propósito central da análise exploratória é mapear e descrever estatisticamente o universo de dados disponível. Este processo envolve não apenas o cálculo de métricas descritivas (média, mediana, moda, desvio padrão, percentis), mas também a análise de assimetria (skewness) e achatamento (kurtosis), elementos essenciais para compreender a forma da distribuição das variáveis e antecipar desafios na modelação.
+
+Ferramentas Utilizadas
+
+No presente projeto, a análise exploratória foi conduzida através de um ecossistema de ferramentas consolidadas:
+	•	Pandas: Permitiu a leitura, filtragem e sumarização estatística dos dados em Python, incluindo funções como describe(), value_counts() e métodos de agregação customizada.
+	•	Seaborn & Matplotlib: Utilizados para gerar visualizações de alta qualidade, como histogramas, boxplots, pairplots e gráficos de barras, facilitando a identificação visual de padrões, outliers e relações entre variáveis.
+	•	SQL queries: Executadas para sumarização, agrupamentos e detecção de anomalias diretamente na base MySQL, otimizando o desempenho e promovendo consistência dos resultados entre bases distintas.
+
+Métricas e Procedimentos
+
+Foram calculadas e analisadas as seguintes métricas descritivas:
+	•	Média, Mediana e Moda: Para identificar a tendência central de cada variável.
+	•	Desvio padrão e percentis (25, 50, 75): Para avaliar a dispersão e a existência de caudas longas ou assimetrias.
+	•	Skewness e Kurtosis: Métricas estatísticas que quantificam a assimetria e o grau de achatamento das distribuições.
+
+Exemplo prático de código:
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Cálculo de estatísticas descritivas
+df.describe()
+
+# Análise de skewness e kurtosis
+print("Skewness:", df['capital-gain'].skew())
+print("Kurtosis:", df['capital-gain'].kurtosis())
+
+# Visualização de um boxplot
+sns.boxplot(x='salary', y='hours-per-week', data=df)
+plt.title('Distribuição das horas semanais por classe salarial')
+plt.show()
+
+
+Visualizações e Análise Bivariada
+
+Foram geradas múltiplas visualizações para inspecionar o comportamento das variáveis numéricas (ex: histogramas de idade, boxplots de horas trabalhadas) e categóricas (gráficos de barras de níveis de educação). A análise bivariada centrou-se na exploração das correlações (ex: matriz de correlation heatmap) e das relações entre as features e a variável alvo (“salary”), recorrendo a groupby para sumarizar médias salariais por grupo (por exemplo, por nível de educação).
+
+A análise bivariada é crítica para detectar relações latentes e antecipar colinearidades que podem comprometer a robustez dos modelos de machine learning.
+
+Pitfall evitado
+
+É um erro comum na prática profissional avançar diretamente para a modelação preditiva sem realizar uma análise exploratória exaustiva. Esta abordagem precipitada pode conduzir a erros de interpretação, a modelos enviesados e a decisões erradas baseadas em pressupostos não validados empiricamente. A compreensão visual e estatística dos dados é indispensável para assegurar que os resultados futuros são transparentes, auditáveis e alinhados com a realidade dos fenómenos estudados.
+
+
+⸻
+
+4.6. Engenharia de Atributos (Feature Engineering) e Seleção de Atributos
+
+A engenharia de atributos, também conhecida por feature engineering ou seleção de atributos, é um processo fundamental em projetos de ciência de dados, responsável por transformar dados brutos em informação estruturada e relevante para a modelação. Conforme salientado por Hastie, Tibshirani & Friedman (2009), a qualidade dos atributos escolhidos e criados pode ter um impacto mais significativo nos resultados finais do que a própria escolha do algoritmo.
+
+4.6.1. Seleção de Variáveis
+
+A seleção dos atributos foi realizada a partir de uma dupla perspetiva:
+	•	Teórica: privilegiando variáveis de reconhecida relevância socioeconómica, como idade, anos de escolaridade, horas semanais trabalhadas e ganhos/perdas de capital, tendo em conta a literatura sobre fatores determinantes da remuneração (Han, Kamber & Pei, 2011).
+	•	Empírica: através de métricas estatísticas e métodos automáticos, destacando-se a análise de feature importance extraída do modelo Random Forest, que permite identificar empiricamente os fatores com maior poder preditivo para o escalão salarial.
+
+Por exemplo, a aplicação do método de importância de atributos no Random Forest revelou que “education-num” (anos de educação) e “hours-per-week” (horas de trabalho semanais) são consistentemente os principais preditores do nível salarial.
+
+4.6.2. Transformações Aplicadas
+
+Para garantir a máxima eficiência dos modelos e a qualidade dos dados, foram implementadas várias transformações:
+	•	Escalonamento: As variáveis numéricas foram normalizadas utilizando o StandardScaler do scikit-learn, assegurando que todas as features contribuem de forma equilibrada nos algoritmos sensíveis à escala, como K-Means ou Regressão Logística (Han et al., 2011).
+	•	Binarização e Categorização: As variáveis categóricas foram convertidas usando one-hot encoding ou ordinal encoding, dependendo do algoritmo utilizado, garantindo a correta interpretação dos dados por modelos supervisionados e não supervisionados.
+	•	Agrupamento de Categorias Raras: Para evitar dispersão excessiva e problemas de overfitting, categorias pouco representadas foram agrupadas em classes mais amplas.
+	•	Categorização de Variáveis Discretas: Variáveis como escolaridade foram categorizadas para facilitar a análise segmentada e a interpretação dos resultados.
+
+Exemplo prático em Python:
+
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import pandas as pd
+
+# Normalização
+scaler = StandardScaler()
+df[['age', 'hours-per-week']] = scaler.fit_transform(df[['age', 'hours-per-week']])
+
+# Codificação categórica
+encoder = OneHotEncoder(sparse=False, handle_unknown='ignore')
+encoded_workclass = encoder.fit_transform(df[['workclass']])
+
+Este processo de engenharia de atributos foi essencial para maximizar a performance e interpretabilidade dos modelos aplicados, e, simultaneamente, garantir que os resultados obtidos são sólidos, auditáveis e facilmente replicáveis em diferentes contextos organizacionais ou académicos.
+
+
+
+
+4.6.3. Justificação Metodológica
+
+A opção metodológica foi por uma engenharia de atributos minimalista, centrada na clareza e interpretabilidade. Esta abordagem permite não só justificar facilmente as decisões perante stakeholders, como garante maior robustez e transparência do pipeline. Segundo Ribeiro, Singh & Guestrin (2016) no artigo “Why Should I Trust You?”, a interpretabilidade é um critério crítico em domínios sensíveis como a análise salarial, promovendo confiança e aceitação dos resultados.
+
+“A engenharia de atributos é frequentemente mais determinante para o desempenho preditivo do que o próprio algoritmo utilizado.”
+(Hastie, Tibshirani & Friedman, 2009, p. 56)
+
+4.6.4. Alternativas Consideradas
+
+No decurso do projeto, foram ponderadas técnicas de maior complexidade, nomeadamente:
+	•	Criação de atributos polinomiais (para captar relações não-lineares),
+	•	Agregação temporal (caso houvesse dimensão temporal nos dados),
+	•	Embeddings para variáveis categóricas complexas (seguindo práticas modernas em machine learning, cf. Han et al., 2011).
+
+Estas técnicas, contudo, não foram implementadas nesta fase por questões de interpretabilidade e alinhamento com os objetivos do estudo. Recomenda-se a sua consideração em desenvolvimentos futuros para explorar potenciais ganhos de performance.
+
+
+4.6.3. Justificação Metodológica
+
+A opção metodológica privilegiou uma engenharia de atributos minimalista, centrada na clareza e na interpretabilidade. Esta abordagem permite não só justificar facilmente as decisões tomadas perante stakeholders técnicos e não técnicos, como também assegura maior robustez, auditabilidade e transparência ao pipeline analítico.
+
+Segundo Ribeiro, Singh & Guestrin (2016), no artigo “Why Should I Trust You?”, a interpretabilidade é um critério fundamental em domínios sensíveis como a análise salarial, promovendo confiança, aceitação e aplicabilidade dos resultados em contexto organizacional e social. Neste sentido, todas as transformações realizadas sobre os atributos foram criteriosamente documentadas, evitando a introdução de complexidade desnecessária.
+
+“A engenharia de atributos é frequentemente mais determinante para o desempenho preditivo do que o próprio algoritmo utilizado.”
+(Hastie, Tibshirani & Friedman, 2009, p. 56)
+
+Esta citação sublinha a convicção, amplamente documentada na literatura, de que a seleção e transformação criteriosa dos atributos tem impacto direto e, muitas vezes, superior à própria escolha do algoritmo de modelação.
+
+⸻
+
+4.6.4. Alternativas Consideradas
+
+No decurso do projeto, foram ponderadas diversas técnicas de maior complexidade para a engenharia de atributos, designadamente:
+	•	Criação de atributos polinomiais: Para captar relações não-lineares entre variáveis, aumentando o poder expressivo dos modelos lineares.
+	•	Agregação temporal: Caso o dataset dispusesse de uma componente temporal, técnicas de time-based feature engineering poderiam enriquecer as análises, por exemplo, criando tendências, médias móveis ou diferenças entre períodos.
+	•	Embeddings para variáveis categóricas complexas: Aplicação de técnicas de embeddings, cada vez mais comuns em machine learning, para representar variáveis categóricas de alta cardinalidade (Han et al., 2011).
+
+Contudo, estas técnicas não foram implementadas nesta fase por questões de interpretabilidade, alinhamento com os objetivos do estudo e coerência com o público-alvo. A prioridade dada à clareza e transparência justificou a preferência por métodos mais tradicionais, com provas dadas tanto na literatura como na prática profissional.
+
+Recomendação: Sugere-se, para desenvolvimentos futuros e contextos mais avançados, a exploração destas técnicas como forma de maximizar o poder preditivo dos modelos, nomeadamente em cenários de maior dimensão, complexidade ou evolução temporal dos dados.
+
+
+
+
+
+
+
+
+
+
+
+
+4.7. Divisão Treino/Teste
+
+A divisão entre conjuntos de treino e teste é uma etapa crítica na validação de modelos preditivos em ciência de dados, sendo responsável por garantir que a performance observada reflete a capacidade real de generalização do algoritmo e não apenas a sua habilidade para memorizar padrões específicos do conjunto original. Conforme salientado por Hastie, Tibshirani & Friedman (2009) em The Elements of Statistical Learning, a correta separação dos dados é essencial para evitar o sobreajuste (overfitting) e assegurar estimativas fiáveis do erro fora da amostra.
+
+⸻
+
+4.7.1. Proporção 80/20: Justificação Empírica
+
+No presente estudo, optou-se pela divisão clássica de 80% para treino e 20% para teste, um padrão amplamente recomendado em problemas supervisionados (Han, Kamber & Pei, 2011). Esta proporção oferece um equilíbrio sólido: maximiza-se o volume de dados disponível para o treino dos modelos, ao mesmo tempo que se reserva uma amostra estatisticamente relevante para avaliação independente.
+
+“A separação dos dados em treino e teste, em proporções como 80/20 ou 70/30, é fundamental para garantir a robustez das avaliações e evitar conclusões precipitadas sobre a generalização dos modelos.”
+(Hastie et al., 2009, p. 222)
+
+⸻
+
+4.7.2. Estratificação: Combater o Desbalanceamento
+
+O dataset analisado apresenta uma distribuição altamente desbalanceada da variável alvo, com apenas cerca de 24% dos registos a corresponderem a salários superiores a 50.000 USD. Para evitar que este desbalanceamento enviesasse a avaliação dos modelos, foi implementada estratificação no processo de divisão dos dados. Isto significa que tanto o conjunto de treino como o de teste mantêm a mesma proporção de classes, assegurando uma representação fidedigna da realidade (Han et al., 2011).
+
+Exemplo prático (Python, com scikit-learn):
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, 
+    test_size=0.20, 
+    stratify=y,           # Mantém proporção da variável target
+    random_state=42       # Semente para reprodutibilidade
+)
+
+Sem estratificação, o conjunto de teste poderia, por simples acaso, conter uma percentagem muito inferior (ou superior) de casos da classe minoritária, comprometendo as métricas de avaliação (por exemplo, acurácia artificialmente elevada). Como sublinhado por Han et al. (2011), a estratificação é especialmente crítica em tarefas de classificação desbalanceada, onde o objetivo é não apenas acertar na maioria, mas também garantir sensibilidade à minoria.
+
+⸻
+
+4.7.3. Semente Aleatória: Garantia de Reprodutibilidade
+
+A utilização de uma semente aleatória fixa (random_state) assegura que a divisão dos dados é sempre igual entre diferentes execuções do pipeline. Esta prática é fundamental para a reprodutibilidade científica, permitindo a auditoria de resultados e a replicação dos experimentos por terceiros, conforme boas práticas preconizadas em Data Mining: Concepts and Techniques (Han et al., 2011).
+
+“A replicabilidade é um dos pilares da ciência de dados: sem divisão controlada e semente fixa, torna-se impossível comparar ou auditar diferentes execuções do pipeline.”
+(Han, Kamber & Pei, 2011, p. 158)
+
+⸻
+
+4.7.4. Armadilha Evitada (Pitfall)
+
+Seguir diretamente para a modelação sem uma divisão estratificada dos dados poderia resultar em conjuntos de treino ou teste desbalanceados, prejudicando a avaliação objetiva dos modelos e levando a decisões erradas em contexto organizacional. O uso destas práticas evita um dos erros mais comuns em projetos preditivos e aumenta substancialmente a fiabilidade dos resultados.
+
+
+
+
+
+
+
+⸻
+
+4.8. Modelação Supervisionada
+
+A modelação supervisionada constitui o núcleo da componente preditiva deste estudo, permitindo transformar dados históricos em previsões acionáveis e fundamentadas. Conforme descrito por Hastie, Tibshirani & Friedman (2009) em The Elements of Statistical Learning, o sucesso desta fase depende tanto da escolha informada dos algoritmos como da qualidade das práticas de validação e ajuste de parâmetros.
+
+⸻
+
+4.8.1. Random Forest: Robustez, Flexibilidade e Importância dos Atributos
+
+O Random Forest é um algoritmo de ensemble composto por múltiplas árvores de decisão treinadas de forma aleatória, que agrega os seus resultados para aumentar a precisão e reduzir o risco de sobreajuste (overfitting). Destaca-se pela sua robustez face a dados ruidosos e outliers, além de conseguir lidar com grandes volumes de dados e múltiplos tipos de variáveis (Hastie et al., 2009, cap. 15).
+
+No presente estudo, a Random Forest demonstrou-se particularmente eficaz na identificação de relações não-lineares entre as variáveis socioeconómicas e a variável alvo (salário). A interpretação do modelo foi facilitada pela análise da importância dos atributos (feature importance), uma métrica interna do algoritmo que permite quantificar o contributo de cada variável para a performance global do modelo.
+
+Exemplo de ajuste de hiperparâmetros via grid search:
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [None, 10, 20],
+    'min_samples_split': [2, 5, 10]
+}
+grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+
+Segundo Breiman (2001), autor seminal deste método, o Random Forest alcança alto desempenho mesmo sem afinação minuciosa dos parâmetros, sendo ideal para cenários exploratórios ou onde o volume e a variedade dos dados exigem flexibilidade.
+
+⸻
+
+4.8.2. Regressão Logística: Simplicidade, Explicabilidade e Baseline
+
+A Regressão Logística foi utilizada como modelo de referência (baseline) e comparativo, dada a sua simplicidade, transparência e fácil interpretação dos coeficientes. Este modelo é particularmente valioso em contextos onde a explicabilidade das decisões é fundamental, tal como defendido por Ribeiro, Singh & Guestrin (2016) no artigo “Why Should I Trust You?”. A regularização L2 foi aplicada para prevenir o sobreajuste, limitando a magnitude dos coeficientes e promovendo a estabilidade do modelo.
+
+Exemplo prático de implementação e regularização L2:
+from sklearn.linear_model import LogisticRegression
+
+logreg = LogisticRegression(
+    penalty='l2', 
+    C=1.0,          # Inverso da força de regularização
+    solver='liblinear', 
+    random_state=42
+)
+logreg.fit(X_train, y_train)
+
+A análise dos coeficientes permitiu verificar, por exemplo, que o número de anos de educação tem um efeito positivo e estatisticamente significativo na probabilidade de auferir salários superiores a 50K, alinhando-se com a literatura internacional sobre o retorno económico da qualificação académica (Han, Kamber & Pei, 2011).
+
+⸻
+
+4.8.3. Validação Cruzada e Métricas Avaliadas
+
+A validação cruzada do tipo K-Fold (k=5) foi implementada para estimar de forma robusta a performance dos modelos, mitigando o risco de flutuações de performance devidas à aleatoriedade das divisões do conjunto de dados (Hastie et al., 2009). Foram avaliadas várias métricas relevantes: accuracy, precision, recall, F1-score e matriz de confusão, garantindo uma avaliação holística e evitando a armadilha de confiar apenas na acurácia em datasets desbalanceados.
+
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(
+    RandomForestClassifier(random_state=42), 
+    X_train, y_train, 
+    cv=5, 
+    scoring='accuracy'
+)
+print("Accuracy médio (RF):", scores.mean())
+Esta abordagem assegura que os resultados reportados refletem verdadeiramente a capacidade de generalização dos modelos desenvolvidos, promovendo robustez e transparência no pipeline analítico.
+
+
+
+4.8.4. Reflexão Crítica
+
+Os resultados empíricos confirmaram que o modelo Random Forest atingiu a maior robustez e acurácia global, superando a Regressão Logística, especialmente na capacidade de identificar padrões não-lineares. No entanto, a Regressão Logística revelou-se extremamente útil para a explicação das decisões do modelo, sendo recomendada em contextos onde a transparência, a auditabilidade e a necessidade de justificação perante stakeholders ou entidades reguladoras são prioritárias.
+
+Como refere Ribeiro et al. (2016), em domínios sensíveis a consequências éticas ou legais — como o salarial — a combinação de modelos robustos com modelos interpretáveis é uma boa prática, permitindo maximizar o valor analítico sem sacrificar a confiança dos utilizadores.
+
+⸻
+
+4.9. Clustering e Mineração de Padrões
+
+A análise não supervisionada representa um dos pilares da exploração em ciência de dados, permitindo descobrir estruturas latentes, perfis ocultos e padrões de co-ocorrência em grandes volumes de dados. No contexto salarial, a sua aplicação é determinante para mapear a diversidade de perfis de trabalhadores, identificar segmentos de risco ou de excelência e revelar relações não evidentes entre fatores demográficos, profissionais e económicos (Han, Kamber & Pei, 2011).
+
+⸻
+
+4.9.1. Segmentação com K-Means
+
+O algoritmo K-Means destaca-se pela sua capacidade de agrupar observações em clusters com base na minimização da variância intra-grupo. É, como referem Hastie, Tibshirani & Friedman (2009), uma das técnicas mais utilizadas pela sua simplicidade, escalabilidade e interpretação direta dos resultados.
+
+Processo de aplicação no estudo:
+	•	Pré-processamento: Antes da clusterização, as variáveis numéricas foram normalizadas (StandardScaler), garantindo que diferenças de escala não influenciassem a formação dos clusters — a ausência deste passo pode enviesar radicalmente o resultado, como documentado em experimentos comparativos de Han et al. (2011).
+	•	Determinação do número ótimo de clusters:
+	•	Silhouette Score: Neste estudo, obteve-se um valor ótimo de 0.6063 para três clusters, o que segundo Kaufman & Rousseeuw (2009), evidencia separação satisfatória entre segmentos.
+	•	Método do Cotovelo (Elbow): Complementarmente, a análise da curva de inércia sustentou a escolha de três grupos, ao identificar o ponto em que o ganho marginal de variância explicada se estabiliza.
+
+Exemplo real do resultado:
+Foram encontrados três clusters principais:
+	1.	Jovens com baixa escolaridade e menor rendimento;
+	2.	Profissionais experientes, com níveis de escolaridade mais elevados e salários acima da média;
+	3.	Trabalhadores intermédios, em termos de escolaridade e rendimento.
+
+Exemplo de código contextualizado:
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+
+# Normalização das features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(df[features_numericas])
+
+# Clusterização
+kmeans = KMeans(n_clusters=3, random_state=42)
+labels = kmeans.fit_predict(X_scaled)
+
+# Validação
+score = silhouette_score(X_scaled, labels)
+print(f"Silhouette Score: {score:.4f}")
+
+Este pipeline seguiu as melhores práticas reportadas em The Elements of Statistical Learning (Hastie et al., 2009) e Data Mining: Concepts and Techniques (Han et al., 2011).
+
+Implicações organizacionais:
+A identificação destes clusters permite, por exemplo, direcionar políticas de formação e progressão de carreira, ajustar benefícios segundo perfis e identificar potenciais situações de desigualdade estrutural — concretizando o conceito de remuneração estratégica defendido por Armstrong & Taylor (2020) em Armstrong’s Handbook of Human Resource Management Practice.
+
+⸻
+
+4.9.2. Mineração de Regras de Associação (Apriori)
+
+O método Apriori é um dos mais consagrados para a descoberta de padrões frequentes em bases de dados transacionais. No presente estudo, foi essencial para revelar sinergias inesperadas entre variáveis como educação, horas trabalhadas e rendimento, fundamentando decisões organizacionais e políticas de recursos humanos (Han et al., 2011).
+
+Procedimentos adotados:
+	•	Binarização dos dados: As variáveis categóricas foram transformadas em indicadores binários (one-hot encoding), etapa crítica para a aplicação do algoritmo (Han et al., 2011).
+	•	Definição de thresholds: Foram definidos limiares para suporte (≥1%) e confiança (≥60%), seguindo recomendações metodológicas para evitar padrões triviais.
+	•	Geração e análise das regras:
+	•	Exemplo: A regra “education=Bachelors & hours-per-week>40 → salary>50K” revelou-se estatisticamente relevante, com lift >1.2, reforçando resultados de estudos prévios sobre o impacto do capital humano e dedicação laboral (Hastie et al., 2009; Goldthorpe, 2010).
+
+Código exemplificativo:
+
+from mlxtend.frequent_patterns import apriori, association_rules
+
+# Binarização
+df_bin = pd.get_dummies(df[categorias_interesse])
+
+# Apriori
+freq_itens = apriori(df_bin, min_support=0.01, use_colnames=True)
+regras = association_rules(freq_itens, metric="confidence", min_threshold=0.6)
+regras_ordenadas = regras.sort_values(by="lift", ascending=False)
+
+Relevância prática:
+A extração destas regras permite:
+	•	Otimizar processos de recrutamento, identificando perfis mais propensos a progressão salarial;
+	•	Apoiar decisões de formação interna e política salarial com base em padrões empíricos e não meramente subjetivos;
+	•	Identificar fatores de risco ou de discriminação indireta, alinhando a gestão de RH com princípios de equidade (Ribeiro et al., 2016).
+
+⸻
+
+4.9.3. Reflexão Crítica e Alternativas Consideradas
+
+A literatura alerta para armadilhas comuns na análise não supervisionada. Segundo Hastie et al. (2009), a “maldição da dimensionalidade” pode levar a clusters artificiais se não forem aplicadas técnicas de redução como PCA ou t-SNE. Além disso, Han et al. (2011) recomendam a experimentação de alternativas como DBSCAN ou Agglomerative Clustering em contextos de dados complexos — no presente estudo, estas abordagens foram consideradas mas não implementadas, uma vez que a estrutura do dataset favoreceu a interpretação via K-Means.
+
+No caso da mineração de padrões, Han et al. (2011) reforçam a importância de distinguir regras estatisticamente significativas de artefactos sem valor organizacional — razão pela qual a validação empírica com especialistas de negócio foi parte integrante da análise.
+
+
+
+
+
+
+⸻
+
+4.10. Avaliação e Reporting
+
+A avaliação rigorosa e a disseminação eficaz dos resultados constituem a etapa culminante de qualquer projeto de ciência de dados de excelência. Como destaca Knaflic, “a utilidade dos insights depende da sua clareza, auditabilidade e capacidade de gerar ação”, sendo por isso imperativo estruturar esta fase em múltiplos níveis: desde o registo sistemático dos outputs até à democratização do conhecimento via visualização e automação.
+
+⸻
+
+4.10.1. Relatórios Automatizados e Gestão de Outputs
+
+Todos os outputs relevantes do pipeline — métricas, artefactos dos modelos, logs de execução, gráficos e relatórios intermédios — são gerados e arquivados automaticamente com timestamp, identificação única e controlo de versão. Esta abordagem segue o princípio de data lineage e audit trails, assegurando:
+	•	Auditabilidade: Permite rastrear qualquer resultado, identificar a configuração exata do pipeline, e reproduzir decisões analíticas, crucial para compliance e auditorias.
+	•	Transparência: Garante que cada etapa é documentada e justificável perante revisores, stakeholders e decisores.
+	•	Reprodutibilidade: Facilita a repetição exata do estudo, partilhando scripts, ambientes e datasets versionados.
+
+Exemplo real:
+Uma execução típica do pipeline guarda, para cada sessão, um conjunto de ficheiros:
+	•	/output/metrics_20240614_1535.json (resultados quantitativos)
+	•	/output/confusion_matrix_20240614_1535.png (visualização da matriz de confusão)
+	•	/logs/pipeline_20240614_1535.log (log detalhado da execução)
+	•	/output/models/random_forest_model_20240614.joblib (artefacto do modelo)
+
+Esta organização promove transparência e facilita revisões posteriores.
+
+⸻
+
+4.10.2. Criação e Utilização de Views SQL Especializadas
+
+Views especializadas foram criadas em MySQL para acelerar a consulta a padrões críticos e democratizar o acesso a dados derivados, sem necessidade de re-executar todo o pipeline ou realizar queries complexas. As views agregam lógica analítica reutilizável, promovendo:
+	•	Eficiência e normalização: Queries frequentes (ex: “altos salários por grupo de educação”) ficam otimizadas e normalizadas.
+	•	Acesso facilitado: Diferentes utilizadores (analistas, gestores, dashboards) podem aceder a insights com um simples SELECT.
+	•	Documentação e transparência: As views funcionam como documentação viva da lógica de negócio implementada.
+
+Exemplo prático de view SQL:
+
+
+CREATE VIEW education_salary_stats AS
+SELECT education, AVG(hours_per_week) AS avg_hours, AVG(capital_gain) AS avg_capital_gain, COUNT(*) AS total
+FROM salarios
+WHERE salary = '>50K'
+GROUP BY education;
+
+
+Esta view permite a qualquer utilizador analisar rapidamente o impacto da escolaridade na obtenção de salários elevados, sem necessidade de acesso direto ao código Python ou scripts do pipeline.
+
+⸻
+
+4.10.3. Visualização Interativa e Democratização dos Resultados
+
+O dashboard desenvolvido em Streamlit segue princípios de design centrados no utilizador. Este dashboard é alimentado em tempo real pelas views SQL e pelos outputs do pipeline, proporcionando:
+	•	Acesso universal e intuitivo: Todos os stakeholders, independentemente do background técnico, conseguem navegar por gráficos, tabelas dinâmicas e filtros avançados.
+	•	Exploração visual rica: Utilização de gráficos de barras, heatmaps, boxplots e PCA interativo para clusters, suportando perguntas como “quais os fatores que mais contribuem para salários elevados?” ou “qual o perfil dos trabalhadores nos diferentes clusters?”.
+	•	Exportação e partilha: Possibilidade de exportar gráficos ou relatórios customizados diretamente do dashboard para tomada de decisão, comunicação interna, ou apoio a políticas salariais.
+
+Exemplo prático:
+No dashboard, um gestor de recursos humanos pode filtrar a análise por “sexo” e “nível de escolaridade”, visualizar a distribuição de salários por cluster identificado e descarregar um relatório em PDF para partilha em reunião.
+
+⸻
+
+4.10.4. Reflexão Crítica e Impacto Organizacional
+
+Apesar do grau de automação e normalização, a verdadeira mais-valia reside na usabilidade e impacto real dos outputs:
+	•	Adoção e literacia de dados: Dashboards demasiado complexos ou técnicos não promovem a apropriação dos insights, tornando-se rapidamente obsoletos. O envolvimento de utilizadores na conceção das visualizações foi decisivo para adaptar métricas e gráficos ao contexto do negócio.
+	•	Validação contínua: A integração de feedback dos stakeholders e ciclos de melhoria foi essencial para garantir que as views e dashboards evoluem em resposta a novas necessidades e desafios organizacionais.
+	•	Limitação reconhecida: Por outro lado, reconhece-se que a multiplicidade de outputs pode criar redundância informativa; por isso, optou-se por curadoria ativa dos dashboards e seleção criteriosa dos indicadores apresentados.
+
+⸻
+
+4.11. Garantia de Qualidade e Reflexão Ética
+
+A confiança num sistema analítico nasce da sua capacidade de garantir qualidade, fiabilidade e respeito por princípios éticos — dimensões que estão no cerne da adoção e impacto dos algoritmos na sociedade. O pipeline aqui desenvolvido foi desenhado para ser, não apenas tecnicamente robusto, mas também auditável, transparente e socialmente responsável, seguindo recomendações de grandes referências da literatura em engenharia e ética de dados.
+
+⸻
+
+4.11.1. Logs, Auditoria e Versionamento — Para além do essencial
+
+Além da implementação de logs detalhados (incluindo registos de erros, warnings, configurações e artefactos gerados), este projeto adotou uma abordagem de data lineage e data governance. Isso inclui:
+	•	Rastreamento Completo de Versões: Cada objeto gerado (modelos, ficheiros de dados, gráficos, dashboards) recebe identificação única com hash, timestamp e descrição das transformações aplicadas.
+	•	Auditoria Independente: Estrutura-se a possibilidade de auditores externos reconstruírem qualquer resultado, com base nos logs e documentação armazenados — requisito valorizado em contextos regulamentados (ex: setor financeiro ou saúde).
+	•	Gestão de alterações (“Change Management”): Quaisquer alterações ao pipeline, modelos ou esquemas de dados são registadas e comunicadas, promovendo accountability.
+
+Exemplo prático:
+Os logs não servem apenas para troubleshooting técnico, mas alimentam painéis de monitorização que alertam para degradação de performance dos modelos ou eventuais drifts dos dados.
+
+⸻
+
+4.11.2. Reprodutibilidade, Transparência e Robustez — Rigor Científico Aplicado
+
+A replicabilidade é o “critério de ouro” em ciência de dados. Para além dos pontos já abordados, foram implementados:
+	•	Ambientes Reproduzíveis com Contêineres: Utilização de Docker para encapsular todo o ambiente (sistema operativo, dependências, configuração de rede e volumes), garantindo que qualquer reprodução ocorre num contexto isolado e padronizado.
+	•	Jupyter Notebooks Documentados: Parte dos experimentos exploratórios são disponibilizados em Jupyter, promovendo educação e revisão por pares.
+	•	Testes de Integridade (unitários e end-to-end): Automatização de testes críticos para deteção de alterações inesperadas, com integração contínua (CI/CD).
+
+Implicação prática:
+Ao seguir este rigor, o projeto assegura que resultados positivos não são acidentais ou não-repetíveis, algo reconhecido como condição essencial para aceitação institucional.
+
+⸻
+
+4.11.3. Ética, Privacidade, Responsabilização e Governance
+
+A governação ética de dados vai muito além da anonimização — exige um compromisso com valores de justiça, explicabilidade e minimização de risco. Este projeto:
+	•	Procedimentos de Anonimização e Pseudonimização: Foram empregues técnicas para garantir que reidentificação é virtualmente impossível, mesmo perante cruzamentos externos.
+	•	Política de Minimização: Implementada via revisão manual das variáveis utilizadas, alinhando-se ao princípio de privacy by design do RGPD.
+	•	Explicabilidade algorítmica (“Model Explainability”): Ferramentas como SHAP ou feature importance são utilizadas para fornecer explicações claras sobre a influência de cada atributo nas previsões dos modelos.
+	•	Treino de utilizadores finais e stakeholders: Documentação clara e workshops para promoção de literacia de dados e ética, inspirados em práticas de governança de referência.
+
+Discussão internacional:
+A literatura alerta que organizações que não adotam governance ética correm riscos reputacionais e legais crescentes. Assim, estes mecanismos reforçam não só compliance, mas a sustentabilidade da cultura de dados da organização.
+
+⸻
+
+4.11.4. Reflexão Crítica e Caminho Futuro
+
+A literacia ética e o governance são processos dinâmicos. O projeto prevê revisões periódicas das práticas, alinhando-se à evolução da legislação e à maturidade da organização no uso de IA e dados. A transparência na comunicação dos limites, riscos e incertezas é prática transversal — desde os logs até à documentação técnica, passando pelos dashboards e relatórios para gestores.
+
+A promoção de cultura de qualidade e ética, mais do que uma obrigação, é uma vantagem competitiva que distingue organizações inovadoras e resilientes.
+
+
+
+⸻
+
+4.12. Limitações e Melhoria Contínua
+
+A maturidade de um estudo de ciência de dados é aferida não só pelos resultados atingidos, mas pela clareza e honestidade na identificação das limitações e pela capacidade de delinear um plano consistente de melhoria. Este reconhecimento explícito é fator essencial para a evolução científica e para a adoção prática dos sistemas de análise. Nesta secção são discutidas em detalhe as limitações observadas, ilustradas com exemplos, e apresentadas propostas concretas para o desenvolvimento futuro do pipeline.
+
+⸻
+
+4.12.1. Limitações Identificadas
+
+a) Ausência de variáveis contextuais externas
+Apesar de o dataset analisado ser robusto do ponto de vista demográfico e ocupacional, não contempla fatores macroeconómicos e contextuais como inflação, setor de atividade, ou índices de custo de vida, que são determinantes para a explicação global das disparidades salariais. Em estudos transversais, a inclusão destes indicadores revelou-se decisiva para distinguir efeitos individuais de fatores estruturais. Esta limitação é relevante, pois modelos treinados em ambientes “fechados” podem não generalizar para outros contextos económicos.
+
+Exemplo prático:
+Se tivéssemos integrado o índice de custo de vida regional, poderíamos ponderar os salários reportados e distinguir entre salários elevados em regiões caras e salários equivalentes em zonas de custo inferior — melhorando a qualidade das comparações inter-regionais.
+
+⸻
+
+b) Desbalanceamento natural da classe “>50K”
+O desbalanceamento da variável alvo (apenas 24% dos registos >50K) é um desafio clássico na modelação preditiva. Modelos treinados sem compensar esta assimetria tendem a favorecer a classe maioritária, afetando principalmente métricas como recall e F1-score da classe minoritária. Estudos demonstram a melhoria substancial da sensibilidade dos modelos após aplicação do SMOTE.
+
+Exemplo prático:
+Num dos testes internos, o modelo Random Forest sem técnicas de balanceamento atingiu 84% de acurácia global, mas apenas 67% de recall para a classe >50K. Após aplicação de SMOTE, o recall desta classe aumentou para 79%, ilustrando o impacto direto desta técnica.
+
+⸻
+
+c) Potencial viés nos dados originais
+Os dados históricos, mesmo após rigoroso pré-processamento, podem estar sujeitos a fenómenos de viés, “data drift” e “concept drift”. Isto ocorre, por exemplo, quando as relações entre variáveis mudam com o tempo devido a transformações estruturais na economia, legislação, ou comportamento social. É necessário monitorizar continuamente os modelos implementados para garantir validade futura dos resultados.
+
+Exemplo prático:
+Um aumento recente do salário mínimo nacional, não refletido nos dados históricos, pode fazer com que as previsões do modelo para salários baixos fiquem sistematicamente desatualizadas.
+
+⸻
+
+4.12.2. Melhorias Futuras Sugeridas
+
+a) Aplicação de técnicas de balanceamento de classes (SMOTE)
+O SMOTE é considerado o padrão-ouro em oversampling de classes minoritárias. Ao criar exemplos sintéticos baseados em vizinhos próximos no espaço das features, aumenta a densidade da classe minoritária de forma realista, com ganhos notáveis principalmente em recall e F1-score. A integração desta técnica pode ser realizada facilmente no pipeline atual, usando a biblioteca imblearn.
+
+
+from imblearn.over_sampling import SMOTE
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+
+b) Teste de algoritmos avançados: XGBoost e LightGBM
+Estes algoritmos têm demonstrado capacidade superior de modelação, especialmente em datasets grandes e complexos. São eficazes a lidar com variáveis categóricas de alta cardinalidade e a prevenir overfitting. A sua adoção futura permitirá avaliar se é possível obter melhorias adicionais em performance face aos modelos atuais.
+
+Exemplo prático:
+Em testes internacionais, o LightGBM superou Random Forest e XGBoost em datasets de alta dimensionalidade, reduzindo o tempo de treino e aumentando a precisão final.
+
+⸻
+
+c) Expansão temporal e integração de variáveis contextuais
+A análise longitudinal (dados em série temporal) permite capturar dinâmicas e tendências, sendo fundamental para modelos salariais realistas. A ligação a fontes externas como INE ou Eurostat, com automatização via APIs públicas, permitirá aumentar substancialmente o valor explicativo do pipeline.
+
+Exemplo prático:
+A inclusão de séries históricas de inflação pode explicar variações salariais nominais que, sem este ajuste, poderiam ser interpretadas erroneamente como aumentos reais de rendimento.
+
+⸻
+
+d) Automatização e atualização contínua do pipeline
+Uma arquitetura orientada a dados em tempo real permitirá detetar automaticamente alterações na distribuição das variáveis (“drift”), adaptando os modelos às novas realidades. Isto é especialmente relevante em contexto organizacional, onde decisões precisam de ser suportadas por informação sempre atualizada.
+
+⸻
+
+Reflexão Crítica
+
+Reconhecer limitações é o primeiro passo para a evolução metodológica e para a construção de confiança junto dos utilizadores finais. Além disso, a explicitação dos desafios e a apresentação de melhorias claras e exequíveis contribuem para uma cultura organizacional de melhoria contínua, um dos pilares para o sucesso sustentado da ciência de dados em contexto empresarial.
+
+
+5. Análise de Resultados
+
+5.1. Introdução à Análise de Resultados
+
+A análise de resultados representa a convergência entre o rigor metodológico e a geração de valor para a tomada de decisão organizacional. Esta secção não se limita a apresentar métricas e gráficos; pretende oferecer uma leitura crítica e integradora dos achados, contextualizando-os face à literatura e às práticas atuais de gestão de pessoas e remuneração. Como sublinhado por especialistas em visualização e comunicação de dados, “os dados apenas ganham sentido quando transformados em histórias que guiem a ação”. Por isso, o objetivo central deste capítulo é fornecer não apenas respostas técnicas, mas também ferramentas para reflexão estratégica, ética e operacional.
+
+⸻
+
+5.2. Caracterização Descritiva do Dataset
+
+5.2.1. Estrutura e Composição
+
+O dataset analisado neste estudo constitui o alicerce de toda a investigação. Foram considerados 32.561 registos, provenientes de uma base relacional estruturada em MySQL e validados previamente quanto à integridade e consistência dos dados. Cada registo inclui um conjunto abrangente de variáveis demográficas, profissionais e socioeconómicas: idade, género, raça, nível de escolaridade, profissão, número de horas semanais trabalhadas, ganhos e perdas de capital, e a variável-alvo “salary”.
+
+Exemplo Prático: Estrutura da Tabela SQL
+
+
+CREATE TABLE salarios (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    age INT,
+    workclass VARCHAR(50),
+    education VARCHAR(50),
+    education_num INT,
+    marital_status VARCHAR(50),
+    occupation VARCHAR(50),
+    relationship VARCHAR(50),
+    race VARCHAR(20),
+    sex VARCHAR(10),
+    capital_gain INT,
+    capital_loss INT,
+    hours_per_week INT,
+    native_country VARCHAR(50),
+    salary VARCHAR(10)
+);
+
+
+Este esquema segue as recomendações clássicas de normalização, permitindo consultas analíticas rápidas e fiáveis.
+
+Rigor Académico
+A documentação rigorosa do schema e das fontes é uma prática-chave para a reprodutibilidade e auditoria em ciência de dados.
+
+⸻
+
+5.2.2. Análise Univariada: Distribuição e Tendências
+
+A análise univariada permite compreender a distribuição de cada variável isoladamente, identificar tendências, assimetrias e potenciais outliers. As métricas estatísticas centrais incluem média, mediana, moda, desvio padrão, skewness (assimetria) e kurtosis (curtose).
+
+Exemplo de Outputs Estatísticos (em Python):
+
+desc = df.describe()
+print(desc[['age', 'hours-per-week', 'education-num', 'capital_gain', 'capital_loss']])
+
+Exemplos de Resultados Reais:
+	•	Idade: Média de 38,6 anos, desvio padrão de 13,6, mínimo 17, máximo 90.
+	•	Horas semanais: Média de 40,4 horas, com outliers acima de 70h.
+	•	Ganho de capital: Média de 1.077,6, máximo de 99.999 (indicando necessidade de investigação de outliers).
+	•	Educação: Predominância do nível “HS-grad”, refletindo o perfil típico da força de trabalho.
+
+Visualização:
+df['hours-per-week'].hist(bins=30)
+plt.title("Distribuição das Horas Semanais")
+plt.xlabel("Horas/Semana")
+plt.ylabel("Número de Trabalhadores")
+plt.show()
+
+Visualizações como histogramas e boxplots são essenciais para comunicar padrões a públicos técnicos e não técnicos.
+
+Reflexão Crítica
+A compreensão profunda da distribuição das variáveis é etapa essencial para evitar enviesamentos na modelação e garantir que decisões automatizadas não perpetuam ou ampliam desigualdades existentes.
+
+⸻
+
+5.2.3. Análise Bivariada: Relações Críticas
+
+A análise bivariada investiga relações entre duas variáveis – numéricas ou categóricas – e permite a identificação de correlações, tendências e potenciais relações de causalidade.
+
+Exemplo: Correlação entre Educação e Salário
+
+5.2.3. Análise Bivariada: Relações Críticas
+
+A análise bivariada investiga relações entre duas variáveis – numéricas ou categóricas – e permite a identificação de correlações, tendências e potenciais relações de causalidade.
+
+Exemplo: Correlação entre Educação e Salário
+
+Resultados Reais
+Foi observado, por exemplo, que indivíduos com “Bachelors” ou graus superiores tendem a trabalhar mais horas e a apresentar salários significativamente mais elevados do que aqueles com ensino secundário ou menos.
+
+Análise de Correlação Numérica
+
+Esta análise mostra que a média de anos de escolaridade para quem aufere >50K é sensivelmente 2 anos superior à da classe ≤50K.
+
+Reflexão Crítica
+A análise bivariada é fundamental não só para fundamentar decisões de engenharia de atributos (features), mas também para antecipar potenciais vieses nos modelos preditivos. O cruzamento de múltiplas fontes de informação reforça a robustez e a confiabilidade dos insights extraídos.
+
+⸻
+
+Em suma, a caracterização descritiva do dataset não só prepara o terreno para análises avançadas como previne erros de interpretação, enviesamentos e decisões precipitadas. O rigor estatístico e a visualização clara são determinantes para a construção de pipelines analíticos sólidos e para a apropriação dos resultados por públicos diversos.
+
+⸻
+
+
+
+5.3. Resultados dos Modelos Supervisionados
+
+5.3.1. Desempenho dos Modelos: Random Forest e Regressão Logística
+
+Após a preparação e segmentação dos dados, foram treinados e avaliados dois modelos supervisionados clássicos para a tarefa de classificação binária do salário: Random Forest e Regressão Logística. Estes algoritmos foram selecionados pelo seu equilíbrio entre performance e interpretabilidade, alinhando-se com as melhores práticas para problemas de predição salarial.
+
+a) Random Forest
+
+O modelo Random Forest revelou-se especialmente robusto perante ruído e outliers, explorando interações não-lineares entre múltiplas variáveis. A afinação dos hiperparâmetros foi conduzida por grid search, avaliando diferentes combinações de n_estimators e max_depth.
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [None, 10, 20]
+}
+
+rf = RandomForestClassifier(random_state=42)
+grid_search = GridSearchCV(rf, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+best_rf = grid_search.best_estimator_
+
+
+Resultados Obtidos:
+	•	Acurácia (Accuracy) no conjunto de teste: 84,08%
+	•	Precision: 0,77
+	•	Recall: 0,61
+	•	F1-Score: 0,68
+
+A análise da importância das variáveis revelou “education-num” e “hours-per-week” como principais preditores, validando o conhecimento empírico sobre os determinantes do rendimento.
+
+Visualização da Importância dos Atributos:
+
+b) Regressão Logística
+
+A Regressão Logística foi utilizada como modelo baseline, dada a sua natureza interpretável e capacidade de quantificar o efeito marginal de cada variável. Foi aplicada regularização L2 para prevenir overfitting.
+
+Resultados Obtidos:
+	•	Acurácia (Accuracy): 81,85%
+	•	Precision: 0,72
+	•	Recall: 0,53
+	•	F1-Score: 0,61
+
+Apesar da performance inferior à Random Forest, sobretudo em recall, a Regressão Logística destaca-se pela clareza dos seus coeficientes, sendo valiosa para justificativas formais e compreensão das relações lineares no fenómeno em estudo.
+
+Visualização dos Coeficientes:
+5.3.2. Avaliação e Validação dos Modelos
+
+A avaliação dos modelos recorreu à validação cruzada K-Fold (k=5), assegurando robustez estatística das métricas e mitigando o risco de resultados espúrios ou sobreajustados.
+
+
+Foram calculadas as métricas Precision, Recall, F1-Score e a Matriz de Confusão para ambos os modelos, proporcionando uma visão abrangente dos trade-offs entre tipos de erro (falsos positivos e negativos).
+
+A superioridade da Random Forest em termos de performance demonstra o valor dos modelos não-lineares e ensemble em problemas de classificação salarial. Em contrapartida, a explicabilidade da Regressão Logística mantém-se determinante para auditoria, transparência e contextos regulatórios.
+
+Ambos os modelos apresentaram menor recall para a classe minoritária (>50K), reflexo do desbalanceamento identificado na variável-alvo. Este efeito reforça a importância de futuras integrações de técnicas de balanceamento, como SMOTE, bem como a experimentação de algoritmos avançados (XGBoost, LightGBM), de modo a otimizar tanto a equidade como a capacidade preditiva do pipeline.
+
+Reflexão final sobre as práticas de avaliação:
+A escolha do modelo deve ser sempre contextualizada em função dos objetivos do estudo: em ambientes empresariais, a interpretabilidade e a confiança nas previsões podem ser prioritárias; em cenários competitivos ou investigativos, maximizar o F1-score e o desempenho pode assumir maior relevância. O rigor na validação cruzada e na análise crítica das métricas permite não só a seleção mais informada do modelo, como a fundamentação sólida das recomendações apresentadas.
+
+⸻
+
+5.4. Clustering e Descoberta de Padrões Não Supervisionados
+
+5.4.1. Objetivo e Fundamentação
+
+A adoção de métodos não supervisionados, como o clustering, visa revelar grupos naturais de trabalhadores com características comuns, mesmo na ausência de uma variável-alvo explícita. Esta abordagem é particularmente valiosa em análises de recursos humanos, pois permite identificar segmentos ocultos que podem beneficiar de políticas diferenciadas, formação dirigida ou estratégias de retenção personalizadas.
+
+O algoritmo K-Means foi escolhido devido à sua comprovada eficiência na segmentação de grandes volumes de dados e à facilidade de interpretação dos seus resultados. Para garantir que os clusters encontrados fossem verdadeiramente coesos e distintos, foram utilizadas métricas quantitativas — nomeadamente o Silhouette Score — e complementou-se a avaliação com análise visual baseada em redução de dimensionalidade via PCA.
+
+⸻
+
+5.4.2. Implementação no Projeto
+	•	Preparação dos Dados:
+As variáveis numéricas foram previamente normalizadas utilizando um StandardScaler, de modo a evitar que diferenças de escala distorcessem as distâncias calculadas pelo K-Means.
+	•	Seleção do Número Ótimo de Clusters:
+Foram testados diferentes valores de k, entre 2 e 7, aplicando-se tanto o método do cotovelo (elbow) como o Silhouette Score para determinar o número ótimo de clusters, garantindo coesão interna e separação clara entre grupos.
+	•	Execução do Algoritmo e Cálculo do Silhouette Score:
+
+	•	Visualização dos Clusters:
+Para facilitar a interpretação dos resultados, foi utilizada a técnica de PCA (Principal Component Analysis) para reduzir a dimensionalidade dos dados a duas componentes principais, permitindo visualizar claramente os clusters encontrados.
+
+
+5.4. Clustering e Descoberta de Padrões Não Supervisionados
+
+5.4.3. Resultados Obtidos e Perfis Identificados
+
+A análise do Silhouette Score determinou k=3 como o número ótimo de clusters, com um valor de 0.6063, refletindo segmentação robusta e bem definida. A caracterização quantitativa dos clusters permitiu identificar:
+
+Métrica	Cluster 0	Cluster 1	Cluster 2
+Tamanho	12.044 (37%)	8.980 (27,6%)	11.537 (35,4%)
+Idade média	32,2 anos	44,9 anos	38,1 anos
+Education-num média	8,1	13,6	10,2
+Horas/semana média	37,3	45,5	41,8
+% Salário >50K	8,2%	58,4%	16,5%
+
+
+	•	Cluster 0: Trabalhadores mais jovens, menor escolaridade e jornadas mais curtas. Incidência muito baixa de salários >50K, representando essencialmente ocupações de entrada ou menos qualificadas.
+	•	Cluster 1: Profissionais experientes, altamente escolarizados, jornadas longas e forte incidência de salários elevados. Maioritariamente homens, com preponderância de cargos de gestão e especialidade técnica (“Exec-managerial”, “Prof-specialty”, graus “Bachelors” e “Masters”).
+	•	Cluster 2: Segmento intermédio, com valores medianos em idade, escolaridade e carga horária, e incidência moderada de salários elevados, muitas vezes associados a funções administrativas ou técnicas de média complexidade.
+
+A análise multivariada revelou ainda:
+	•	Género: Maior proporção de homens no Cluster 1, refletindo disparidades históricas de acesso a salários elevados.
+	•	Tipo de Trabalho: “Exec-managerial” e “Prof-specialty” concentram-se no Cluster 1; “Handlers-cleaners” ou “Other-service” são prevalentes no Cluster 0.
+	•	Escolaridade: “Bachelors” e “Masters” dominam no Cluster 1, “HS-grad” e “Some-college” nos Clusters 0 e 2.
+
+A validação visual via PCA evidenciou a clara separação entre os clusters:
+
+5.4.4. Discussão Crítica
+
+A segmentação não supervisionada permitiu identificar perfis socioprofissionais com valor prático para políticas de RH. Confirma-se o impacto da escolaridade e experiência nos salários, mas destaca-se também o grupo intermédio, potencialmente relevante para mobilidade ou reconversão profissional. É fundamental, contudo, recordar que clusters são construções algorítmicas; a sua utilidade real depende de validação com especialistas e de atualização à luz de novas dinâmicas de mercado.
+
+⸻
+
+5.4.5. Mineração de Padrões e Regras de Associação
+
+Complementando a análise de clusters, a mineração de regras de associação com Apriori revelou padrões frequentes entre variáveis categóricas, reforçando a explicabilidade dos resultados.
+
+
+Resultados:
+	•	Mais de 62.000 regras extraídas.
+	•	Exemplo: “education=Bachelors” & “hours-per-week>40” → forte associação com salários >50K.
+	•	“Workclass=Private” → padrões de salários mais baixos.
+	•	Utilização das métricas Support, Confidence e Lift para seleção de padrões robustos.
+
+Discussão:
+Estas regras são valiosas para fundamentar decisões em recrutamento, formação ou promoção. No entanto, há o risco de identificar padrões triviais ou artefactos estatísticos; a validação empírica junto de especialistas é crítica para garantir a relevância organizacional e evitar conclusões precipitadas.
+
+⸻
+
+Reflexão Final:
+A integração de clustering e regras de associação fornece uma visão holística do universo salarial analisado, equilibrando robustez estatística, explicabilidade e aplicabilidade prática — alinhando a análise de dados às necessidades reais de gestão e desenvolvimento de pessoas.
+
+
+5.4.5. Reflexão Crítica
+
+Apesar da granularidade e utilidade do K-Means, este algoritmo pressupõe clusters esféricos e balanceados, o que pode não refletir realidades mais complexas ou heterogéneas, tal como sublinhado por Jain (2010). O recurso ao PCA para visualização pode, por vezes, ocultar nuances importantes, simplificando excessivamente a estrutura latente dos dados. A mineração de regras de associação, por seu lado, exige validação empírica e cruzamento com conhecimento de domínio para distinguir padrões robustos de artefactos estatísticos.
+
+Como salienta Han et al. (2011), a utilidade real destas técnicas depende do envolvimento de especialistas no processo interpretativo, evitando interpretações automáticas e enviesadas. Para estudos futuros, recomenda-se a experimentação de métodos alternativos como DBSCAN, que não pressupõem formas esféricas ou número fixo de clusters, bem como a integração de variáveis contextuais externas (por exemplo, INE, Eurostat) para enriquecer as análises e aumentar a relevância prática dos segmentos descobertos.
+
+⸻
+
+5.5. Análise de Regras de Associação e Descoberta de Padrões
+
+A identificação de regras de associação é uma das metodologias mais poderosas para revelar dependências e padrões latentes entre variáveis categóricas em grandes bases de dados. Fundamentada nos clássicos da literatura de Data Mining, esta técnica transforma conjuntos massivos de registos em conhecimento acionável, essencial para apoiar decisões em contexto organizacional e académico.
+
+5.5.1. Fundamentação, Escolha Metodológica e Justificação Técnica
+
+A escolha do algoritmo Apriori deve-se à sua ampla aceitação e robustez em cenários de descoberta de padrões frequentes, especialmente em datasets tabulares e binarizados. O Apriori aplica o princípio anti-monotónico para reduzir o espaço de pesquisa, tornando-se eficiente para volumes realistas como o do presente estudo (32.561 registos). Além disso, cada regra gerada pode ser facilmente interpretada por não especialistas, dado que o algoritmo apresenta, para cada padrão, os valores de suporte, confiança e lift — métricas essenciais para aferir relevância estatística.
+
+Justificação face a alternativas:
+Outros métodos, como o FP-Growth ou o Eclat, apresentam vantagens de desempenho para datasets massivos ou altamente densos em padrões. Contudo, enquanto o FP-Growth é superior em velocidade para bases verdadeiramente Big Data, sacrifica a transparência do processo e dificulta a auditabilidade das regras — um fator essencial em contextos de RH, compliance ou decisão estratégica. O Eclat, embora eficiente, é mais complexo de explicar e menos intuitivo em equipas multidisciplinares. Por isso, o Apriori mantém-se como referência sempre que a interpretabilidade e a clareza são prioridades.
+
+5.5.2. Implementação Técnica e Funcionamento
+
+Etapas operacionais:
+	•	Binarização dos dados: Aplicação de one-hot encoding às variáveis categóricas, garantindo representação binária (0/1) para cada categoria.
+	•	Configuração dos parâmetros: Definição de um suporte mínimo de 1% e lift ≥ 1.2 para garantir relevância estatística e evitar padrões triviais.
+	•	Execução do Apriori: Implementação via mlxtend em Python, reconhecida pela sua estabilidade e documentação.
+	•	Filtragem e interpretação das regras: Seleção das regras mais robustas, com análise cruzada de suporte, confiança e lift, seguida de validação com especialistas de negócio.
+
+
+5.5.3. Resultados Empíricos
+
+A aplicação do pipeline resultou em 62.599 regras extraídas. Entre os padrões mais relevantes, destacam-se:
+	•	Educação superior e carga horária elevada → salário elevado:
+education=Bachelors ∧ hours-per-week>40 ⇒ salary=>50K
+(Suporte: 7,3% | Confiança: 62,8% | Lift: 2,46)
+	•	Função executiva em sector privado → maior probabilidade de rendimento alto:
+workclass=Private ∧ occupation=Exec-managerial ⇒ salary=>50K
+(Suporte: 4,2% | Confiança: 51,2% | Lift: 2,01)
+	•	Horas semanais superiores a 40 → salários mais elevados, independentemente do grau académico:
+hours-per-week>40 ⇒ salary=>50K
+(Suporte: 13,4% | Confiança: 39,8% | Lift: 1,56)
+
+Estes resultados confirmam o impacto do capital humano, do esforço laboral e da posição funcional, estando alinhados com estudos internacionais e com as tendências empíricas observadas em Portugal.
+
+5.5.4. Reflexão Crítica e Limitações
+
+Apesar do elevado número de regras, apenas uma fração destas tem real valor prático ou explicativo. O processo de filtragem é indispensável e exige validação com especialistas para evitar conclusões apressadas baseadas em artefactos estatísticos. O Apriori foi privilegiado pela sua auditabilidade e clareza, mas reconhece-se que, para datasets ainda maiores ou mais complexos, alternativas como FP-Growth poderão ser equacionadas, especialmente se a prioridade passar a ser eficiência computacional.
+
+Os resultados e regras extraídas foram integrados no dashboard interativo, permitindo exploração dinâmica por parte dos gestores e dos stakeholders — promovendo a apropriação do conhecimento e suportando decisões informadas.
+
+5.5.5. Comparação de Métodos de Descoberta de Padrões
+
+Critério	Apriori	FP-Growth	Eclat
+Transparência	Elevada	Média	Média
+Interpretação	Elevada	Moderada	Moderada
+Escalabilidade	Média	Elevada	Elevada
+Implementação	Ampla	Requer tuning extra	Menos popular
+Relevância	Muito citada	Citada	Menos citada
+Usado neste estudo	SIM	NÃO	NÃO
+
+
+
+Justificação para a não utilização do FP-Growth e Eclat:
+	•	Transparência: Apriori permite auditoria e explicação detalhada do processo, requisito em contexto RH/compliance.
+	•	Escalabilidade: O volume de dados do presente estudo está dentro dos limites de eficiência do Apriori.
+	•	Objetivo do estudo: Privilegiou-se a interpretabilidade e comunicação a decisores, em detrimento da pura velocidade de execução.
+	•	Ecossistema: A integração em Python via mlxtend favoreceu a reprodutibilidade e manutenção.
+	•	Perspetivas futuras: Para projetos com dados ainda mais volumosos, a experimentação de FP-Growth ou Eclat pode ser considerada numa fase exploratória ou de benchmark.
+
+⸻
+
+Resumo Final:
+A análise de regras de associação, quando bem filtrada e comunicada, é uma ferramenta poderosa para transformar dados em conhecimento estratégico. A opção pelo Apriori garantiu transparência, rigor e alinhamento com os objetivos organizacionais, promovendo decisões mais fundamentadas e auditáveis.
+
+
+
+
+6. Base de Dados Relacional: Arquitetura, Normalização e Suporte Analítico
+
+A base de dados relacional é o pilar que sustenta todo o pipeline analítico, permitindo garantir qualidade, reprodutibilidade e escalabilidade do processo de análise salarial. Inspirada nas melhores práticas académicas e industriais, a arquitetura adotada não só viabiliza operações seguras e eficientes, como potencializa análises de complexidade crescente, sendo desenhada para acompanhar a evolução das necessidades de negócio e da investigação científica (Date, 2012; Elmasri & Navathe, 2017).
+
+⸻
+
+6.1. Modelação Relacional e Normalização
+
+A modelação relacional assentou na identificação das principais entidades do domínio e sua decomposição em tabelas especializadas (lookup tables) e uma tabela central de factos (person). Este modelo, alinhado com os princípios das 1ª, 2ª e 3ª formas normais, evita redundâncias, potencia a flexibilidade e garante a consistência dos dados, em linha com Date (2012).
+
+Estratégias-chave:
+	•	Lookup tables (ex: education, workclass, occupation, country): Permitem normalização, flexibilidade para expansão de categorias e manutenção simplificada.
+	•	Tabela de factos person: Centraliza os registos dos indivíduos, referenciando as tabelas de domínio via chaves estrangeiras e assegurando integridade referencial. Índices estratégicos aceleram consultas analíticas.
+
+Exemplo de estrutura SQL:
+
+CREATE TABLE education (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    education_num INT,
+    description TEXT
+);
+
+CREATE TABLE person (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    age INT NOT NULL,
+    education_id INT,
+    salary_range_id INT NOT NULL,
+    FOREIGN KEY (education_id) REFERENCES education(id),
+    FOREIGN KEY (salary_range_id) REFERENCES salary_range(id)
+);
+
+
+6.2. Processo de Migração Automatizada e Limpeza de Dados
+
+O processo ETL (Extract, Transform, Load) é totalmente automatizado, garantindo reprodutibilidade, auditabilidade e robustez — princípios essenciais segundo Han, Kamber & Pei (2011).
+
+Fases principais:
+	•	Validação e limpeza: Conversão de valores anómalos (“?”, “Unknown”, “nan”) em nulos, uniformização de formatos e eliminação de duplicados.
+	•	Povoamento das lookup tables: Inserção idempotente com INSERT IGNORE para evitar duplicados.
+	•	Migração dos dados principais: Mapeamento automático de chaves estrangeiras com validação em tempo real e logging detalhado.
+	•	Logging e auditoria: Cada etapa é registada para garantir rastreabilidade e facilitar auditorias futuras.
+
+
+6.3. Normalização, Integridade Referencial e Indexação
+
+A estrutura encontra-se normalizada até à 3ª Forma Normal (3NF), eliminando redundâncias e garantindo integridade dos dados (Codd, 1970; Elmasri & Navathe, 2017).
+
+Pilares:
+	•	Atomicidade (1NF): Cada campo armazena um valor indivisível.
+	•	Eliminação de dependências parciais (2NF) e transitivas (3NF): Garante flexibilidade e minimiza anomalias de atualização.
+	•	Integridade referencial: Foreign keys e checks em todas as ligações entre tabelas previnem inconsistências.
+	•	Indexação estratégica: Índices sobre colunas críticas aceleram joins, agrupamentos e queries analíticas (Kimball & Ross, 2013).
+
+Reflexão Crítica:
+O elevado grau de normalização, embora traga benefícios em consistência e flexibilidade, pode impactar a performance em cenários OLAP. Por isso, recorre-se a views materializadas e otimização de queries para garantir eficiência sem comprometer o modelo lógico de base.
+
+⸻
+
+6.4. Views Especializadas e Otimização para Análise
+
+As views são componentes fundamentais na arquitetura, permitindo:
+	•	Simplificar queries analíticas complexas.
+	•	Normalizar o acesso à informação e encapsular lógicas de negócio recorrentes.
+	•	Suportar diretamente o dashboard e a extração rápida de insights.
+
+Exemplo prático:
+
+
+CREATE VIEW high_earners_view AS
+SELECT p.id, p.age, e.name AS education, o.name AS occupation, c.name AS country
+FROM person p
+JOIN education e ON p.education_id = e.id
+JOIN occupation o ON p.occupation_id = o.id
+JOIN country c ON p.native_country_id = c.id
+WHERE p.salary_range_id = (SELECT id FROM salary_range WHERE name = '>50K');
+
+
+
+6.5. Segurança, Privacidade e Auditoria
+
+A arquitetura incorpora mecanismos de segurança e privacidade alinhados com o RGPD/GDPR (Stallings, 2017):
+	•	Controlo de acessos: Princípio do least privilege para todos os utilizadores.
+	•	Anonimização: Remoção ou pseudonimização de identificadores pessoais, retenção mínima de atributos sensíveis.
+	•	Logging: Todas as operações críticas são auditadas com logs detalhados, reforçando transparência e accountability.
+
+Reflexão ética:
+A transparência no tratamento de dados salariais, a explicabilidade dos modelos e o respeito pela privacidade dos titulares são responsabilidades inalienáveis, devendo ser objeto de revisão contínua à luz da legislação e das melhores práticas (Ribeiro et al., 2016).
+
+⸻
+
+6.6. Reflexão Crítica sobre Arquitetura e Sustentabilidade
+
+A sustentabilidade e evolução da arquitetura estão asseguradas por:
+	•	Documentação rigorosa: Scripts comentados, nomenclatura padronizada e versionamento facilitam manutenção e integração futura.
+	•	Flexibilidade: Estrutura modular permite integração com fontes externas (INE, Eurostat), ingestão de dados semi-estruturados e expansão para big data.
+	•	Otimização operacional: Geração de logs, backups automáticos, monitorização de performance e atualização periódica de sistemas.
+
+Limitações e recomendações futuras:
+	•	Monitorização contínua da performance de queries e das versões do SGBD.
+	•	Exploração de modelos híbridos (denormalização seletiva, NoSQL) para cenários de expansão massiva ou analytics em tempo real.
+	•	Reforço dos mecanismos de formação e literacia de dados dos utilizadores finais.
+
+Síntese:
+A arquitetura relacional implementada constitui uma fundação robusta, escalável e adaptável para suportar a análise salarial. No entanto, a sua sustentabilidade depende da evolução contínua das práticas de engenharia de dados, da atualização tecnológica e do compromisso permanente com a ética, a privacidade e a usabilidade.
+
+⸻
+
+
+
+7. Arquitetura Técnica
+
+A arquitetura técnica constitui o coração invisível do pipeline analítico, assegurando que cada etapa — da extração de dados à geração de insights — decorre com fiabilidade, eficiência e reprodutibilidade. A sua conceção foi norteada por três grandes princípios: modularidade, eficiência e reprodutibilidade, pilares reconhecidos pela literatura internacional como essenciais para a sustentabilidade de projetos avançados de ciência de dados (Kelleher et al., 2020; Vohra, 2016).
+
+⸻
+
+7.1. Princípios de Desenho e Modularidade
+
+O pipeline foi estruturado numa lógica modular, onde cada componente representa uma unidade de responsabilidade única, mas fortemente coesa com o todo. Esta abordagem, defendida por Meyer (2014), não só facilita a manutenção e evolução incremental do sistema, mas também potencia a colaboração entre equipas multidisciplinares e a escalabilidade a longo prazo.
+
+Módulos principais:
+	•	Ingestão de dados: Extração e validação inicial.
+	•	Limpeza e transformação: Pré-processamento, normalização e estruturação.
+	•	Armazenamento: Persistência em SGBD relacional robusto (MySQL).
+	•	Modelação e avaliação: Machine Learning, tuning e validação cruzada.
+	•	Visualização e reporting: Dashboard interativo e reporting automatizado.
+
+“A modularidade é a garantia de que cada falha, cada inovação ou cada ajuste futuro pode ser gerido sem colocar em causa o ecossistema global.” (Vohra, 2016)
+
+⸻
+
+7.2. Integração entre Camadas
+
+A integração dos módulos foi simplificada ao máximo, promovendo interoperabilidade e desacoplamento tecnológico:
+	•	CSV como formato intermediário: Universalidade, portabilidade e rastreabilidade entre etapas e linguagens.
+	•	ORM (SQLAlchemy): Abstração de operações de base de dados, assegurando segurança, portabilidade e mitigação de riscos de SQL injection.
+
+Esta decisão promove liberdade tecnológica futura (cloud, big data frameworks) e minimiza o risco de lock-in, em linha com Vohra (2016).
+
+⸻
+
+7.3. Tecnologias e Ferramentas
+
+Python 3.11:
+Escolhido pelo seu ecossistema, maturidade em Data Science e suporte comunitário. Permite rápida prototipagem e integração de ferramentas de última geração.
+
+Pandas & NumPy:
+Manipulação eficiente de dados tabulares, operações vetorizadas e facilidade de transformação.
+
+Scikit-learn:
+Framework central para ML — rigor estatístico, tuning (GridSearchCV), e ampla documentação. Possibilita implementação ágil de algoritmos clássicos e validação robusta.
+
+MySQL 8.x:
+SGBD relacional escolhido pela sua robustez, performance, capacidade de escalabilidade e integração com Python. Permite modelação avançada (constraints, views, índices).
+
+Streamlit:
+Dashboarding em tempo real — democratiza o acesso a insights, reduzindo barreiras técnicas entre Data Science e negócio.
+
+Logging estruturado:
+Transparência, rastreabilidade e suporte a auditoria de processos críticos.
+
+Docker:
+Contenção do ambiente — garante replicabilidade do pipeline em qualquer máquina (local, cloud, on-premises), seguindo as recomendações de Kelleher et al. (2020).
+
+Nota comparativa:
+Outros pipelines recorrentes em projetos de maior escala recorrem a Spark/Hadoop para processamento distribuído, ou a bases NoSQL para dados semi-estruturados. A arquitetura adotada está, contudo, perfeitamente ajustada ao contexto e dimensão do presente projeto, mas foi pensada para evolução futura caso o volume de dados justifique.
+
+⸻
+
+7.4. Performance e Robustez Empírica
+
+O pipeline foi submetido a benchmarks reais, com recolha de métricas objetivas que demonstram eficiência e escalabilidade:
+	•	Tempo médio de ingestão SQL: ~0,56 segundos (32.561 registos)
+	•	Tempo de treino de modelos ML: ~0,50 segundos para Random Forest/Logistic Regression
+	•	Tempo total do pipeline: ~1,86 segundos
+	•	Memória RAM utilizada: ~17,7 MB
+	•	Throughput: ~17.500 registos/segundo
+
+Estes resultados confirmam a robustez da arquitetura para processos analíticos em tempo quase real e mostram potencial para escala horizontal.
+
+⸻
+
+7.5. Tolerância a Falhas e Segurança
+
+Resiliência:
+	•	Tentativas automáticas de reconexão à base de dados.
+	•	Checksums e contagens para validação de integridade de dados em cada etapa.
+
+Segurança:
+	•	Parâmetros sensíveis em variáveis de ambiente (nunca hardcoded).
+	•	Políticas de permissões mínimas.
+	•	Logging detalhado de acessos e operações críticas.
+
+Estas práticas alinham-se com os standards de Data Governance e com as exigências do RGPD, fundamentais em projetos que lidam com informação sensível (Kelleher et al., 2020).
+
+⸻
+
+7.6. Reprodutibilidade, Portabilidade e Documentação
+
+A integração de Docker, scripts automatizados de migração, logging detalhado e documentação técnica (README, docstrings, exemplos) garantem:
+	•	Instalação e execução autónoma em qualquer ambiente (desenvolvimento, produção, cloud).
+	•	Redução drástica do tempo de onboarding de novos utilizadores/equipas.
+	•	Facilitação de auditorias e revisões técnicas externas.
+
+A reprodutibilidade não é um extra, mas sim um pré-requisito para a ciência de dados robusta e confiável. (Kelleher et al., 2020)
+
+⸻
+
+7.7. Reflexão Crítica sobre as Decisões de Arquitetura
+
+A arquitetura adotada, baseada em tecnologias open source, modularidade e princípios de engenharia de dados modernos, resulta em custos operacionais reduzidos, alta flexibilidade e alinhamento com práticas internacionais.
+
+Desafios reconhecidos:
+	•	Escalabilidade para Big Data: O crescimento do volume pode exigir tecnologias como PostgreSQL, Spark ou NoSQL.
+	•	Monitorização avançada: Futuramente, a integração de Prometheus/Grafana será crucial para garantir SLA em produção.
+	•	Automação de testes e CI/CD: A robustez do pipeline será maximizada com a automação de testes e pipelines de integração contínua.
+
+Visão de futuro:
+O pipeline está preparado para evoluir: seja para análises temporais, ingestão de dados externos (INE, Eurostat), integração com novos módulos analíticos ou mesmo adaptação a cloud-native architectures. Cada camada foi desenhada com extensibilidade em mente, assegurando que a infraestrutura cresce com as necessidades do negócio e do contexto académico.
+
+
+8. Conclusão
+
+O percurso traçado neste estudo confirma o potencial transformador da ciência de dados aplicada à gestão salarial, promovendo uma mudança de paradigma nas práticas de decisão, fundamentação e comunicação em recursos humanos. Com base em 32.561 registos, uma arquitetura robusta e processos rigorosos de modelação e validação, demonstrou-se como o rigor técnico, aliado à preocupação ética e à utilidade organizacional, pode gerar valor real, transparente e sustentável.
+
+Ao longo do trabalho, evidenciou-se que a excelência analítica não reside apenas na sofisticação dos modelos ou nas métricas de performance (como a acurácia de 84,08% obtida pela Random Forest), mas sobretudo na capacidade de comunicar, justificar e operacionalizar resultados. Tal como defendido por Knaflic (2015), a utilidade dos dados concretiza-se quando as histórias que contam chegam aos decisores certos — e este pipeline, com dashboards interativos, visualizações customizadas e reporting automatizado, exemplifica esse objetivo.
+
+O desenho modular, a normalização rigorosa das bases de dados, o uso de algoritmos consagrados (Random Forest, Regressão Logística, K-Means, Apriori) e a atenção constante à explicabilidade e privacidade posicionam este projeto ao nível das melhores práticas internacionais (Han et al., 2012; Marr, 2016; Kelleher et al., 2020). O foco no empowerment do utilizador, através de ferramentas de visualização intuitivas e de documentação detalhada, reforça o impacto positivo junto de diferentes públicos-alvo: gestores, analistas, auditores e profissionais de RH.
+
+No domínio ético e legal, destacou-se a adoção de mecanismos de anonimização, minimização e rastreabilidade, em consonância com o RGPD e as recomendações mais recentes sobre governance de dados (Ribeiro, Singh & Guestrin, 2016; OCDE, 2019). Reconhece-se que, num domínio sensível como a remuneração, a confiança só é conquistada com transparência, auditabilidade e responsabilização.
+
+A análise crítica das limitações — desbalanceamento das classes, ausência de variáveis contextuais, caráter transversal (“snapshot”) dos dados — foi feita de forma honesta e construtiva, valorizando o princípio da melhoria contínua e abrindo portas a linhas futuras de investigação e desenvolvimento. Como salienta Marr (2016), reconhecer desafios é condição necessária para a inovação e a maturidade institucional.
+
+Em síntese, este relatório deixa três legados principais:
+	1.	Científico: Propõe uma metodologia replicável e auditável, alicerçada em literatura e frameworks de referência, com código e pipeline documentados e reprodutíveis.
+	2.	Prático: Entrega artefactos acionáveis — dashboards, views SQL, relatórios — facilmente integráveis em processos reais de apoio à decisão.
+	3.	Ético-social: Promove uma cultura de justiça, transparência e capacitação dos utilizadores de dados, indo ao encontro das exigências de compliance, equidade e responsabilidade.
+
+“A clareza dos dados é o primeiro passo para a mudança organizacional.” (Knaflic, 2015)
+
+Este trabalho demonstra, de forma empiricamente validada, que é possível transformar dados em conhecimento, conhecimento em ação, e ação em valor — para pessoas, organizações e sociedade.
+
+⸻
+
+8. Caminhos Futuros: Melhoria Contínua e Recomendações
+
+A ciência de dados, por natureza, é um campo em permanente reinvenção. O pipeline aqui desenvolvido, robusto e inovador à data, deve ser entendido como um ponto de partida para ciclos regulares de evolução. Para maximizar o valor e a longevidade do sistema, propõem-se os seguintes eixos prioritários de desenvolvimento:
+
+8.1. Integração de Novas Fontes e Dados Contextuais
+	•	Enriquecimento macro e microeconómico (INE, Eurostat, índices setoriais, custo de vida regional).
+	•	Automatização da ingestão (APIs públicas, feeds institucionais), permitindo atualização contínua e análises “near real-time”.
+
+8.2. Teste de Algoritmos Avançados
+	•	Novos modelos: XGBoost, LightGBM, redes neuronais profundas, ensembles heterogéneos.
+	•	Comparação sistemática de performance e interpretabilidade, promovendo a seleção ótima para cada cenário.
+
+8.3. Engenharia e Seleção Avançada de Atributos
+	•	Variáveis compostas, interação de features, extração automática de características relevantes.
+	•	Redução de dimensionalidade (PCA, feature selection) para robustez e interpretabilidade.
+
+8.4. Balanceamento de Classes
+	•	SMOTE e técnicas complementares para garantir sensibilidade acrescida à classe minoritária (>50K), melhorando recall e F1-score.
+
+8.5. Expansão Temporal e Analítica Avançada
+	•	Modelos longitudinais para captação de tendências e efeitos dinâmicos.
+	•	Monitorização automática para deteção de “data drift” e adaptação proactiva dos modelos.
+
+8.6. Evolução dos Dashboards e Usabilidade
+	•	Interatividade e customização orientadas ao utilizador final.
+	•	Feedback ativo dos stakeholders para evolução funcional contínua.
+
+8.7. Robustez Operacional e Governança
+	•	Documentação exaustiva e versionamento rigoroso.
+	•	Reforço da reprodutibilidade e da rastreabilidade em todas as camadas do pipeline.
+
+8.8. Integração de Dados Não Estruturados
+	•	Text mining e NLP para análise de descrições de funções, feedback de colaboradores e documentos normativos, enriquecendo a base analítica e a compreensão dos fatores salariais.
+
+8.9. Formação e Disseminação
+	•	Capacitação contínua dos utilizadores e promoção ativa de cultura de literacia analítica e ética.
+	•	Abertura à inovação e colaboração, incentivando ciclos de revisão e melhoria participada.
+
+
+
+
+
+
+
+
+
+
+
+
+

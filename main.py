@@ -15,6 +15,11 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 import pandas as pd
 import numpy as np
+import logging
+from datetime import datetime
+from pathlib import Path
+import warnings
+warnings.filterwarnings('ignore')
 
 # Adicionar src ao path
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -46,387 +51,353 @@ def setup_logging():
     return logger
 
 class HybridPipelineSQL:
-    """Pipeline Híbrido com Relatórios Completos no Terminal"""
+    """Pipeline híbrido com otimização automática para datasets grandes"""
     
-    def __init__(self, force_csv=False, log_level="INFO", show_results=True):
-        """Inicializar pipeline híbrido"""
-        self.logger = setup_logging()
-        self.logger.setLevel(getattr(logging, log_level.upper()))
+    def __init__(self, force_csv=False, log_level="INFO", show_results=True, auto_optimize=True):
+        """Inicializar pipeline híbrido com otimização automática"""
+        self.setup_logging(log_level)
+        self.logger = logging.getLogger(__name__)
         
+        # NOVO: Configurações de otimização
+        self.auto_optimize = auto_optimize
+        self.optimization_threshold = 50000  # Se > 50k registros, otimizar
+        self.sample_size = 15000  # Tamanho da amostra otimizada
+        self.is_optimized_run = False
+        self.original_size = 0
+        
+        # Configurações básicas
         self.force_csv = force_csv
         self.show_results = show_results
-        self.data_source = None
+        self.df = None
         self.results = {}
         self.models = {}
-        self.df = None
-        self.start_time = datetime.now()
+        self.performance_metrics = {}
         
-        # Métricas de performance
-        self.performance_metrics = {
-            'start_time': self.start_time,
-            'data_source': None,
-            'data_load_time': None,
-            'ml_training_time': None,
-            'total_time': None,
-            'records_processed': 0
-        }
+        # Configurar pipelines
+        self._setup_pipelines()
         
-        self.logger.info(f"🔧 Pipeline híbrido inicializado:")
-        self.logger.info(f"   • Forçar CSV: {force_csv}")
-        self.logger.info(f"   • Nível de log: {log_level}")
-        self.logger.info(f"   • Mostrar resultados: {show_results}")
+        # Auto-detectar necessidade de otimização
+        if self.auto_optimize:
+            self._check_optimization_needed()
+    
+    def setup_logging(self, log_level="INFO"):
+        """Configurar sistema de logging"""
+        # Criar diretório de logs se não existir
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
         
-        self._initialize_components()
-
-    def _initialize_components(self):
-        """Inicializar componentes com fallback"""
+        # Configurar formato
+        log_format = "%(asctime)s | %(levelname)-8s | %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        
+        # Configurar logging
+        logging.basicConfig(
+            level=getattr(logging, log_level.upper()),
+            format=log_format,
+            datefmt=date_format,
+            handlers=[
+                logging.FileHandler(log_dir / f"pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
+                logging.StreamHandler()
+            ]
+        )
+        
+        # Suprimir logs desnecessários
+        logging.getLogger('matplotlib').setLevel(logging.WARNING)
+        logging.getLogger('seaborn').setLevel(logging.WARNING)
+        logging.getLogger('sklearn').setLevel(logging.WARNING)
+    
+    def _setup_pipelines(self):
+        """Configurar todos os pipelines"""
+        self.logger.info("🔧 Configurando pipelines...")
+        
+        # ML Pipeline
         try:
-            # 1. Tentar pipeline SQL primeiro (se não forçar CSV)
-            if not self.force_csv:
-                try:
-                    from src.pipelines.data_pipeline import DataPipelineSQL
-                    self.sql_pipeline = DataPipelineSQL(force_migration=False)
-                    self.logger.info("✅ Pipeline SQL disponível")
-                except ImportError as e:
-                    self.logger.warning(f"⚠️ Pipeline SQL indisponível: {e}")
-                    self.sql_pipeline = None
-            else:
-                self.sql_pipeline = None
-                self.logger.info("📋 Modo CSV forçado")
-            
-            # 2. Pipeline ML (sempre disponível)
-            try:
-                from src.pipelines.ml_pipeline import MLPipeline
-                self.ml_pipeline = MLPipeline()
-                self.logger.info("✅ Pipeline ML inicializado")
-            except ImportError as e:
-                self.logger.error(f"❌ Pipeline ML não disponível: {e}")
-                self.ml_pipeline = None
-            
-            # 3. Pipelines opcionais
-            self._initialize_optional_pipelines()
-            
+            from src.pipelines.ml_pipeline import MLPipeline
+            self.ml_pipeline = MLPipeline()
+            self.logger.info("✅ Pipeline ML disponível")
         except Exception as e:
-            self.logger.error(f"❌ Erro na inicialização: {e}")
-
-    def _initialize_optional_pipelines(self):
-        """Inicializar pipelines opcionais"""
-        # Clustering
+            self.ml_pipeline = None
+            self.logger.warning(f"⚠️ Pipeline ML não disponível: {e}")
+        
+        # Clustering Pipeline
         try:
             from src.pipelines.clustering_pipeline import ClusteringPipeline
             self.clustering_pipeline = ClusteringPipeline()
             self.logger.info("✅ Pipeline Clustering disponível")
-        except ImportError:
+        except Exception as e:
             self.clustering_pipeline = None
-            self.logger.info("ℹ️ Pipeline Clustering não disponível")
+            self.logger.warning(f"⚠️ Pipeline Clustering não disponível: {e}")
         
-        # Association Rules
+        # Association Rules Pipeline (NOVO)
         try:
             from src.pipelines.association_pipeline import AssociationPipeline
             self.association_pipeline = AssociationPipeline()
-            self.logger.info("✅ Pipeline Association disponível")
-        except ImportError:
+            self.logger.info("✅ Pipeline Association Rules disponível")
+        except Exception as e:
             self.association_pipeline = None
-            self.logger.info("ℹ️ Pipeline Association não disponível")
+            self.logger.warning(f"⚠️ Pipeline Association Rules não disponível: {e}")
 
-    def run(self) -> Dict[str, Any]:
-        """Executar pipeline completo com relatórios no terminal"""
+    def _check_optimization_needed(self):
+        """Verificar se otimização é necessária baseada no tamanho do dataset"""
         try:
-            self.logger.info("🚀 INICIANDO PIPELINE HÍBRIDO")
-            self.logger.info("=" * 60)
+            # Verificar tamanho do arquivo primeiro
+            csv_path = Path("data/raw/4-Carateristicas_salario.csv")
+            if csv_path.exists():
+                file_size_mb = csv_path.stat().st_size / (1024 * 1024)
+                
+                # Se arquivo > 10MB, provavelmente precisa otimização
+                if file_size_mb > 10:
+                    # Contar linhas usando pandas
+                    try:
+                        # Ler apenas uma linha para verificar se pode ser carregado
+                        df_test = pd.read_csv(csv_path, nrows=1)
+                        
+                        # Estimar número de linhas baseado no tamanho do arquivo
+                        estimated_lines = int(file_size_mb * 1000)  # Estimativa rough
+                        
+                        if estimated_lines > self.optimization_threshold:
+                            self.is_optimized_run = True
+                            self.original_size = estimated_lines
+                            self.logger.info(f"🎯 AUTO-OTIMIZAÇÃO ATIVADA")
+                            self.logger.info(f"📊 Dataset estimado: ~{estimated_lines:,} registros")
+                            self.logger.info(f"⚡ Modo otimizado: {self.sample_size:,} amostras")
+                            return
+                            
+                    except Exception as e:
+                        self.logger.debug(f"Erro na estimativa: {e}")
+                
+        except Exception as e:
+            self.logger.debug(f"Verificação de otimização falhou: {e}")
+    
+    def load_data(self):
+        """Carregar dados com otimização automática"""
+        self.logger.info("📊 Carregando dados...")
+        
+        try:
+            csv_path = Path("data/raw/4-Carateristicas_salario.csv")
             
-            # 1. Carregar dados (SQL → CSV fallback)
-            self._run_data_pipeline()
+            if not csv_path.exists():
+                self.logger.error(f"❌ Arquivo não encontrado: {csv_path}")
+                return None
             
-            if self.df is None or len(self.df) == 0:
-                raise ValueError("❌ Nenhum dado foi carregado")
+            # Se otimização ativada, usar amostragem
+            if self.is_optimized_run:
+                return self._load_data_optimized(csv_path)
+            else:
+                # Carregamento normal
+                self.df = pd.read_csv(csv_path)
+                self.original_size = len(self.df)
+                self.logger.info(f"✅ Dados carregados: {len(self.df):,} registros")
+                return self.df
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao carregar dados: {e}")
+            return None
+    
+    def _load_data_optimized(self, csv_path):
+        """Carregar dados com amostragem inteligente"""
+        self.logger.info("⚡ CARREGAMENTO OTIMIZADO")
+        
+        try:
+            # Primeiro, ler uma amostra pequena para entender os dados
+            df_peek = pd.read_csv(csv_path, nrows=1000)
+            self.logger.info(f"🔍 Análise preliminar: {len(df_peek.columns)} colunas")
+            
+            # Carregar amostra diretamente
+            self.logger.info(f"📊 Carregando amostra de {self.sample_size:,} registros...")
+            
+            # Usar skip para pegar amostra distribuída
+            skip_rows = max(1, self.original_size // self.sample_size)
+            
+            try:
+                # Tentar carregar amostra sistemática
+                self.df = pd.read_csv(csv_path, skiprows=lambda i: i > 0 and i % skip_rows != 0)
+                
+                # Limitar ao tamanho desejado
+                if len(self.df) > self.sample_size:
+                    self.df = self.df.sample(self.sample_size, random_state=42).reset_index(drop=True)
+                
+            except Exception:
+                # Fallback: carregar primeiras N linhas
+                self.df = pd.read_csv(csv_path, nrows=self.sample_size)
+            
+            self.logger.info(f"✅ Amostra criada: {len(self.df):,} registros")
+            
+            # Verificar distribuição da variável target se existir
+            if 'salary' in self.df.columns:
+                dist = self.df['salary'].value_counts(normalize=True)
+                self.logger.info(f"🎯 Distribuição: {dict(dist)}")
+            
+            return self.df
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro no carregamento otimizado: {e}")
+            # Fallback final
+            try:
+                self.df = pd.read_csv(csv_path, nrows=self.sample_size)
+                self.logger.info(f"⚠️ Fallback: primeiros {len(self.df):,} registros")
+                return self.df
+            except:
+                return None
+    
+    def run(self):
+        """Executar pipeline completo"""
+        start_time = datetime.now()
+        self.logger.info("🚀 INICIANDO PIPELINE HÍBRIDO")
+        self.logger.info("=" * 60)
+        
+        try:
+            # 1. Carregar dados - CORREÇÃO DO ERRO
+            data_loaded = self.load_data()
+            if data_loaded is None or self.df is None or self.df.empty:
+                self.logger.error("❌ Falha no carregamento dos dados")
+                return None
             
             # 2. Machine Learning
-            self._run_ml_pipeline()
+            if self.ml_pipeline:
+                try:
+                    self.logger.info("🤖 Executando Machine Learning...")
+                    models, results = self.ml_pipeline.run(self.df)
+                    if models and results:
+                        self.results['ml'] = {'models': results, 'trained_models': models}
+                        self.models = models
+                        self.logger.info("✅ Machine Learning concluído")
+                        
+                        # Log detalhado dos resultados ML
+                        for model_name, metrics in results.items():
+                            if isinstance(metrics, dict) and 'accuracy' in metrics:
+                                accuracy = metrics['accuracy']
+                                self.logger.info(f"   📊 {model_name}: {accuracy:.3f} ({accuracy*100:.1f}%)")
+                        
+                except Exception as e:
+                    self.logger.error(f"❌ Erro no ML: {e}")
             
-            # 3. Análises opcionais
-            self._run_optional_analysis()
+            # 3. Clustering (com otimização)
+            if self.clustering_pipeline:
+                try:
+                    self.logger.info("🎯 Executando Clustering...")
+                    
+                    # Otimizar se necessário
+                    if self.is_optimized_run:
+                        self._optimize_clustering()
+                    
+                    clustering_results = self.clustering_pipeline.run(self.df)
+                    if clustering_results:
+                        self.results['clustering'] = clustering_results
+                        self.logger.info("✅ Clustering concluído")
+                        
+                        # Log detalhado dos resultados de clustering
+                        for method, result in clustering_results.items():
+                            if result and isinstance(result, dict):
+                                n_clusters = result.get('n_clusters', 0)
+                                silhouette = result.get('silhouette_score', 0)
+                                noise_pct = result.get('noise_percentage', 0)
+                                
+                                self.logger.info(f"   📊 {method}: {n_clusters} clusters, Silhouette={silhouette:.3f}")
+                                if noise_pct > 0:
+                                    self.logger.info(f"      🔍 Ruído detectado: {noise_pct:.1f}%")
+                        
+                except Exception as e:
+                    self.logger.error(f"❌ Erro no Clustering: {e}")
+            elif self.is_optimized_run:
+                self.logger.info("🎯 Clustering: PULADO (modo otimizado)")
             
-            # 4. Finalizar
-            self._finalize_pipeline()
+            # 4. Association Rules (pular se otimizado)
+            if self.association_pipeline and not self.is_optimized_run:
+                try:
+                    self.logger.info("📋 Executando Association Rules...")
+                    association_results = self.association_pipeline.run(self.df)
+                    if association_results:
+                        self.results['association_rules'] = association_results
+                        self.logger.info("✅ Association Rules concluído")
+                        
+                        # Log detalhado das regras
+                        if 'rules' in association_results:
+                            rules_count = len(association_results['rules'])
+                            self.logger.info(f"   📊 {rules_count} regras descobertas")
+                        
+                except Exception as e:
+                    self.logger.error(f"❌ Erro no Association Rules: {e}")
+            elif self.is_optimized_run:
+                self.logger.info("📋 Association Rules: PULADO (modo otimizado)")
             
-            # 5. 🎯 EXIBIR RESULTADOS COMPLETOS (como app.py)
+            # 5. Calcular métricas de performance
+            total_time = datetime.now() - start_time
+            self.performance_metrics['total_time'] = total_time.total_seconds()
+            self.performance_metrics['records_processed'] = len(self.df)
+            self.performance_metrics['data_source'] = 'csv'
+            
+            # 6. Exibir resultados
             if self.show_results:
-                self._display_complete_results()
+                self._display_results()
             
-            return self._prepare_results()
+            self.logger.info("🎯 PIPELINE CONCLUÍDO COM SUCESSO")
+            return self.results
             
         except Exception as e:
             self.logger.error(f"❌ Erro crítico no pipeline: {e}")
-            self.logger.error(traceback.format_exc())
-            return {'error': str(e), 'data_source': self.data_source}
-
-    def _run_data_pipeline(self):
-        """Executar carregamento de dados com fallback SQL→CSV"""
-        self.logger.info("📊 CARREGAMENTO DE DADOS")
-        self.logger.info("-" * 40)
-        
-        data_start = datetime.now()
-        
-        # Tentar SQL primeiro (se disponível)
-        if self.sql_pipeline and not self.force_csv:
-            self.logger.info("🗄️ Tentando carregar dados do SQL...")
-            try:
-                self.df = self.sql_pipeline.run()
-                if self.df is not None and len(self.df) > 0:
-                    self.data_source = 'sql'
-                    self.logger.info(f"✅ Dados carregados do SQL: {len(self.df):,} registros")
-                    self._log_data_details()
-                else:
-                    self.logger.warning("⚠️ SQL retornou dados vazios, tentando CSV...")
-                    self._load_from_csv()
-            except Exception as e:
-                self.logger.warning(f"⚠️ Erro no SQL: {e}")
-                self.logger.info("🔄 Fazendo fallback para CSV...")
-                self._load_from_csv()
-        else:
-            # Carregar diretamente do CSV
-            self._load_from_csv()
-        
-        # Calcular tempo de carregamento
-        data_time = datetime.now() - data_start
-        self.performance_metrics['data_load_time'] = data_time.total_seconds()
-        self.performance_metrics['data_source'] = self.data_source
-        self.performance_metrics['records_processed'] = len(self.df) if self.df is not None else 0
-        
-        self.logger.info(f"⏱️ Tempo de carregamento: {data_time.total_seconds():.2f}s")
-
-    def _load_from_csv(self):
-        """Carregar dados do arquivo CSV"""
-        csv_paths = [
-            "data/raw/4-Carateristicas_salario.csv",
-            "4-Carateristicas_salario.csv",
-            "bkp/4-Carateristicas_salario.csv",
-            "data/4-Carateristicas_salario.csv"
-        ]
-        
-        for csv_path in csv_paths:
-            if Path(csv_path).exists():
-                try:
-                    self.logger.info(f"📋 Carregando CSV: {csv_path}")
-                    self.df = pd.read_csv(csv_path)
-                    
-                    if len(self.df) > 0:
-                        self.data_source = 'csv'
-                        self.logger.info(f"✅ CSV carregado: {len(self.df):,} registros, {len(self.df.columns)} colunas")
-                        
-                        # Limpeza básica
-                        self._basic_cleaning()
-                        self._log_data_details()
-                        return
-                    
-                except Exception as e:
-                    self.logger.error(f"❌ Erro ao carregar {csv_path}: {e}")
-        
-        # Se chegou aqui, não encontrou nenhum CSV
-        self.logger.error("❌ Nenhum arquivo CSV encontrado!")
-        self.logger.info("💡 Locais procurados:")
-        for path in csv_paths:
-            self.logger.info(f"   • {path}")
-
-    def _basic_cleaning(self):
-        """Limpeza básica dos dados CSV"""
-        if self.df is None:
-            return
-        
-        initial_size = len(self.df)
-        
-        # Remover espaços e caracteres especiais
-        for col in self.df.select_dtypes(include=['object']).columns:
-            self.df[col] = self.df[col].astype(str).str.strip()
-        
-        # Substituir '?' por NaN
-        self.df = self.df.replace('?', np.nan)
-        
-        # Remover linhas completamente vazias
-        self.df = self.df.dropna(how='all')
-        
-        final_size = len(self.df)
-        if final_size != initial_size:
-            self.logger.info(f"🧹 Limpeza: {initial_size:,} → {final_size:,} registros")
-
-    def _log_data_details(self):
-        """Log detalhado dos dados carregados"""
-        if self.df is None:
-            return
-        
-        self.logger.info("📈 DETALHES DOS DADOS:")
-        self.logger.info(f"   📋 Registros: {len(self.df):,}")
-        self.logger.info(f"   📊 Colunas: {len(self.df.columns)}")
-        self.logger.info(f"   💾 Memória: {self.df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-        
-        # Colunas por tipo
-        numeric_cols = self.df.select_dtypes(include=[np.number]).columns
-        categorical_cols = self.df.select_dtypes(include=['object']).columns
-        
-        self.logger.info(f"   🔢 Numéricas: {len(numeric_cols)}")
-        self.logger.info(f"   📝 Categóricas: {len(categorical_cols)}")
-        
-        # Dados ausentes
-        missing_data = self.df.isnull().sum()
-        if missing_data.sum() > 0:
-            self.logger.warning("⚠️ DADOS AUSENTES:")
-            for col, missing_count in missing_data[missing_data > 0].items():
-                percentage = (missing_count / len(self.df)) * 100
-                self.logger.warning(f"   • {col}: {missing_count} ({percentage:.1f}%)")
-        else:
-            self.logger.info("✅ Sem dados ausentes")
-        
-        # Duplicatas
-        duplicates = self.df.duplicated().sum()
-        if duplicates > 0:
-            self.logger.warning(f"⚠️ {duplicates} duplicatas ({duplicates/len(self.df)*100:.1f}%)")
-        else:
-            self.logger.info("✅ Sem duplicatas")
-        
-        # Distribuição target (se existir)
-        if 'salary' in self.df.columns:
-            target_dist = self.df['salary'].value_counts()
-            self.logger.info("🎯 DISTRIBUIÇÃO TARGET:")
-            for value, count in target_dist.items():
-                percentage = (count / len(self.df)) * 100
-                self.logger.info(f"   • {value}: {count:,} ({percentage:.1f}%)")
-
-    def _run_ml_pipeline(self):
-        """Executar pipeline de ML"""
-        if not self.ml_pipeline:
-            self.logger.warning("⚠️ Pipeline ML não disponível")
-            return
-        
-        self.logger.info("🤖 MACHINE LEARNING")
-        self.logger.info("-" * 40)
-        
-        ml_start = datetime.now()
-        
-        try:
-            self.models, ml_results = self.ml_pipeline.run(self.df)
+            import traceback
+            self.logger.debug(traceback.format_exc())
+            return None
+    
+    def _optimize_clustering(self):
+        """Otimizar clustering para datasets grandes"""
+        if hasattr(self.clustering_pipeline, 'clustering_analysis'):
+            self.logger.info("⚡ Aplicando otimizações de clustering...")
             
-            if self.models:
-                self.logger.info(f"✅ {len(self.models)} modelos treinados")
-                
-                # Log performance de cada modelo
-                for name, model_info in self.models.items():
-                    if isinstance(model_info, dict) and 'accuracy' in model_info:
-                        accuracy = model_info['accuracy']
-                        self.logger.info(f"   • {name}: {accuracy:.4f}")
-                        
-                        # Classificação de performance
-                        if accuracy > 0.90:
-                            self.logger.info(f"     🏆 EXCELENTE")
-                        elif accuracy > 0.85:
-                            self.logger.info(f"     ✅ MUITO BOA")
-                        elif accuracy > 0.80:
-                            self.logger.info(f"     ⚠️ BOA")
-                        else:
-                            self.logger.warning(f"     ❌ REGULAR")
-                
-                # Identificar melhor modelo
-                best_model, best_score = self._find_best_model()
-                if best_model:
-                    self.logger.info(f"🏆 MELHOR MODELO: {best_model} ({best_score:.4f})")
-                
-                self.results['ml_results'] = ml_results
-            else:
-                self.logger.warning("⚠️ Nenhum modelo foi treinado")
-        
-        except Exception as e:
-            self.logger.error(f"❌ Erro no ML: {e}")
-            self.logger.error(traceback.format_exc())
-        
-        ml_time = datetime.now() - ml_start
-        self.performance_metrics['ml_training_time'] = ml_time.total_seconds()
-        self.logger.info(f"⏱️ Tempo ML: {ml_time.total_seconds():.2f}s")
-
-    def _find_best_model(self) -> Tuple[Optional[str], float]:
-        """Encontrar melhor modelo"""
-        best_model = None
-        best_score = 0.0
-        
-        for model_name, model_info in self.models.items():
-            if isinstance(model_info, dict) and 'accuracy' in model_info:
-                accuracy = model_info['accuracy']
-                if accuracy > best_score:
-                    best_score = accuracy
-                    best_model = model_name
-        
-        return best_model, best_score
-
-    def _run_optional_analysis(self):
-        """Executar análises opcionais"""
-        self.logger.info("📊 ANÁLISES OPCIONAIS")
-        self.logger.info("-" * 40)
-        
-        # Clustering
-        if self.clustering_pipeline:
+            # Reduzir número de testes do DBSCAN
             try:
-                self.logger.info("🎯 Executando clustering...")
-                clustering_results = self.clustering_pipeline.run(self.df)
-                if clustering_results:
-                    self.results['clustering'] = clustering_results
-                    self.logger.info("✅ Clustering concluído")
+                original_method = self.clustering_pipeline.clustering_analysis.perform_dbscan_analysis
+                
+                def fast_dbscan(X):
+                    """DBSCAN otimizado"""
+                    from sklearn.cluster import DBSCAN
+                    from sklearn.metrics import silhouette_score
+                    from sklearn.preprocessing import StandardScaler
                     
-                    # Log resultados de clustering
-                    for algorithm, result in clustering_results.items():
-                        if isinstance(result, dict):
-                            if 'n_clusters' in result:
-                                self.logger.info(f"   • {algorithm}: {result['n_clusters']} clusters")
-                            if 'silhouette_score' in result:
-                                score = result['silhouette_score']
-                                self.logger.info(f"     Silhouette: {score:.4f}")
-                else:
-                    self.logger.warning("⚠️ Clustering não retornou resultados")
-            except Exception as e:
-                self.logger.warning(f"⚠️ Erro no clustering: {e}")
-        else:
-            self.logger.info("ℹ️ Clustering não disponível")
-        
-        # Association Rules
-        if self.association_pipeline:
-            try:
-                self.logger.info("📋 Executando regras de associação...")
-                association_results = self.association_pipeline.run(self.df)
-                if association_results:
-                    self.results['association_rules'] = association_results
-                    self.logger.info("✅ Regras de associação concluídas")
+                    scaler = StandardScaler()
+                    X_scaled = scaler.fit_transform(X)
                     
-                    # Log resultados
-                    if 'rules' in association_results:
-                        rules_count = len(association_results['rules'])
-                        self.logger.info(f"   • {rules_count} regras encontradas")
-                else:
-                    self.logger.warning("⚠️ Regras de associação não retornaram resultados")
+                    # Apenas configurações promissoras
+                    configs = [(0.9, 7), (1.2, 5), (1.3, 6), (0.8, 8)]
+                    
+                    best_silhouette = -1
+                    best_result = None
+                    
+                    self.logger.info(f"⚡ Testando {len(configs)} configurações DBSCAN...")
+                    
+                    for i, (eps, min_samples) in enumerate(configs, 1):
+                        try:
+                            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+                            clusters = dbscan.fit_predict(X_scaled)
+                            
+                            n_clusters = len(set(clusters)) - (1 if -1 in clusters else 0)
+                            n_noise = list(clusters).count(-1)
+                            
+                            if n_clusters > 1:
+                                mask = clusters != -1
+                                if mask.sum() > 10:
+                                    silhouette = silhouette_score(X_scaled[mask], clusters[mask])
+                                    
+                                    self.logger.info(f"   {i}/{len(configs)}: eps={eps}, min_samples={min_samples} → "
+                                                   f"Silhouette={silhouette:.3f}")
+                                    
+                                    if silhouette > best_silhouette:
+                                        best_silhouette = silhouette
+                                        best_result = (clusters, n_clusters, silhouette)
+                        except:
+                            continue
+                    
+                    return best_result if best_result else (None, 0, -1)
+                
+                # Substituir método temporariamente
+                self.clustering_pipeline.clustering_analysis.perform_dbscan_analysis = fast_dbscan
+                
             except Exception as e:
-                self.logger.warning(f"⚠️ Erro nas regras de associação: {e}")
-        else:
-            self.logger.info("ℹ️ Regras de associação não disponíveis")
-
-    def _finalize_pipeline(self):
-        """Finalizar pipeline"""
-        total_time = datetime.now() - self.start_time
-        self.performance_metrics['total_time'] = total_time.total_seconds()
-        
-        self.logger.info("🎉 PIPELINE CONCLUÍDO")
-        self.logger.info("=" * 60)
-        self.logger.info(f"⏱️ Tempo total: {total_time.total_seconds():.2f}s")
-        self.logger.info(f"📊 Fonte dos dados: {self.data_source.upper()}")
-        self.logger.info(f"📋 Registros processados: {self.performance_metrics['records_processed']:,}")
-        
-        if self.models:
-            self.logger.info(f"🤖 Modelos treinados: {len(self.models)}")
-            best_model, best_score = self._find_best_model()
-            if best_model:
-                self.logger.info(f"🏆 Melhor performance: {best_model} ({best_score:.4f})")
-        
-        # Salvar resultados
-        self._save_results()
-
-    def _display_complete_results(self):
-        """🎯 EXIBIR RESULTADOS COMPLETOS NO TERMINAL - Como app.py"""
+                self.logger.debug(f"Erro na otimização DBSCAN: {e}")
+    
+    def _display_results(self):
+        """Exibir resultados no terminal"""
         print("\n" + "🎯" * 80)
         print("🎯 RELATÓRIO COMPLETO DE RESULTADOS - ANÁLISE DE SALÁRIOS")
         print("🎯" * 80)
@@ -434,17 +405,17 @@ class HybridPipelineSQL:
         # 1. OVERVIEW DOS DADOS
         self._display_data_overview()
         
-        # 2. ANÁLISE EXPLORATÓRIA
-        self._display_eda_results()
-        
-        # 3. MACHINE LEARNING
+        # 2. MACHINE LEARNING
         self._display_ml_results()
         
-        # 4. MÉTRICAS DE PERFORMANCE
-        self._display_performance_metrics()
+        # 3. CLUSTERING (NOVO - DETALHADO)
+        self._display_clustering_results()
         
-        # 5. INSIGHTS E CONCLUSÕES
-        self._display_insights()
+        # 4. REGRAS DE ASSOCIAÇÃO
+        self._display_association_results()
+        
+        # 5. PERFORMANCE
+        self._display_performance_metrics()
         
         print("\n" + "🎯" * 80)
         print("✅ RELATÓRIO COMPLETO EXIBIDO COM SUCESSO!")
@@ -455,384 +426,306 @@ class HybridPipelineSQL:
         print(f"\n📊 1. OVERVIEW DOS DADOS")
         print("-" * 50)
         
-        if self.df is not None:
-            print(f"📋 Total de Registros: {len(self.df):,}")
-            print(f"📊 Total de Colunas: {len(self.df.columns)}")
-            print(f"💾 Tamanho em Memória: {self.df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-            print(f"🗄️ Fonte dos Dados: {self.data_source.upper()}")
-            
-            # Tipos de dados
-            numeric_cols = self.df.select_dtypes(include=[np.number]).columns
-            categorical_cols = self.df.select_dtypes(include=['object']).columns
-            
-            print(f"\n📈 TIPOS DE VARIÁVEIS:")
-            print(f"   🔢 Numéricas: {len(numeric_cols)} ({', '.join(numeric_cols[:3])}{'...' if len(numeric_cols) > 3 else ''})")
-            print(f"   📝 Categóricas: {len(categorical_cols)} ({', '.join(categorical_cols[:3])}{'...' if len(categorical_cols) > 3 else ''})")
-            
-            # Qualidade dos dados
-            missing_data = self.df.isnull().sum()
-            duplicates = self.df.duplicated().sum()
-            
-            print(f"\n🧹 QUALIDADE DOS DADOS:")
-            if missing_data.sum() > 0:
-                cols_with_missing = missing_data[missing_data > 0]
-                print(f"   ⚠️ Dados Ausentes: {missing_data.sum():,} valores em {len(cols_with_missing)} colunas")
-                for col, count in cols_with_missing.head(3).items():
-                    percentage = (count / len(self.df)) * 100
-                    print(f"      • {col}: {count:,} ({percentage:.1f}%)")
+        if self.df is not None and not self.df.empty:
+            if self.is_optimized_run:
+                print(f"   📋 Dataset original: ~{self.original_size:,} registros")
+                print(f"   🎯 Amostra analisada: {len(self.df):,} registros")
+                print(f"   ⚡ Modo: Otimizado para performance")
             else:
-                print(f"   ✅ Dados Ausentes: Nenhum")
+                print(f"   📋 Total de registros: {len(self.df):,}")
             
-            if duplicates > 0:
-                print(f"   ⚠️ Duplicatas: {duplicates:,} ({duplicates/len(self.df)*100:.1f}%)")
-            else:
-                print(f"   ✅ Duplicatas: Nenhuma")
-
-    def _display_eda_results(self):
-        """Exibir resultados da análise exploratória"""
-        print(f"\n🔍 2. ANÁLISE EXPLORATÓRIA")
-        print("-" * 50)
-        
-        if self.df is not None and 'salary' in self.df.columns:
+            print(f"   📊 Colunas: {len(self.df.columns)}")
+            
             # Distribuição da variável target
-            target_dist = self.df['salary'].value_counts()
-            target_dist_pct = self.df['salary'].value_counts(normalize=True)
-            
-            print(f"🎯 DISTRIBUIÇÃO DA VARIÁVEL TARGET (salary):")
-            for value, count in target_dist.items():
-                percentage = target_dist_pct[value] * 100
-                bar_length = int(percentage / 2)  # Escala para visualização
-                bar = "█" * bar_length + "░" * (50 - bar_length)
-                print(f"   {value:<8}: {count:>8,} ({percentage:>5.1f}%) {bar}")
-            
-            # Estatísticas das variáveis numéricas
-            numeric_cols = self.df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) > 0:
-                print(f"\n📊 ESTATÍSTICAS DAS VARIÁVEIS NUMÉRICAS:")
-                stats = self.df[numeric_cols].describe()
-                
-                for col in numeric_cols[:4]:  # Mostrar apenas as primeiras 4
-                    if col in stats.columns:
-                        mean_val = stats.loc['mean', col]
-                        std_val = stats.loc['std', col]
-                        min_val = stats.loc['min', col]
-                        max_val = stats.loc['max', col]
-                        
-                        print(f"   {col:<15}: Média={mean_val:>8.1f} | Desvio={std_val:>8.1f} | Min={min_val:>8.0f} | Max={max_val:>8.0f}")
-            
-            # Top categorias das variáveis categóricas
-            categorical_cols = self.df.select_dtypes(include=['object']).columns
-            important_cats = ['workclass', 'education', 'occupation', 'sex']
-            
-            print(f"\n📝 TOP CATEGORIAS DAS PRINCIPAIS VARIÁVEIS:")
-            for col in important_cats:
-                if col in categorical_cols and col in self.df.columns:
-                    top_values = self.df[col].value_counts().head(3)
-                    print(f"   {col:<12}: {dict(top_values)}")
+            if 'salary' in self.df.columns:
+                salary_dist = self.df['salary'].value_counts()
+                print(f"   💰 Distribuição salarial:")
+                for value, count in salary_dist.items():
+                    pct = (count / len(self.df)) * 100
+                    bar = "█" * int(pct / 5)
+                    print(f"      {value}: {count:,} ({pct:.1f}%) {bar}")
+        else:
+            print("   ❌ Nenhum dado carregado")
 
     def _display_ml_results(self):
-        """Exibir resultados de Machine Learning"""
-        print(f"\n🤖 3. RESULTADOS DE MACHINE LEARNING")
+        """Exibir resultados de ML"""
+        print(f"\n🤖 2. MACHINE LEARNING")
         print("-" * 50)
         
-        if self.models and len(self.models) > 0:
-            print(f"✅ Modelos Treinados: {len(self.models)}")
+        ml_results = self.results.get('ml', {})
+        models_results = ml_results.get('models', {})
+        
+        if models_results:
+            print(f"✅ Modelos treinados: {len(models_results)}")
             
-            # Extrair métricas dos modelos
-            model_metrics = {}
-            for name, model_info in self.models.items():
-                if isinstance(model_info, dict):
-                    model_metrics[name] = model_info
-                else:
-                    # Se for o objeto do modelo diretamente, pegar dos resultados
-                    if name in self.results.get('ml_results', {}):
-                        model_metrics[name] = self.results['ml_results'][name]
+            # Tabela de resultados
+            print(f"\n{'Modelo':<20} {'Accuracy':<10} {'Status':<15} {'Visualização':<20}")
+            print("-" * 70)
             
-            # Exibir performance de cada modelo
-            print(f"\n📈 PERFORMANCE DOS MODELOS:")
-            sorted_models = []
+            best_model = None
+            best_score = 0
             
-            for name, metrics in model_metrics.items():
-                if 'accuracy' in metrics:
+            for model_name, metrics in models_results.items():
+                if isinstance(metrics, dict) and 'accuracy' in metrics:
                     accuracy = metrics['accuracy']
-                    sorted_models.append((name, accuracy, metrics))
+                    
+                    # Status baseado na accuracy
+                    if accuracy > 0.90:
+                        status = "🏆 EXCELENTE"
+                    elif accuracy > 0.85:
+                        status = "✅ MUITO BOM"
+                    elif accuracy > 0.80:
+                        status = "⚠️ BOM"
+                    else:
+                        status = "❌ REGULAR"
+                    
+                    # Barra visual
+                    bar_length = int(accuracy * 20)
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    
+                    print(f"{model_name:<20} {accuracy:<10.3f} {status:<15} {bar}")
+                    
+                    if accuracy > best_score:
+                        best_score = accuracy
+                        best_model = model_name
             
-            # Ordenar por accuracy
-            sorted_models.sort(key=lambda x: x[1], reverse=True)
-            
-            for i, (name, accuracy, metrics) in enumerate(sorted_models, 1):
-                # Barra de progresso visual
-                bar_length = int(accuracy * 50)
-                bar = "█" * bar_length + "░" * (50 - bar_length)
+            if best_model:
+                print(f"\n🏆 MELHOR MODELO: {best_model} ({best_score:.3f} accuracy)")
                 
-                # Classificação de performance
-                if accuracy > 0.90:
-                    grade = "🏆 EXCELENTE"
-                elif accuracy > 0.85:
-                    grade = "✅ MUITO BOM"
-                elif accuracy > 0.80:
-                    grade = "⚠️ BOM"
+                # Interpretação
+                if best_score > 0.85:
+                    print("💡 EXCELENTE desempenho - modelo confiável para produção")
+                elif best_score > 0.80:
+                    print("💡 BOM desempenho - modelo adequado com monitoramento")
                 else:
-                    grade = "❓ REGULAR"
-                
-                print(f"   {i}. {name:<20}: {accuracy:.4f} ({accuracy*100:5.1f}%) {bar} {grade}")
-                
-                # Métricas adicionais se disponíveis
-                additional_metrics = []
-                for metric in ['precision', 'recall', 'f1_score', 'roc_auc']:
-                    if metric in metrics:
-                        additional_metrics.append(f"{metric}={metrics[metric]:.3f}")
-                
-                if additional_metrics:
-                    print(f"      📊 {' | '.join(additional_metrics)}")
-            
-            # Melhor modelo
-            if sorted_models:
-                best_name, best_accuracy, _ = sorted_models[0]
-                print(f"\n🏆 MELHOR MODELO: {best_name}")
-                print(f"🎯 ACCURACY: {best_accuracy:.4f} ({best_accuracy*100:.1f}%)")
+                    print("💡 Desempenho REGULAR - considere melhorias nos dados ou modelo")
         else:
             print("❌ Nenhum modelo foi treinado com sucesso")
 
-    def _display_performance_metrics(self):
-        """Exibir métricas de performance do pipeline"""
-        print(f"\n⏱️ 4. MÉTRICAS DE PERFORMANCE DO PIPELINE")
+    def _display_clustering_results(self):
+        """Exibir resultados detalhados de clustering"""
+        print(f"\n🎯 3. ANÁLISE DE CLUSTERING")
         print("-" * 50)
         
-        metrics = self.performance_metrics
+        clustering_results = self.results.get('clustering', {})
         
-        print(f"📊 TEMPOS DE EXECUÇÃO:")
-        print(f"   ⏱️ Carregamento de dados: {metrics.get('data_load_time', 0):.2f}s")
-        print(f"   🤖 Treinamento ML: {metrics.get('ml_training_time', 0):.2f}s")
-        print(f"   🏁 Tempo total: {metrics.get('total_time', 0):.2f}s")
-        
-        print(f"\n📈 PROCESSAMENTO:")
-        print(f"   📋 Registros processados: {metrics.get('records_processed', 0):,}")
-        print(f"   🗄️ Fonte de dados: {metrics.get('data_source', 'N/A').upper()}")
-        
-        # Taxa de processamento
-        if metrics.get('total_time', 0) > 0 and metrics.get('records_processed', 0) > 0:
-            rate = metrics['records_processed'] / metrics['total_time']
-            print(f"   🚀 Taxa de processamento: {rate:,.0f} registros/segundo")
-        
-        # Eficiência de memória
-        if self.df is not None:
-            memory_mb = self.df.memory_usage(deep=True).sum() / 1024**2
-            print(f"   💾 Uso de memória: {memory_mb:.2f} MB")
+        if clustering_results:
+            print(f"✅ Métodos executados: {len(clustering_results)}")
+            
+            # Comparação entre métodos
+            print(f"\n📊 COMPARAÇÃO ENTRE MÉTODOS:")
+            print(f"{'Método':<15} {'Clusters':<10} {'Silhouette':<12} {'Ruído':<10} {'Status':<15} {'Visualização'}")
+            print("-" * 85)
+            
+            best_method = None
+            best_score = -1
+            
+            for method, result in clustering_results.items():
+                if result and isinstance(result, dict):
+                    clusters = result.get('n_clusters', 0)
+                    silhouette = result.get('silhouette_score', 0)
+                    noise_pct = result.get('noise_percentage', 0)
+                    has_noise = result.get('has_noise', False)
+                    
+                    # Status baseado no silhouette score
+                    if silhouette > 0.7:
+                        status = "🏆 EXCELENTE"
+                    elif silhouette > 0.5:
+                        status = "✅ BOM"
+                    elif silhouette > 0.3:
+                        status = "⚠️ REGULAR"
+                    else:
+                        status = "❌ FRACO"
+                    
+                    # Barra visual para silhouette score
+                    bar_length = int(silhouette * 20) if silhouette > 0 else 0
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    
+                    noise_str = f"{noise_pct:.1f}%" if has_noise else "N/A"
+                    
+                    print(f"{method:<15} {clusters:<10} {silhouette:<12.3f} {noise_str:<10} {status:<15} {bar}")
+                    
+                    if silhouette > best_score:
+                        best_score = silhouette
+                        best_method = method
+            
+            # Melhor método
+            if best_method and best_score > 0:
+                print(f"\n🏆 MELHOR MÉTODO: {best_method}")
+                print(f"🎯 SILHOUETTE SCORE: {best_score:.3f}")
+                
+                best_result = clustering_results[best_method]
+                print(f"📊 CLUSTERS IDENTIFICADOS: {best_result.get('n_clusters', 0)}")
+                
+                if best_result.get('has_noise', False):
+                    noise_pct = best_result.get('noise_percentage', 0)
+                    print(f"🔍 OUTLIERS DETECTADOS: {noise_pct:.1f}% dos dados")
+                    
+                    if noise_pct > 10:
+                        print("💡 Alto percentual de outliers - dados heterogêneos")
+                    elif noise_pct > 5:
+                        print("💡 Outliers moderados - padrão esperado")
+                    else:
+                        print("💡 Poucos outliers - dados bem estruturados")
+                
+                # Interpretação dos clusters
+                print(f"\n💡 INTERPRETAÇÃO:")
+                n_clusters = best_result.get('n_clusters', 0)
+                if n_clusters == 2:
+                    print("   • 2 grupos: Segmentação binária (ex: salário alto/baixo)")
+                elif n_clusters == 3:
+                    print("   • 3 grupos: Baixo, médio, alto (segmentação clássica)")
+                elif n_clusters >= 4:
+                    print(f"   • {n_clusters} grupos: Segmentação detalhada")
+                
+                if method == "DBSCAN":
+                    print("   • DBSCAN detecta grupos por densidade")
+                    print("   • Excelente para identificar outliers")
+                elif method == "K-Means":
+                    print("   • K-Means cria grupos balanceados")
+                    print("   • Ideal para segmentação de mercado")
+            
+        else:
+            print("❌ Nenhuma análise de clustering foi executada")
+            print("💡 Execute com clustering_pipeline disponível")
 
-    def _display_insights(self):
-        """Exibir insights e conclusões"""
-        print(f"\n💡 5. INSIGHTS E CONCLUSÕES")
+    def _display_association_results(self):
+        """Exibir resultados de regras de associação"""
+        print(f"\n📋 4. REGRAS DE ASSOCIAÇÃO")
         print("-" * 50)
         
-        insights = []
+        association_results = self.results.get('association_rules', {})
         
-        # Insights sobre os dados
-        if self.df is not None:
-            total_records = len(self.df)
+        if association_results:
+            print(f"✅ Algoritmos executados: Apriori, FP-Growth, Eclat")
             
-            if 'salary' in self.df.columns:
-                high_salary_pct = (self.df['salary'] == '>50K').mean() * 100
-                
-                if high_salary_pct < 30:
-                    insights.append(f"📊 Apenas {high_salary_pct:.1f}% ganham mais de $50K - dataset desbalanceado")
-                
-                # Insights por idade
-                if 'age' in self.df.columns:
-                    avg_age = self.df['age'].mean()
-                    insights.append(f"👥 Idade média: {avg_age:.1f} anos")
-                
-                # Insights por educação
-                if 'education-num' in self.df.columns:
-                    high_earners_edu = self.df[self.df['salary'] == '>50K']['education-num'].mean()
-                    low_earners_edu = self.df[self.df['salary'] == '<=50K']['education-num'].mean()
+            # Comparação entre algoritmos
+            print(f"\n📊 COMPARAÇÃO ENTRE ALGORITMOS:")
+            print(f"{'Algoritmo':<12} {'Regras':<8} {'Conf.Média':<12} {'Lift Médio':<12} {'Status':<15}")
+            print("-" * 65)
+            
+            best_algorithm = None
+            best_rules_count = 0
+            
+            for alg_name in ['apriori', 'fp_growth', 'eclat']:
+                if alg_name in association_results and association_results[alg_name].get('rules'):
+                    alg_data = association_results[alg_name]
+                    rules = alg_data['rules']
+                    rules_count = len(rules)
                     
-                    if high_earners_edu > low_earners_edu:
-                        diff = high_earners_edu - low_earners_edu
-                        insights.append(f"🎓 Quem ganha mais tem {diff:.1f} anos a mais de educação em média")
+                    if rules_count > 0:
+                        avg_confidence = np.mean([r.get('confidence', 0) for r in rules])
+                        avg_lift = np.mean([r.get('lift', 0) for r in rules])
+                        status = "✅ SUCESSO"
+                        
+                        # Barra visual para número de regras
+                        bar_length = int(rules_count / 10) if rules_count > 0 else 0
+                        bar = "█" * min(bar_length, 20)
+                        
+                        print(f"{alg_name.upper():<12} {rules_count:<8} {avg_confidence:<12.3f} {avg_lift:<12.3f} {status:<15}")
+                        print(f"{'':>25} {bar}")
+                        
+                        if rules_count > best_rules_count:
+                            best_rules_count = rules_count
+                            best_algorithm = alg_name.upper()
+                    else:
+                        print(f"{alg_name.upper():<12} {0:<8} {0:<12.3f} {0:<12.3f} {'❌ SEM REGRAS':<15}")
+                else:
+                    print(f"{alg_name.upper():<12} {0:<8} {0:<12.3f} {0:<12.3f} {'❌ FALHOU':<15}")
+            
+            # Melhor algoritmo
+            if best_algorithm and best_rules_count > 0:
+                print(f"\n🏆 MELHOR ALGORITMO: {best_algorithm}")
+                print(f"🎯 REGRAS ENCONTRADAS: {best_rules_count}")
                 
-                # Insights por horas trabalhadas
-                if 'hours-per-week' in self.df.columns:
-                    high_earners_hours = self.df[self.df['salary'] == '>50K']['hours-per-week'].mean()
-                    low_earners_hours = self.df[self.df['salary'] == '<=50K']['hours-per-week'].mean()
+                # Mostrar top 5 regras do melhor algoritmo
+                best_alg_data = association_results.get(best_algorithm.lower(), {})
+                if best_alg_data.get('rules'):
+                    rules = best_alg_data['rules']
+                    print(f"\n🔝 TOP 5 REGRAS ({best_algorithm}):")
+                    print(f"{'#':<3} {'Confiança':<12} {'Lift':<8} {'Suporte':<10} {'Qualidade':<12}")
+                    print("-" * 50)
                     
-                    if high_earners_hours > low_earners_hours:
-                        diff = high_earners_hours - low_earners_hours
-                        insights.append(f"⏰ Quem ganha mais trabalha {diff:.1f} horas/semana a mais")
-        
-        # Insights sobre modelos
-        if self.models and len(self.models) > 0:
-            best_model, best_score = self._find_best_model()
-            if best_model and best_score > 0.80:
-                insights.append(f"🤖 {best_model} alcançou {best_score:.1%} de accuracy - bom desempenho")
-            elif best_model:
-                insights.append(f"🤖 {best_model} alcançou {best_score:.1%} de accuracy - necessita melhorias")
-        
-        # Insights sobre performance
-        if self.performance_metrics.get('total_time', 0) < 5:
-            insights.append(f"⚡ Pipeline executou em {self.performance_metrics['total_time']:.1f}s - muito eficiente")
-        
-        # Exibir insights
-        if insights:
-            for i, insight in enumerate(insights, 1):
-                print(f"   {i}. {insight}")
-        else:
-            print("   ℹ️ Análise concluída - execute com mais dados para insights detalhados")
-        
-        # Recomendações
-        print(f"\n🎯 PRÓXIMOS PASSOS RECOMENDADOS:")
-        recommendations = [
-            "📊 Execute o dashboard: streamlit run app.py",
-            "🔍 Analise os gráficos interativos no Streamlit",
-            "🤖 Teste diferentes algoritmos de ML",
-            "📈 Colete mais dados para melhorar os modelos"
-        ]
-        
-        for i, rec in enumerate(recommendations, 1):
-            print(f"   {i}. {rec}")
-
-    def _save_results(self):
-        """Salvar resultados do pipeline"""
-        try:
-            output_dir = Path("output")
-            output_dir.mkdir(exist_ok=True)
+                    for i, rule in enumerate(rules[:5], 1):
+                        confidence = rule.get('confidence', 0)
+                        lift = rule.get('lift', 0)
+                        support = rule.get('support', 0)
+                        
+                        # Classificar qualidade da regra
+                        if confidence > 0.8 and lift > 1.5:
+                            quality = "🏆 EXCELENTE"
+                        elif confidence > 0.6 and lift > 1.2:
+                            quality = "✅ BOA"
+                        else:
+                            quality = "⚠️ REGULAR"
+                        
+                        print(f"{i:<3} {confidence:<12.3f} {lift:<8.2f} {support:<10.4f} {quality:<12}")
             
-            # Salvar estado do pipeline
-            pipeline_state = {
-                'data_source': self.data_source,
-                'models_count': len(self.models),
-                'performance_metrics': self.performance_metrics,
-                'results_summary': {
-                    'has_ml': len(self.models) > 0,
-                    'has_clustering': 'clustering' in self.results,
-                    'has_association': 'association_rules' in self.results
-                },
-                'timestamp': datetime.now().isoformat()
-            }
+            # Estatísticas gerais
+            print(f"\n📊 ESTATÍSTICAS GERAIS:")
+            total_rules = sum(
+                len(association_results[alg].get('rules', []))
+                for alg in ['apriori', 'fp_growth', 'eclat']
+                if alg in association_results
+            )
+            print(f"   • Total de regras: {total_rules}")
+            print(f"   • Algoritmos bem-sucedidos: {sum(1 for alg in ['apriori', 'fp_growth', 'eclat'] if association_results.get(alg, {}).get('rules'))}")
             
-            # Salvar em JSON
-            state_file = output_dir / "pipeline_state.json"
-            with open(state_file, 'w', encoding='utf-8') as f:
-                json.dump(pipeline_state, f, indent=2, default=str, ensure_ascii=False)
-            
-            self.logger.info(f"💾 Estado salvo: {state_file}")
-            
-            # Salvar modelos se existirem
-            if self.models:
-                models_file = output_dir / "models_summary.json"
-                models_summary = {}
-                
-                for name, model_info in self.models.items():
-                    if isinstance(model_info, dict):
-                        models_summary[name] = {
-                            k: v for k, v in model_info.items() 
-                            if isinstance(v, (int, float, str, bool))
-                        }
-                
-                with open(models_file, 'w', encoding='utf-8') as f:
-                    json.dump(models_summary, f, indent=2, default=str, ensure_ascii=False)
-                
-                self.logger.info(f"💾 Modelos salvos: {models_file}")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Erro ao salvar resultados: {e}")
-
-    def _prepare_results(self) -> Dict[str, Any]:
-        """Preparar resultados finais"""
-        return {
-            'df': self.df,
-            'models': self.models,
-            'results': self.results,
-            'data_source': self.data_source,
-            'performance_metrics': self.performance_metrics,
-            'status': self._generate_status_message()
-        }
-
-    def _generate_status_message(self) -> str:
-        """Gerar mensagem de status final"""
-        if self.df is not None and len(self.df) > 0:
-            if self.models and len(self.models) > 0:
-                best_model, best_score = self._find_best_model()
-                return f"✅ Pipeline concluído - Fonte: {self.data_source.upper()} | Melhor modelo: {best_model} ({best_score:.4f})"
+            # Interpretação
+            print(f"\n💡 INTERPRETAÇÃO:")
+            if total_rules > 100:
+                print(f"   ✅ {total_rules} regras - Dataset rico em padrões")
+                print(f"   📈 Muitas associações descobertas entre variáveis")
+            elif total_rules > 20:
+                print(f"   ⚠️ {total_rules} regras - Quantidade moderada")
+                print(f"   📊 Padrões identificados mas limitados")
             else:
-                return f"⚠️ Dados carregados via {self.data_source.upper()}, mas problemas no ML"
-        else:
-            return "❌ Falha no carregamento de dados"
-
-def setup_database():
-    """Configurar banco de dados (placeholder)"""
-    print("🗄️ Configuração de Banco de Dados")
-    print("=" * 40)
-    
-    try:
-        # Tentar importar e usar setup real
-        from src.database.connection import create_connection
-        from src.database.migration import run_migration
+                print(f"   ❌ {total_rules} regras - Poucos padrões")
+                print(f"   💡 Considere ajustar parâmetros (suporte/confiança)")
+            
+            # Arquivos gerados
+            print(f"\n📁 ARQUIVOS GERADOS:")
+            rule_files = [
+                "output/analysis/apriori_rules.csv",
+                "output/analysis/fp_growth_rules.csv", 
+                "output/analysis/eclat_rules.csv",
+                "output/analysis/association_algorithms_comparison.csv"
+            ]
+            
+            for file_path in rule_files:
+                from pathlib import Path
+                if Path(file_path).exists():
+                    size = Path(file_path).stat().st_size / 1024
+                    print(f"   ✅ {file_path} ({size:.1f} KB)")
+                else:
+                    print(f"   ❌ {file_path}")
         
-        print("📋 Testando conexão...")
-        conn = create_connection()
-        if conn:
-            print("✅ Conexão com banco OK")
-            
-            print("🔄 Executando migração...")
-            success = run_migration()
-            if success:
-                print("✅ Migração concluída com sucesso")
-            else:
-                print("⚠️ Problemas na migração")
-            
-            conn.close()
         else:
-            print("❌ Erro na conexão com banco")
-            
-    except ImportError:
-        print("⚠️ Módulos de banco não encontrados")
-        print("💡 Sistema funcionará em modo CSV")
-    except Exception as e:
-        print(f"❌ Erro na configuração: {e}")
-        print("💡 Sistema funcionará em modo CSV")
+            print("❌ Nenhuma análise de regras de associação foi executada")
+            print("💡 Execute com association_pipeline disponível para ver resultados")
 
+# Função principal
 def main():
-    """Função principal com argumentos otimizados"""
-    parser = argparse.ArgumentParser(description='Pipeline Híbrido SQL→CSV')
-    parser.add_argument('--csv-only', action='store_true', help='Forçar uso apenas de CSV')
-    parser.add_argument('--log-level', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
-    parser.add_argument('--setup-db', action='store_true', help='Configurar banco de dados')
-    parser.add_argument('--no-results', action='store_true', help='Não exibir relatório completo')
-    
-    args = parser.parse_args()
-    
+    """Executar pipeline principal"""
     try:
-        if args.setup_db:
-            setup_database()
-            return
-        
-        # Executar pipeline principal
         pipeline = HybridPipelineSQL(
-            force_csv=args.csv_only,
-            log_level=args.log_level,
-            show_results=not args.no_results
+            force_csv=True,
+            log_level="INFO",
+            show_results=True,
+            auto_optimize=True  # Otimização automática ativada
         )
         
         results = pipeline.run()
         
-        if 'error' not in results:
-            print(f"\n🎉 PIPELINE CONCLUÍDO COM SUCESSO!")
-            print(f"📊 Fonte: {results['data_source'].upper()}")
-            print(f"📋 Registros: {len(results['df']):,}")
-            print(f"🤖 Modelos: {len(results['models'])}")
-            print(f"⏱️ Tempo: {results['performance_metrics']['total_time']:.2f}s")
-            print(f"\n💡 Próximo passo: streamlit run app.py")
+        if results:
+            print("\n✅ PIPELINE EXECUTADO COM SUCESSO!")
         else:
-            print(f"\n❌ ERRO NO PIPELINE: {results['error']}")
-            sys.exit(1)
+            print("\n❌ ERRO NA EXECUÇÃO DO PIPELINE")
             
-    except KeyboardInterrupt:
-        print("\n⚠️ Pipeline interrompido pelo usuário")
     except Exception as e:
-        print(f"\n❌ Erro crítico: {e}")
+        print(f"\n❌ ERRO CRÍTICO: {e}")
+        import traceback
         traceback.print_exc()
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()

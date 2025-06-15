@@ -155,3 +155,21 @@ Para problemas ou dúvidas:
 ---
 
 **💰 Sistema de Análise Salarial v6.1** - Dashboard Multilingual Modular
+
+---
+
+**4.13. Limitações Metodológicas e Threats to Validity**
+
+#### 4.13.1. Limitações dos Dados
+- **Temporal:** Dataset representa apenas um momento no tempo
+- **Geográfica:** Possível concentração em determinadas regiões
+- **Sectorial:** Pode não representar todos os sectores económicos
+
+#### 4.13.2. Limitações Algorítmicas
+- **Class Imbalance:** 75.9% vs 24.1% pode enviesar modelos
+- **Feature Selection:** Ausência de variáveis contextuais importantes
+- **Validation:** Cross-validation pode não captar todos os patterns
+
+#### 4.13.3. Limitações de Generalização
+- **External Validity:** Resultados podem não generalizar para outros países
+- **Temporal Validity:** Padrões podem mudar com transformações económicas
