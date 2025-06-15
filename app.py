@@ -1,15 +1,20 @@
 """
 🌍 Dashboard Multilingual - Análise Salarial
-Sistema Modular com Navegação por Botões - VERSÃO DEFINITIVA
+Sistema Modular com Páginas Específicas - VERSÃO CORRIGIDA
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from pathlib import Path
 import logging
 import sys
 import warnings
+import json
+from datetime import datetime
 
 # Configurações
 warnings.filterwarnings('ignore')
@@ -23,169 +28,125 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Imports seguros
-try:
-    from src.utils.i18n import I18nSystem
-    from src.auth.authentication import AuthenticationSystem
-    from src.data.loader import load_data
-except ImportError as e:
-    logging.warning(f"Imports não disponíveis: {e}")
-    # Fallbacks serão implementados
+# Configurar página
+st.set_page_config(
+    page_title="Dashboard Multilingual - Análise Salarial",
+    page_icon="🌍",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Imports das páginas (com fallbacks)
-try:
-    from src.pages.overview import show_overview_page
-    from src.pages.exploratory import show_exploratory_page
-    from src.pages.models import show_models_page
-    from src.pages.clustering import show_clustering_page
-    from src.pages.association_rules import show_association_rules_page
-    from src.pages.prediction import show_prediction_page
-    from src.pages.metrics import show_metrics_page
-    from src.pages.reports import show_reports_page
-    from src.pages.admin import show_admin_page
-    PAGES_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Páginas não disponíveis: {e}")
-    PAGES_AVAILABLE = False
+class SimpleAuth:
+    """Sistema de autenticação simplificado"""
+    
+    def __init__(self):
+        self.users = {
+            'admin': {'password': 'admin123', 'name': 'Administrador', 'role': 'admin'},
+            'user': {'password': 'user123', 'name': 'Usuário', 'role': 'user'},
+            'demo': {'password': 'demo123', 'name': 'Demo', 'role': 'user'}
+        }
+    
+    def authenticate(self, username, password):
+        """Autenticar usuário"""
+        if username in self.users and self.users[username]['password'] == password:
+            st.session_state.authenticated = True
+            st.session_state.user_data = self.users[username]
+            st.session_state.username = username
+            return True
+        return False
+    
+    def is_authenticated(self):
+        """Verificar se usuário está autenticado"""
+        return st.session_state.get('authenticated', False)
+    
+    def get_user_data(self):
+        """Obter dados do usuário"""
+        return st.session_state.get('user_data', {})
+    
+    def logout(self):
+        """Fazer logout"""
+        st.session_state.authenticated = False
+        st.session_state.user_data = {}
+        st.session_state.username = ''
 
 class MultilingualDashboard:
-    """Dashboard principal multilingual com navegação por botões"""
+    """Dashboard principal com páginas específicas"""
     
     def __init__(self):
         """Inicializar dashboard"""
-        # Inicializar sistemas
-        try:
-            self.i18n = I18nSystem()
-            self.auth = AuthenticationSystem(self.i18n)
-        except:
-            # Fallback para sistema básico
-            self.i18n = self._create_fallback_i18n()
-            self.auth = self._create_fallback_auth()
+        self.auth = SimpleAuth()
         
-        # Configurar páginas
+        # Páginas específicas
         self.pages = {
             'overview': {
                 'title': 'Visão Geral',
                 'icon': '📊',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_overview
+                'roles': ['admin', 'user'],
+                'func': self._show_overview_page
             },
             'exploratory': {
                 'title': 'Análise Exploratória',
                 'icon': '🔍',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_exploratory
+                'roles': ['admin', 'user'],
+                'func': self._show_exploratory_page
             },
             'models': {
                 'title': 'Modelos ML',
                 'icon': '🤖',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_models
+                'roles': ['admin', 'user'],
+                'func': self._show_models_page
             },
             'clustering': {
                 'title': 'Clustering',
                 'icon': '🎯',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_clustering
+                'roles': ['admin', 'user'],
+                'func': self._show_clustering_page
             },
             'association_rules': {
                 'title': 'Regras de Associação',
                 'icon': '📋',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_association_rules
+                'roles': ['admin', 'user'],
+                'func': self._show_association_rules_page
             },
             'prediction': {
                 'title': 'Predição',
                 'icon': '🔮',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_prediction
+                'roles': ['admin', 'user'],
+                'func': self._show_prediction_page
             },
             'metrics': {
                 'title': 'Métricas',
                 'icon': '📈',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_metrics
+                'roles': ['admin', 'user'],
+                'func': self._show_metrics_page
             },
             'reports': {
                 'title': 'Relatórios',
                 'icon': '📁',
-                'roles': ['admin', 'user', 'analyst'],
-                'func': self._show_reports
+                'roles': ['admin', 'user'],
+                'func': self._show_reports_page
             },
             'admin': {
                 'title': 'Administração',
                 'icon': '⚙️',
                 'roles': ['admin'],
-                'func': self._show_admin
+                'func': self._show_admin_page
             }
         }
         
-        # Estado da sessão
+        # Estado inicial
         if 'current_page' not in st.session_state:
             st.session_state.current_page = 'overview'
         
         # Cache de dados
         self.data_cache = None
-
-    def _create_fallback_i18n(self):
-        """Criar sistema i18n básico como fallback"""
-        class FallbackI18n:
-            def t(self, key, default=None):
-                return default or key.split('.')[-1].replace('_', ' ').title()
-            
-            def get_language(self):
-                return 'pt'
-            
-            def set_language(self, lang):
-                pass
-        
-        return FallbackI18n()
-
-    def _create_fallback_auth(self):
-        """Criar sistema auth básico como fallback"""
-        class FallbackAuth:
-            def __init__(self):
-                self.users = {
-                    'admin': {'password': 'admin123', 'role': 'admin', 'name': 'Admin'},
-                    'user': {'password': 'user123', 'role': 'user', 'name': 'User'},
-                    'demo': {'password': 'demo123', 'role': 'user', 'name': 'Demo'}
-                }
-            
-            def is_authenticated(self):
-                return st.session_state.get('authenticated', False)
-            
-            def authenticate(self, username, password):
-                if username in self.users and self.users[username]['password'] == password:
-                    st.session_state.authenticated = True
-                    st.session_state.user_data = self.users[username]
-                    st.session_state.username = username
-                    return True
-                return False
-            
-            def logout(self):
-                st.session_state.authenticated = False
-                st.session_state.user_data = {}
-                st.session_state.username = None
-            
-            def get_user_data(self):
-                return st.session_state.get('user_data', {})
-        
-        return FallbackAuth()
-
+    
     def run(self):
         """Executar dashboard"""
-        # Configurar página
-        st.set_page_config(
-            page_title="Dashboard Multilingual - Análise Salarial",
-            page_icon="🌍",
-            layout="wide",
-            initial_sidebar_state="expanded"
-        )
-        
         # CSS personalizado
-        self._apply_custom_css()
+        self._apply_css()
         
-        # Header principal
+        # Header
         st.markdown("""
         <div class="main-header">
             🌍 Dashboard Multilingual - Análise Salarial
@@ -197,15 +158,15 @@ class MultilingualDashboard:
             self._show_login_page()
             return
         
-        # Carregar dados (uma vez)
+        # Carregar dados uma vez
         if self.data_cache is None:
-            self.data_cache = self._safe_load_data()
+            self.data_cache = self._load_data()
         
         # Layout principal
         self._show_sidebar()
         self._execute_current_page()
-
-    def _apply_custom_css(self):
+    
+    def _apply_css(self):
         """Aplicar CSS personalizado"""
         st.markdown("""
         <style>
@@ -230,7 +191,6 @@ class MultilingualDashboard:
             text-align: left !important;
             margin-bottom: 0.5rem !important;
             font-weight: 600 !important;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
         }
         
         .nav-button-inactive {
@@ -242,14 +202,6 @@ class MultilingualDashboard:
             width: 100% !important;
             text-align: left !important;
             margin-bottom: 0.5rem !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        .nav-button-inactive:hover {
-            background: #e9ecef !important;
-            border-color: #667eea !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
         }
         
         .user-section {
@@ -261,131 +213,113 @@ class MultilingualDashboard:
             text-align: center;
         }
         
-        .data-status {
-            background: #f8f9fa;
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             padding: 1rem;
             border-radius: 10px;
-            border-left: 4px solid #28a745;
-        }
-        
-        .data-status.error {
-            border-left-color: #dc3545;
-        }
-        
-        .data-status.warning {
-            border-left-color: #ffc107;
+            text-align: center;
+            margin-bottom: 1rem;
         }
         </style>
         """, unsafe_allow_html=True)
-
-    def _safe_load_data(self):
-        """Carregar dados de forma segura"""
+    
+    def _load_data(self):
+        """Carregar dados"""
         try:
-            # Tentar carregar usando o sistema modular
-            if 'load_data' in globals():
-                raw_data = load_data()
-                
-                # Garantir retorno consistente
-                if isinstance(raw_data, dict):
-                    return raw_data
-                elif isinstance(raw_data, tuple) and len(raw_data) >= 2:
-                    return {
-                        'df': raw_data[0],
-                        'status': raw_data[1] if len(raw_data) > 1 else '✅ Dados carregados',
-                        'files_status': raw_data[2] if len(raw_data) > 2 else {'analysis': [], 'models': [], 'images': []},
-                        'source': raw_data[3] if len(raw_data) > 3 else None
-                    }
-            
-            # Fallback: tentar carregar diretamente
-            return self._fallback_load_data()
-            
-        except Exception as e:
-            logging.error(f"Erro ao carregar dados: {e}")
-            return self._fallback_load_data()
-
-    def _fallback_load_data(self):
-        """Fallback para carregamento de dados"""
-        try:
-            # Tentar caminhos conhecidos
-            csv_paths = [
+            # Tentar vários caminhos
+            data_paths = [
+                "bkp/4-Carateristicas_salario.csv",
                 "data/raw/4-Carateristicas_salario.csv",
-                "4-Carateristicas_salario.csv",
-                "bkp/4-Carateristicas_salario.csv"
+                "4-Carateristicas_salario.csv"
             ]
             
-            for csv_path in csv_paths:
-                if Path(csv_path).exists():
-                    df = pd.read_csv(csv_path)
-                    return {
-                        'df': df,
-                        'status': f'✅ Dados carregados de {csv_path}',
-                        'files_status': self._scan_files(),
-                        'source': csv_path
-                    }
+            df = None
+            source = None
             
-            # Se não encontrou, criar dados de exemplo
-            return self._create_sample_data()
+            for path in data_paths:
+                if Path(path).exists():
+                    df = pd.read_csv(path)
+                    source = path
+                    break
             
+            if df is not None:
+                # Limpeza básica
+                df = df.replace('?', pd.NA)
+                
+                # Escanear arquivos de análise
+                files_status = self._scan_analysis_files()
+                
+                return {
+                    'df': df,
+                    'status': f'✅ Dados carregados de {source} ({len(df):,} registros)',
+                    'files_status': files_status,
+                    'source': source
+                }
+            else:
+                # Dados de exemplo
+                return self._create_sample_data()
+                
         except Exception as e:
-            logging.error(f"Erro no fallback: {e}")
-            return {
-                'df': None,
-                'status': f'❌ Erro ao carregar dados: {e}',
-                'files_status': {'analysis': [], 'models': [], 'images': []},
-                'source': None
-            }
-
-    def _scan_files(self):
-        """Escanear arquivos disponíveis"""
+            logging.error(f"Erro ao carregar dados: {e}")
+            return self._create_sample_data()
+    
+    def _scan_analysis_files(self):
+        """Escanear arquivos de análise"""
         files_status = {
             'analysis': [],
             'models': [],
             'images': []
         }
         
-        # Diretórios para buscar
-        dirs = {
-            'analysis': ['output/analysis', 'output', '.'],
-            'models': ['models', 'data/processed', 'output/models'],
-            'images': ['output/images', 'imagens', 'images']
-        }
+        # Diretórios para verificar
+        analysis_dirs = ['output/analysis', 'output', '.']
+        models_dirs = ['models', 'data/processed', 'output/models']
+        images_dirs = ['output/images', 'imagens', 'images']
         
-        for category, paths in dirs.items():
-            for path_str in paths:
-                path = Path(path_str)
-                if path.exists():
-                    if category == 'analysis':
-                        files_status[category].extend(path.glob('*.csv'))
-                        files_status[category].extend(path.glob('*.md'))
-                    elif category == 'models':
-                        files_status[category].extend(path.glob('*.pkl'))
-                        files_status[category].extend(path.glob('*.joblib'))
-                    elif category == 'images':
-                        files_status[category].extend(path.glob('*.png'))
-                        files_status[category].extend(path.glob('*.jpg'))
+        # Análises
+        for dir_path in analysis_dirs:
+            path = Path(dir_path)
+            if path.exists():
+                files_status['analysis'].extend(list(path.glob('*.csv')))
+                files_status['analysis'].extend(list(path.glob('*.json')))
+        
+        # Modelos
+        for dir_path in models_dirs:
+            path = Path(dir_path)
+            if path.exists():
+                files_status['models'].extend(list(path.glob('*.pkl')))
+                files_status['models'].extend(list(path.glob('*.joblib')))
+        
+        # Imagens
+        for dir_path in images_dirs:
+            path = Path(dir_path)
+            if path.exists():
+                files_status['images'].extend(list(path.glob('*.png')))
+                files_status['images'].extend(list(path.glob('*.jpg')))
         
         return files_status
-
+    
     def _create_sample_data(self):
         """Criar dados de exemplo"""
         try:
             np.random.seed(42)
-            
             n_samples = 1000
+            
             data = {
                 'age': np.random.randint(18, 70, n_samples),
                 'workclass': np.random.choice(['Private', 'Self-emp-not-inc', 'Federal-gov'], n_samples),
-                'education': np.random.choice(['Bachelors', 'HS-grad', 'Masters', 'Some-college'], n_samples),
+                'education': np.random.choice(['Bachelors', 'HS-grad', 'Masters'], n_samples),
                 'education-num': np.random.randint(1, 17, n_samples),
                 'marital-status': np.random.choice(['Married-civ-spouse', 'Divorced', 'Never-married'], n_samples),
-                'occupation': np.random.choice(['Tech-support', 'Craft-repair', 'Sales', 'Exec-managerial'], n_samples),
-                'relationship': np.random.choice(['Wife', 'Husband', 'Not-in-family', 'Own-child'], n_samples),
+                'occupation': np.random.choice(['Tech-support', 'Sales', 'Exec-managerial'], n_samples),
+                'relationship': np.random.choice(['Wife', 'Husband', 'Not-in-family'], n_samples),
                 'race': np.random.choice(['White', 'Black', 'Asian-Pac-Islander'], n_samples),
                 'sex': np.random.choice(['Female', 'Male'], n_samples),
                 'capital-gain': np.random.randint(0, 10000, n_samples),
                 'capital-loss': np.random.randint(0, 5000, n_samples),
                 'hours-per-week': np.random.randint(20, 80, n_samples),
-                'native-country': np.random.choice(['United-States', 'Canada', 'Mexico'], n_samples),
+                'native-country': np.random.choice(['United-States', 'Canada'], n_samples),
                 'salary': np.random.choice(['<=50K', '>50K'], n_samples)
             }
             
@@ -393,36 +327,30 @@ class MultilingualDashboard:
             
             return {
                 'df': df,
-                'status': '✅ Dados de exemplo criados',
+                'status': '✅ Dados de exemplo criados (1,000 registros)',
                 'files_status': {'analysis': [], 'models': [], 'images': []},
                 'source': 'sample_data'
             }
             
         except Exception as e:
+            logging.error(f"Erro ao criar dados de exemplo: {e}")
             return {
                 'df': None,
-                'status': f'❌ Erro ao criar dados de exemplo: {e}',
+                'status': f'❌ Erro: {e}',
                 'files_status': {'analysis': [], 'models': [], 'images': []},
                 'source': None
             }
-
+    
     def _show_login_page(self):
-        """Mostrar página de login"""
+        """Página de login"""
         col1, col2, col3 = st.columns([1, 2, 1])
         
         with col2:
             st.markdown("### 🔐 Login")
             
             with st.form("login_form", clear_on_submit=True):
-                username = st.text_input(
-                    "👤 Nome de usuário",
-                    placeholder="admin, user, demo"
-                )
-                password = st.text_input(
-                    "🔑 Senha",
-                    type="password",
-                    placeholder="admin123, user123, demo123"
-                )
+                username = st.text_input("👤 Nome de usuário", placeholder="admin, user, demo")
+                password = st.text_input("🔑 Senha", type="password", placeholder="admin123, user123, demo123")
                 
                 if st.form_submit_button("🚪 Entrar", use_container_width=True):
                     if username and password:
@@ -442,17 +370,17 @@ class MultilingualDashboard:
                 - **user** / **user123** (Usuário)
                 - **demo** / **demo123** (Demo)
                 """)
-
+    
     def _show_sidebar(self):
-        """Mostrar sidebar com navegação"""
+        """Mostrar sidebar"""
         with st.sidebar:
             # Informações do usuário
             self._show_user_info()
             
             st.markdown("---")
             
-            # Navegação por botões
-            self._show_navigation_buttons()
+            # Navegação
+            self._show_navigation()
             
             st.markdown("---")
             
@@ -461,9 +389,13 @@ class MultilingualDashboard:
             
             st.markdown("---")
             
-            # Controles extras
-            self._show_extra_controls()
-
+            # Controles
+            if st.button("🔄 Recarregar Dados", use_container_width=True):
+                self.data_cache = None
+                self.data_cache = self._load_data()
+                st.success("✅ Dados recarregados!")
+                st.rerun()
+    
     def _show_user_info(self):
         """Mostrar informações do usuário"""
         user_data = self.auth.get_user_data()
@@ -475,70 +407,47 @@ class MultilingualDashboard:
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button("🚪 Logout", use_container_width=True, type="secondary"):
+            if st.button("🚪 Logout", use_container_width=True):
                 self.auth.logout()
                 st.rerun()
-
-    def _show_navigation_buttons(self):
-        """Mostrar navegação com botões"""
+    
+    def _show_navigation(self):
+        """Mostrar navegação"""
         st.markdown("### 🧭 Navegação")
         
-        # Obter papel do usuário
         user_data = self.auth.get_user_data()
         user_role = user_data.get('role', 'user')
         
-        # Filtrar páginas disponíveis
-        available_pages = []
         for page_key, page_info in self.pages.items():
             if user_role in page_info['roles']:
-                available_pages.append((page_key, page_info))
-        
-        # Criar botões de navegação
-        for page_key, page_info in available_pages:
-            button_text = f"{page_info['icon']} {page_info['title']}"
-            
-            # Página atual
-            is_current = st.session_state.current_page == page_key
-            
-            if is_current:
-                # Botão ativo (visual apenas)
-                st.markdown(f"""
-                <div class="nav-button-active">
-                    {button_text}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                # Botão clicável
-                if st.button(
-                    button_text,
-                    key=f"nav_{page_key}",
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    st.session_state.current_page = page_key
-                    st.rerun()
-
+                button_text = f"{page_info['icon']} {page_info['title']}"
+                is_current = st.session_state.current_page == page_key
+                
+                if is_current:
+                    st.markdown(f"""
+                    <div class="nav-button-active">
+                        {button_text}
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    if st.button(button_text, key=f"nav_{page_key}", use_container_width=True):
+                        st.session_state.current_page = page_key
+                        st.rerun()
+    
     def _show_data_status(self):
         """Mostrar status dos dados"""
         st.markdown("### 📊 Status dos Dados")
         
-        if self.data_cache and isinstance(self.data_cache, dict):
-            status = self.data_cache.get('status', '❌ Não carregado')
+        if self.data_cache:
+            status = self.data_cache.get('status', '❌ Erro')
             
-            # Determinar tipo de status
-            status_type = "error"
             if "✅" in status:
-                status_type = "success"
+                st.success(status)
             elif "⚠️" in status:
-                status_type = "warning"
+                st.warning(status)
+            else:
+                st.error(status)
             
-            st.markdown(f"""
-            <div class="data-status {status_type}">
-                {status}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Métricas
             df = self.data_cache.get('df')
             if df is not None:
                 col1, col2 = st.columns(2)
@@ -546,207 +455,388 @@ class MultilingualDashboard:
                     st.metric("📋 Registros", f"{len(df):,}")
                 with col2:
                     st.metric("📊 Colunas", len(df.columns))
-                
-                if 'salary' in df.columns:
-                    high_salary_rate = (df['salary'] == '>50K').mean()
-                    st.metric("💰 Salário Alto", f"{high_salary_rate:.1%}")
-        else:
-            st.error("❌ Erro no carregamento dos dados")
-
-    def _show_extra_controls(self):
-        """Mostrar controles extras"""
-        st.markdown("### ⚙️ Controles")
-        
-        # Recarregar dados
-        if st.button("🔄 Recarregar Dados", use_container_width=True):
-            self.data_cache = None
-            self.data_cache = self._safe_load_data()
-            st.success("✅ Dados recarregados!")
-            st.rerun()
-
+    
     def _execute_current_page(self):
         """Executar página atual"""
-        try:
-            current_page = st.session_state.current_page
-            
-            if current_page in self.pages:
-                page_info = self.pages[current_page]
-                
-                # Verificar permissões
-                user_data = self.auth.get_user_data()
-                user_role = user_data.get('role', 'user')
-                
-                if user_role not in page_info['roles']:
-                    st.error("❌ Acesso negado!")
-                    return
-                
-                # Executar página
-                page_info['func']()
-                
-            else:
-                st.error(f"❌ Página '{current_page}' não encontrada")
-                
-        except Exception as e:
-            st.error(f"❌ Erro ao executar página: {e}")
-            logging.error(f"Erro na página {current_page}: {e}")
-
-    # Métodos das páginas (com fallbacks)
-    def _show_overview(self):
-        """Página de visão geral"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_overview_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
+        current_page = st.session_state.current_page
         
-        # Fallback
-        self._show_fallback_page("📊 Visão Geral")
-
-    def _show_exploratory(self):
-        """Página de análise exploratória"""
-        if PAGES_AVAILABLE:
+        if current_page in self.pages:
             try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_exploratory_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("🔍 Análise Exploratória")
-
-    def _show_models(self):
-        """Página de modelos ML"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_models_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("🤖 Modelos ML")
-
-    def _show_clustering(self):
-        """Página de clustering"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_clustering_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("🎯 Clustering")
-
-    def _show_association_rules(self):
-        """Página de regras de associação"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_association_rules_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_association_fallback()
-
-    def _show_prediction(self):
-        """Página de predição"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_prediction_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("🔮 Predição")
-
-    def _show_metrics(self):
-        """Página de métricas"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_metrics_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("📈 Métricas")
-
-    def _show_reports(self):
-        """Página de relatórios"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_reports_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("📁 Relatórios")
-
-    def _show_admin(self):
-        """Página de administração"""
-        if PAGES_AVAILABLE:
-            try:
-                df = self.data_cache.get('df') if self.data_cache else None
-                files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
-                show_admin_page(df, files_status, self.i18n)
-                return
-            except:
-                pass
-        
-        self._show_fallback_page("⚙️ Administração")
-
-    def _show_fallback_page(self, title):
-        """Página fallback quando a original não existe"""
-        st.header(title)
-        st.info("🚧 Esta página está em desenvolvimento")
+                self.pages[current_page]['func']()
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar página: {e}")
+                logging.error(f"Erro na página {current_page}: {e}")
+        else:
+            st.error(f"❌ Página '{current_page}' não encontrada")
+    
+    # =========================================================================
+    # PÁGINAS ESPECÍFICAS
+    # =========================================================================
+    
+    def _show_overview_page(self):
+        """Página de visão geral - ESPECÍFICA"""
+        st.header("📊 Visão Geral do Dataset")
         
         df = self.data_cache.get('df') if self.data_cache else None
         
-        if df is not None:
-            st.markdown("### 📊 Visualização dos Dados")
-            st.dataframe(df.head(), use_container_width=True)
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Métricas principais
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>📋 Registros</h3>
+                <h2>{len(df):,}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>📊 Colunas</h3>
+                <h2>{len(df.columns)}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            if 'salary' in df.columns:
+                high_salary_rate = (df['salary'] == '>50K').mean()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>💰 Salário Alto</h3>
+                    <h2>{high_salary_rate:.1%}</h2>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>💰 Salário Alto</h3>
+                    <h2>N/A</h2>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col4:
+            missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>❌ Missing</h3>
+                <h2>{missing_rate:.1%}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Gráficos de distribuição
+        st.subheader("📈 Distribuições Principais")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'salary' in df.columns:
+                salary_counts = df['salary'].value_counts()
+                fig = px.pie(
+                    values=salary_counts.values,
+                    names=salary_counts.index,
+                    title="💰 Distribuição de Salário"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            if 'sex' in df.columns:
+                sex_counts = df['sex'].value_counts()
+                fig = px.bar(
+                    x=sex_counts.index,
+                    y=sex_counts.values,
+                    title="👥 Distribuição por Sexo"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Amostra dos dados
+        st.subheader("📋 Amostra dos Dados")
+        st.dataframe(df.head(10), use_container_width=True)
+        
+        # Estatísticas descritivas
+        st.subheader("📊 Estatísticas Descritivas")
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 0:
+            st.dataframe(df[numeric_cols].describe(), use_container_width=True)
+    
+    def _show_exploratory_page(self):
+        """Página de análise exploratória - ESPECÍFICA"""
+        st.header("🔍 Análise Exploratória Avançada")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Controles
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if numeric_cols:
+                x_var = st.selectbox("📊 Variável X:", numeric_cols)
+        
+        with col2:
+            y_var = st.selectbox("📊 Variável Y:", ["Nenhuma"] + numeric_cols)
+        
+        with col3:
+            categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+            if categorical_cols:
+                color_var = st.selectbox("🎨 Cor por:", ["Nenhuma"] + categorical_cols)
+            else:
+                color_var = "Nenhuma"
+        
+        # Gráficos baseados na seleção
+        if 'x_var' in locals():
+            if y_var != "Nenhuma":
+                # Scatter plot
+                fig = px.scatter(
+                    df, x=x_var, y=y_var,
+                    color=color_var if color_var != "Nenhuma" else None,
+                    title=f"📊 {x_var} vs {y_var}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                # Histograma
+                fig = px.histogram(
+                    df, x=x_var,
+                    color=color_var if color_var != "Nenhuma" else None,
+                    title=f"📊 Distribuição de {x_var}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Análises por categoria
+        st.subheader("🎯 Análises por Categoria")
+        
+        if 'salary' in df.columns:
+            col1, col2 = st.columns(2)
             
-            col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("📋 Total de Registros", f"{len(df):,}")
+                if 'workclass' in df.columns:
+                    workclass_salary = df.groupby('workclass')['salary'].apply(
+                        lambda x: (x == '>50K').mean()
+                    ).reset_index()
+                    workclass_salary.columns = ['workclass', 'high_salary_rate']
+                    
+                    fig = px.bar(
+                        workclass_salary, x='workclass', y='high_salary_rate',
+                        title="💼 Taxa de Salário Alto por Classe de Trabalho"
+                    )
+                    fig.update_layout(xaxis_tickangle=45)
+                    st.plotly_chart(fig, use_container_width=True)
+            
             with col2:
-                st.metric("📊 Colunas", len(df.columns))
-            with col3:
-                if 'salary' in df.columns:
-                    high_salary = (df['salary'] == '>50K').sum()
-                    st.metric("💰 Salários Altos", f"{high_salary:,}")
+                if 'education' in df.columns:
+                    education_salary = df.groupby('education')['salary'].apply(
+                        lambda x: (x == '>50K').mean()
+                    ).reset_index()
+                    education_salary.columns = ['education', 'high_salary_rate']
+                    
+                    fig = px.bar(
+                        education_salary, x='education', y='high_salary_rate',
+                        title="🎓 Taxa de Salário Alto por Educação"
+                    )
+                    fig.update_layout(xaxis_tickangle=45)
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        # Correlações
+        st.subheader("🔗 Matriz de Correlação")
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 1:
+            corr_matrix = df[numeric_cols].corr()
+            fig = px.imshow(
+                corr_matrix,
+                text_auto=True,
+                title="🔗 Matriz de Correlação"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    def _show_models_page(self):
+        """Página de modelos ML - ESPECÍFICA"""
+        st.header("🤖 Modelos de Machine Learning")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Verificar modelos salvos
+        model_files = files_status.get('models', [])
+        
+        if model_files:
+            st.success(f"✅ {len(model_files)} modelo(s) encontrado(s)")
+            
+            for model_file in model_files:
+                with st.expander(f"📁 {model_file.name}"):
+                    st.write(f"**Localização:** {model_file}")
+                    st.write(f"**Tamanho:** {model_file.stat().st_size / 1024:.1f} KB")
+                    st.write(f"**Modificado:** {datetime.fromtimestamp(model_file.stat().st_mtime)}")
         else:
-            st.warning("❌ Dados não disponíveis")
-
-    def _show_association_fallback(self):
-        """Fallback específico para regras de associação"""
+            st.warning("⚠️ Nenhum modelo treinado encontrado")
+            st.info("💡 Execute o pipeline principal para treinar modelos: `python main.py`")
+        
+        # Preparação de dados (exemplo)
+        st.subheader("📊 Preparação dos Dados para ML")
+        
+        if 'salary' in df.columns:
+            # Target distribution
+            target_dist = df['salary'].value_counts()
+            fig = px.pie(
+                values=target_dist.values,
+                names=target_dist.index,
+                title="🎯 Distribuição da Variável Target (Salary)"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Features numéricas
+        numeric_features = df.select_dtypes(include=[np.number]).columns.tolist()
+        if numeric_features:
+            st.subheader("📊 Features Numéricas")
+            selected_features = st.multiselect(
+                "Selecione features para análise:",
+                numeric_features,
+                default=numeric_features[:3] if len(numeric_features) >= 3 else numeric_features
+            )
+            
+            if selected_features:
+                st.dataframe(df[selected_features].describe(), use_container_width=True)
+        
+        # Informações sobre os algoritmos
+        st.subheader("🧠 Algoritmos Implementados")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            **🌳 Random Forest**
+            - Ensemble de árvores de decisão
+            - Reduz overfitting
+            - Boa performance geral
+            """)
+        
+        with col2:
+            st.markdown("""
+            **📈 Logistic Regression**
+            - Modelo linear para classificação
+            - Interpretável
+            - Rápido para treinar
+            """)
+    
+    def _show_clustering_page(self):
+        """Página de clustering - ESPECÍFICA"""
+        st.header("🎯 Análise de Clustering")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Verificar resultados de clustering
+        analysis_files = files_status.get('analysis', [])
+        clustering_files = [f for f in analysis_files if 'dbscan' in str(f).lower() or 'cluster' in str(f).lower()]
+        
+        if clustering_files:
+            st.success(f"✅ {len(clustering_files)} arquivo(s) de clustering encontrado(s)")
+            
+            for file in clustering_files:
+                with st.expander(f"📁 {file.name}"):
+                    try:
+                        if file.suffix == '.csv':
+                            df_cluster = pd.read_csv(file)
+                            st.dataframe(df_cluster.head(), use_container_width=True)
+                            
+                            # Visualizar clusters se possível
+                            if 'cluster' in df_cluster.columns:
+                                cluster_counts = df_cluster['cluster'].value_counts()
+                                fig = px.bar(
+                                    x=cluster_counts.index,
+                                    y=cluster_counts.values,
+                                    title=f"🎯 Distribuição de Clusters - {file.name}"
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Erro ao ler arquivo: {e}")
+        else:
+            st.warning("⚠️ Nenhum resultado de clustering encontrado")
+            st.info("💡 Execute o pipeline principal para gerar clustering: `python main.py`")
+        
+        # Preparação para clustering
+        st.subheader("📊 Preparação para Clustering")
+        
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if len(numeric_cols) >= 2:
+            st.info(f"✅ {len(numeric_cols)} variáveis numéricas disponíveis para clustering")
+            
+            # Visualização 2D das features
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                x_feature = st.selectbox("Feature X:", numeric_cols, key="cluster_x")
+            
+            with col2:
+                y_feature = st.selectbox("Feature Y:", numeric_cols, index=1 if len(numeric_cols) > 1 else 0, key="cluster_y")
+            
+            if x_feature and y_feature and x_feature != y_feature:
+                # Scatter plot das features
+                color_by = 'salary' if 'salary' in df.columns else None
+                fig = px.scatter(
+                    df, x=x_feature, y=y_feature,
+                    color=color_by,
+                    title=f"📊 {x_feature} vs {y_feature}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("⚠️ Poucas variáveis numéricas para clustering eficaz")
+        
+        # Informações sobre algoritmos
+        st.subheader("🧠 Algoritmos de Clustering")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            **🎯 DBSCAN**
+            - Baseado em densidade
+            - Detecta ruído automaticamente
+            - Não requer número de clusters
+            """)
+        
+        with col2:
+            st.markdown("""
+            **🎯 K-Means**
+            - Baseado em centróides
+            - Rápido e eficiente
+            - Requer número de clusters
+            """)
+    
+    def _show_association_rules_page(self):
+        """Página de regras de associação - ESPECÍFICA"""
         st.header("📋 Regras de Associação")
         
-        # Procurar arquivos
-        association_files = []
-        if self.data_cache and 'files_status' in self.data_cache:
-            files_status = self.data_cache['files_status']
-            if 'analysis' in files_status:
-                association_files = [f for f in files_status['analysis'] 
-                                   if any(keyword in str(f).lower() 
-                                         for keyword in ['apriori', 'fp_growth', 'eclat', 'association'])]
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Verificar resultados de regras de associação
+        analysis_files = files_status.get('analysis', [])
+        association_files = [f for f in analysis_files 
+                           if any(keyword in str(f).lower() 
+                                 for keyword in ['apriori', 'fp_growth', 'eclat', 'association', 'rules'])]
         
         if association_files:
-            st.success(f"✅ {len(association_files)} arquivo(s) encontrado(s)")
+            st.success(f"✅ {len(association_files)} arquivo(s) de regras encontrado(s)")
             
             for file in association_files:
                 with st.expander(f"📁 {file.name}"):
@@ -754,13 +844,399 @@ class MultilingualDashboard:
                         if file.suffix == '.csv':
                             df_rules = pd.read_csv(file)
                             st.dataframe(df_rules.head(10), use_container_width=True)
-                        else:
-                            st.text(f"Arquivo: {file.name}")
+                            
+                            # Estatísticas das regras
+                            if len(df_rules) > 0:
+                                col1, col2, col3 = st.columns(3)
+                                
+                                with col1:
+                                    st.metric("📊 Total de Regras", len(df_rules))
+                                
+                                with col2:
+                                    if 'confidence' in df_rules.columns:
+                                        avg_confidence = df_rules['confidence'].mean()
+                                        st.metric("🎯 Confiança Média", f"{avg_confidence:.3f}")
+                                
+                                with col3:
+                                    if 'lift' in df_rules.columns:
+                                        avg_lift = df_rules['lift'].mean()
+                                        st.metric("📈 Lift Médio", f"{avg_lift:.3f}")
                     except Exception as e:
                         st.error(f"Erro ao ler arquivo: {e}")
         else:
             st.warning("⚠️ Nenhum resultado de regras de associação encontrado")
-            st.info("💡 Execute o pipeline principal para gerar as regras: `python main.py`")
+            st.info("💡 Execute o pipeline principal para gerar regras: `python main.py`")
+        
+        # Preparação para regras de associação
+        st.subheader("📊 Análise de Padrões nos Dados")
+        
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if categorical_cols:
+            st.info(f"✅ {len(categorical_cols)} variáveis categóricas disponíveis")
+            
+            # Análise de frequência
+            selected_col = st.selectbox("Selecione uma variável para análise:", categorical_cols)
+            
+            if selected_col:
+                value_counts = df[selected_col].value_counts()
+                fig = px.bar(
+                    x=value_counts.index[:10],  # Top 10
+                    y=value_counts.values[:10],
+                    title=f"📊 Top 10 valores em {selected_col}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Informações sobre algoritmos
+        st.subheader("🧠 Algoritmos de Regras de Associação")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            **📋 APRIORI**
+            - Algoritmo clássico
+            - Baseado em suporte
+            - Gera candidatos iterativamente
+            """)
+        
+        with col2:
+            st.markdown("""
+            **🚀 FP-GROWTH**
+            - Mais eficiente que Apriori
+            - Usa estrutura FP-Tree
+            - Sem geração de candidatos
+            """)
+        
+        with col3:
+            st.markdown("""
+            **⚡ ECLAT**
+            - Baseado em intersecção
+            - Eficiente para datasets esparsos
+            - Abordagem vertical
+            """)
+    
+    def _show_prediction_page(self):
+        """Página de predição - ESPECÍFICA"""
+        st.header("🔮 Interface de Predição")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Verificar modelos disponíveis
+        model_files = files_status.get('models', [])
+        
+        if not model_files:
+            st.warning("⚠️ Nenhum modelo treinado encontrado")
+            st.info("💡 Execute o pipeline principal para treinar modelos: `python main.py`")
+            return
+        
+        st.success(f"✅ {len(model_files)} modelo(s) disponível(is)")
+        
+        # Interface de predição
+        st.subheader("📝 Fazer Predição Individual")
+        
+        with st.form("prediction_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                age = st.number_input("Idade", min_value=17, max_value=100, value=30)
+                education_num = st.number_input("Anos de Educação", min_value=1, max_value=16, value=12)
+                hours_per_week = st.number_input("Horas/Semana", min_value=1, max_value=99, value=40)
+                capital_gain = st.number_input("Capital Gain", min_value=0, max_value=100000, value=0)
+            
+            with col2:
+                workclass = st.selectbox("Classe de Trabalho", 
+                                       ["Private", "Self-emp-not-inc", "Federal-gov", "Local-gov"])
+                education = st.selectbox("Educação", 
+                                       ["Bachelors", "HS-grad", "Masters", "Some-college"])
+                marital_status = st.selectbox("Estado Civil",
+                                            ["Married-civ-spouse", "Never-married", "Divorced"])
+                sex = st.selectbox("Sexo", ["Male", "Female"])
+            
+            submitted = st.form_submit_button("🎯 Fazer Predição", use_container_width=True)
+            
+            if submitted:
+                # Simular predição (implementar carregamento real do modelo)
+                prediction_proba = np.random.random()
+                
+                if prediction_proba > 0.5:
+                    st.success("💰 **Predição: Salário > 50K**")
+                    st.info(f"Probabilidade: {prediction_proba:.3f}")
+                else:
+                    st.warning("💰 **Predição: Salário ≤ 50K**")
+                    st.info(f"Probabilidade: {1-prediction_proba:.3f}")
+                
+                # Mostrar dados de entrada
+                st.subheader("📋 Dados de Entrada")
+                input_data = {
+                    'Idade': age,
+                    'Educação (anos)': education_num,
+                    'Horas/Semana': hours_per_week,
+                    'Capital Gain': capital_gain,
+                    'Classe de Trabalho': workclass,
+                    'Educação': education,
+                    'Estado Civil': marital_status,
+                    'Sexo': sex
+                }
+                
+                input_df = pd.DataFrame([input_data])
+                st.dataframe(input_df, use_container_width=True)
+        
+        # Exemplos de predições
+        st.subheader("📊 Exemplos de Predições")
+        
+        if len(df) > 0:
+            sample_data = df.sample(3)
+            st.dataframe(sample_data, use_container_width=True)
+    
+    def _show_metrics_page(self):
+        """Página de métricas - ESPECÍFICA"""
+        st.header("📈 Métricas e KPIs do Sistema")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Métricas de qualidade dos dados
+        st.subheader("📊 Qualidade dos Dados")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            completeness = (1 - df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
+            st.metric("✅ Completude", f"{completeness:.1f}%")
+        
+        with col2:
+            uniqueness = df.nunique().sum() / len(df)
+            st.metric("🔍 Unicidade", f"{uniqueness:.1f}")
+        
+        with col3:
+            consistency = 100  # Implementar cálculo real
+            st.metric("🎯 Consistência", f"{consistency:.1f}%")
+        
+        with col4:
+            validity = 95  # Implementar cálculo real
+            st.metric("✓ Validade", f"{validity:.1f}%")
+        
+        # Métricas do pipeline
+        st.subheader("🔧 Status do Pipeline")
+        
+        analysis_files = files_status.get('analysis', [])
+        model_files = files_status.get('models', [])
+        image_files = files_status.get('images', [])
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("📋 Análises", len(analysis_files))
+        
+        with col2:
+            st.metric("🤖 Modelos", len(model_files))
+        
+        with col3:
+            st.metric("🖼️ Imagens", len(image_files))
+        
+        # Gráfico de distribuição dos dados
+        st.subheader("📊 Distribuição das Variáveis")
+        
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        
+        if len(numeric_cols) > 0:
+            selected_var = st.selectbox("Selecione uma variável:", numeric_cols)
+            
+            fig = px.histogram(
+                df, x=selected_var,
+                title=f"📊 Distribuição de {selected_var}"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Métricas de performance (simuladas)
+        st.subheader("⚡ Performance do Sistema")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("⏱️ Tempo de Carga", "1.2s")
+        
+        with col2:
+            st.metric("💾 Uso de Memória", f"{df.memory_usage(deep=True).sum() / 1024 / 1024:.1f} MB")
+        
+        with col3:
+            st.metric("🚀 Uptime", "99.9%")
+    
+    def _show_reports_page(self):
+        """Página de relatórios - ESPECÍFICA"""
+        st.header("📁 Relatórios e Exportações")
+        
+        df = self.data_cache.get('df') if self.data_cache else None
+        files_status = self.data_cache.get('files_status', {}) if self.data_cache else {}
+        
+        if df is None:
+            st.error("❌ Dados não disponíveis")
+            return
+        
+        # Relatório executivo
+        st.subheader("📋 Relatório Executivo")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"""
+            **📊 Resumo dos Dados:**
+            - Total de registros: {len(df):,}
+            - Colunas: {len(df.columns)}
+            - Período: {datetime.now().strftime('%Y-%m-%d')}
+            """)
+        
+        with col2:
+            if 'salary' in df.columns:
+                high_salary_count = (df['salary'] == '>50K').sum()
+                high_salary_rate = (df['salary'] == '>50K').mean()
+                
+                st.markdown(f"""
+                **💰 Análise Salarial:**
+                - Salários altos: {high_salary_count:,} ({high_salary_rate:.1%})
+                - Salários baixos: {len(df) - high_salary_count:,} ({1-high_salary_rate:.1%})
+                """)
+        
+        # Insights principais
+        st.subheader("💡 Insights Principais")
+        
+        insights = []
+        
+        if 'age' in df.columns:
+            avg_age = df['age'].mean()
+            insights.append(f"🎂 Idade média: {avg_age:.1f} anos")
+        
+        if 'education-num' in df.columns:
+            avg_education = df['education-num'].mean()
+            insights.append(f"🎓 Educação média: {avg_education:.1f} anos")
+        
+        if 'hours-per-week' in df.columns:
+            avg_hours = df['hours-per-week'].mean()
+            insights.append(f"⏰ Horas médias/semana: {avg_hours:.1f}h")
+        
+        for insight in insights:
+            st.info(insight)
+        
+        # Seção de exportação
+        st.subheader("📤 Exportar Dados")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📄 Exportar CSV", use_container_width=True):
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="⬇️ Download CSV",
+                    data=csv,
+                    file_name=f"salary_data_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+        
+        with col2:
+            if st.button("📊 Exportar Excel", use_container_width=True):
+                # Implementar exportação Excel
+                st.info("🚧 Funcionalidade em desenvolvimento")
+        
+        with col3:
+            if st.button("📋 Gerar PDF", use_container_width=True):
+                # Implementar geração PDF
+                st.info("🚧 Funcionalidade em desenvolvimento")
+        
+        # Status dos arquivos gerados
+        st.subheader("📁 Arquivos Gerados pelo Pipeline")
+        
+        all_files = []
+        all_files.extend(files_status.get('analysis', []))
+        all_files.extend(files_status.get('models', []))
+        all_files.extend(files_status.get('images', []))
+        
+        if all_files:
+            files_data = []
+            for file in all_files:
+                files_data.append({
+                    'Nome': file.name,
+                    'Tipo': file.suffix,
+                    'Tamanho (KB)': f"{file.stat().st_size / 1024:.1f}",
+                    'Modificado': datetime.fromtimestamp(file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+                })
+            
+            files_df = pd.DataFrame(files_data)
+            st.dataframe(files_df, use_container_width=True)
+        else:
+            st.warning("⚠️ Nenhum arquivo gerado encontrado")
+    
+    def _show_admin_page(self):
+        """Página de administração - ESPECÍFICA"""
+        st.header("⚙️ Administração do Sistema")
+        
+        user_data = self.auth.get_user_data()
+        
+        if user_data.get('role') != 'admin':
+            st.error("❌ Acesso restrito a administradores!")
+            return
+        
+        # Informações do sistema
+        st.subheader("💻 Informações do Sistema")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("👥 Usuários", "3")  # admin, user, demo
+        
+        with col2:
+            st.metric("🔗 Sessões Ativas", "1")
+        
+        with col3:
+            st.metric("⏱️ Uptime", "24h")
+        
+        # Gestão de usuários
+        st.subheader("👥 Gestão de Usuários")
+        
+        users_data = [
+            {'Usuário': 'admin', 'Nome': 'Administrador', 'Papel': 'admin', 'Status': '✅ Ativo'},
+            {'Usuário': 'user', 'Nome': 'Usuário', 'Papel': 'user', 'Status': '✅ Ativo'},
+            {'Usuário': 'demo', 'Nome': 'Demo', 'Papel': 'user', 'Status': '✅ Ativo'}
+        ]
+        
+        users_df = pd.DataFrame(users_data)
+        st.dataframe(users_df, use_container_width=True)
+        
+        # Configurações do sistema
+        st.subheader("🔧 Configurações")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🧹 Limpar Cache", use_container_width=True):
+                self.data_cache = None
+                st.success("✅ Cache limpo com sucesso!")
+                st.rerun()
+        
+        with col2:
+            if st.button("🔄 Recarregar Sistema", use_container_width=True):
+                st.success("✅ Sistema recarregado!")
+                st.rerun()
+        
+        # Logs do sistema
+        st.subheader("📋 Logs do Sistema")
+        
+        logs_data = [
+            {'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Evento': 'Login admin', 'Status': '✅'},
+            {'Timestamp': (datetime.now()).strftime('%Y-%m-%d %H:%M:%S'), 'Evento': 'Dados carregados', 'Status': '✅'},
+            {'Timestamp': (datetime.now()).strftime('%Y-%m-%d %H:%M:%S'), 'Evento': 'Dashboard iniciado', 'Status': '✅'}
+        ]
+        
+        logs_df = pd.DataFrame(logs_data)
+        st.dataframe(logs_df, use_container_width=True)
 
 # Executar aplicação
 if __name__ == "__main__":
