@@ -1,156 +1,105 @@
-"""Script para configurar estrutura de dados correta - VERSÃO MELHORADA"""
+"""
+Script para configurar estrutura de dados do projeto
+"""
 
-import os
 import shutil
 from pathlib import Path
+import os
 
 def setup_data_structure():
-    """Configurar estrutura de pastas e mover arquivos se necessário"""
-    project_root = Path(__file__).parent
+    """Configurar estrutura de dados necessária"""
+    print("🔧 Configurando estrutura de dados...")
     
-    print("🚀 Configurando estrutura do projeto...")
-    
-    # Criar estrutura de pastas COMPLETA
-    folders_to_create = [
-        # Dados
+    # Criar diretórios necessários
+    directories = [
         "data/raw",
         "data/processed", 
-        
-        # Outputs
-        "output/images",
         "output/analysis",
-        "output/logs",
-        
-        # Modelos
-        "models/trained",
-        
-        # Src structure
-        "src/data",
-        "src/models", 
-        "src/analysis",
-        "src/evaluation",
-        "src/visualization",
-        "src/utils",
-        "src/pipelines",
-        "src/config"
+        "output/models",
+        "logs"
     ]
     
-    for folder in folders_to_create:
-        folder_path = project_root / folder
-        folder_path.mkdir(parents=True, exist_ok=True)
-        print(f"✅ Pasta criada/verificada: {folder}")
+    for directory in directories:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+        print(f"✅ Diretório criado: {directory}")
     
-    # Verificar e mover arquivo de dados se necessário
-    data_file = "4-Carateristicas_salario.csv"
-    target_location = project_root / "data" / "raw" / data_file
-    
-    # Locais onde o arquivo pode estar
+    # Procurar arquivo CSV em locais possíveis
+    csv_name = "4-Carateristicas_salario.csv"
     possible_locations = [
-        project_root / data_file,                    # Raiz
-        project_root / "bkp" / data_file,            # Pasta bkp
-        project_root / "data" / data_file,           # Pasta data
-        project_root / "Data" / data_file,           # Pasta Data (maiúscula)
+        Path(csv_name),
+        Path(f"bkp/{csv_name}"),
+        Path(f"data/{csv_name}"),
+        Path(f"src/data/{csv_name}"),
+        Path(f"../{csv_name}"),
+        Path(f"../../{csv_name}")
     ]
     
-    if not target_location.exists():
-        for location in possible_locations:
-            if location.exists():
-                print(f"📁 Arquivo encontrado em: {location}")
+    target_location = Path("data/raw/4-Carateristicas_salario.csv")
+    
+    # Verificar se já existe no local correto
+    if target_location.exists():
+        print(f"✅ Arquivo já existe: {target_location}")
+        return True
+    
+    # Procurar arquivo em outros locais
+    csv_found = False
+    for location in possible_locations:
+        if location.exists():
+            print(f"📁 Arquivo encontrado: {location}")
+            try:
                 shutil.copy2(location, target_location)
                 print(f"✅ Arquivo copiado para: {target_location}")
+                csv_found = True
                 break
-        else:
-            print(f"⚠️ Arquivo {data_file} não encontrado nos locais esperados:")
-            for loc in possible_locations:
-                print(f"   • {loc}")
-            print(f"\n💡 Coloque o arquivo em qualquer uma das localizações acima")
-            print(f"📍 Localização recomendada: {target_location}")
-    else:
-        print(f"✅ Arquivo já está na localização correta: {target_location}")
+            except Exception as e:
+                print(f"❌ Erro ao copiar: {e}")
+                continue
     
-    # Criar arquivos __init__.py se não existirem
-    init_files = [
-        "src/__init__.py",
-        "src/data/__init__.py",
-        "src/models/__init__.py",
-        "src/analysis/__init__.py", 
-        "src/evaluation/__init__.py",
-        "src/visualization/__init__.py",
-        "src/utils/__init__.py",
-        "src/pipelines/__init__.py",
-        "src/config/__init__.py"
-    ]
-    
-    for init_file in init_files:
-        init_path = project_root / init_file
-        if not init_path.exists():
-            init_path.write_text('# Init file\n"""Módulo de inicialização"""\n')
-            print(f"✅ Arquivo __init__.py criado: {init_file}")
-    
-    # Verificar se módulos críticos existem
-    critical_modules = [
-        "src/data/processor.py",
-        "src/models/trainer.py",
-        "src/visualization/plots.py",
-        "src/visualization/styles.py"
-    ]
-    
-    missing_modules = []
-    for module in critical_modules:
-        module_path = project_root / module
-        if not module_path.exists():
-            missing_modules.append(module)
-    
-    if missing_modules:
-        print(f"\n⚠️ Módulos críticos em falta:")
-        for module in missing_modules:
-            print(f"   • {module}")
-        print(f"\n💡 Execute o pipeline principal para criar os módulos automaticamente")
-    
-    print("\n🎉 Estrutura de dados configurada!")
-    print(f"📂 Dados brutos: {project_root / 'data' / 'raw'}")
-    print(f"📂 Dados processados: {project_root / 'data' / 'processed'}")
-    print(f"📂 Saídas: {project_root / 'output'}")
-    print(f"📂 Código fonte: {project_root / 'src'}")
+    if not csv_found:
+        print("❌ Arquivo CSV não encontrado!")
+        print("💡 Soluções:")
+        print("   1. Coloque '4-Carateristicas_salario.csv' na pasta 'data/raw/'")
+        print("   2. Ou coloque na raiz do projeto")
+        print("   3. Ou configure o banco de dados com: python main.py --setup-db")
+        return False
     
     return True
 
-def verify_structure():
-    """Verificar se a estrutura está correta"""
-    project_root = Path(__file__).parent
+def check_file_permissions():
+    """Verificar permissões de arquivos"""
+    csv_path = Path("data/raw/4-Carateristicas_salario.csv")
     
-    required_items = [
-        ("data/raw", "dir"),
-        ("data/processed", "dir"),
-        ("output", "dir"),
-        ("src", "dir"),
-        ("data/raw/4-Carateristicas_salario.csv", "file")
-    ]
+    if csv_path.exists():
+        try:
+            # Testar leitura
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                first_line = f.readline()
+            
+            print(f"✅ Arquivo legível: {len(first_line)} caracteres na primeira linha")
+            print(f"📊 Tamanho: {csv_path.stat().st_size / 1024 / 1024:.1f} MB")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erro ao ler arquivo: {e}")
+            return False
     
-    all_good = True
-    for item, item_type in required_items:
-        path = project_root / item
-        if item_type == "dir" and not path.is_dir():
-            print(f"❌ Pasta em falta: {item}")
-            all_good = False
-        elif item_type == "file" and not path.is_file():
-            print(f"❌ Arquivo em falta: {item}")
-            all_good = False
-        else:
-            print(f"✅ {item}")
-    
-    return all_good
+    return False
 
 if __name__ == "__main__":
-    print("🔧 CONFIGURAÇÃO DA ESTRUTURA DO PROJETO")
-    print("=" * 50)
+    print("🚀 Configurando projeto...")
     
-    setup_data_structure()
+    # Configurar estrutura
+    setup_success = setup_data_structure()
     
-    print("\n🔍 VERIFICAÇÃO DA ESTRUTURA")
-    print("=" * 50)
-    
-    if verify_structure():
-        print("\n🎉 Estrutura está correta! Pode executar: python main.py")
+    if setup_success:
+        # Verificar permissões
+        permissions_ok = check_file_permissions()
+        
+        if permissions_ok:
+            print("\n✅ CONFIGURAÇÃO CONCLUÍDA!")
+            print("🔄 Execute novamente: python main.py")
+        else:
+            print("\n⚠️ Estrutura criada mas arquivo com problemas")
     else:
-        print("\n⚠️ Estrutura incompleta. Execute novamente ou configure manualmente.")
+        print("\n❌ Configuração falhou")
+        print("📋 Verifique se o arquivo '4-Carateristicas_salario.csv' existe")

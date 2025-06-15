@@ -78,7 +78,7 @@ class AssociationRulesAnalysis:
             self.logger.error(f"❌ Erro na preparação dos dados: {e}")
             return []
 
-    def run_apriori(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+    #def run_apriori(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
         """Algoritmo Apriori implementação própria"""
         self.logger.info("🔍 Executando algoritmo Apriori...")
         
@@ -210,7 +210,7 @@ class AssociationRulesAnalysis:
         
         return sorted(rules, key=lambda x: x['confidence'], reverse=True)
 
-    def run_fp_growth(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+    #def run_fp_growth(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
         """Algoritmo FP-Growth (implementação simplificada)"""
         self.logger.info("🌳 Executando algoritmo FP-Growth...")
         
@@ -297,7 +297,7 @@ class AssociationRulesAnalysis:
         """Gerar regras para FP-Growth (mesmo método do Apriori)"""
         return self._generate_rules_apriori(frequent_itemsets, n_transactions, min_confidence)
 
-    def run_eclat(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+    #def run_eclat(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
         """Algoritmo Eclat (baseado em intersecção de conjuntos)"""
         self.logger.info("🔗 Executando algoritmo Eclat...")
         

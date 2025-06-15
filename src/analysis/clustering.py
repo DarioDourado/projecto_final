@@ -66,7 +66,7 @@ class SalaryClusteringAnalysis:
         
         return final_clusters, best_k
 
-    def perform_dbscan_analysis(self, X, eps_range=None, min_samples_range=None):
+    #def perform_dbscan_analysis(self, X, eps_range=None, min_samples_range=None):
         """Análise DBSCAN com otimização de parâmetros"""
         logging.info("🔍 Iniciando análise DBSCAN...")
         
@@ -240,44 +240,8 @@ class SalaryClusteringAnalysis:
             analysis_dir = Path("output/analysis")
             analysis_dir.mkdir(parents=True, exist_ok=True)
             
-            # Estatísticas dos clusters
-            unique_clusters = np.unique(clusters)
-            n_noise = list(clusters).count(-1)
-            n_clusters = len(unique_clusters) - (1 if -1 in unique_clusters else 0)
-            
-            results = []
-            for cluster_id in unique_clusters:
-                if cluster_id != -1:  # Excluir ruído
-                    count = list(clusters).count(cluster_id)
-                    results.append({
-                        'cluster_id': int(cluster_id),
-                        'size': int(count),
-                        'percentage': float(count / len(clusters) * 100)
-                    })
-            
-            # Adicionar estatísticas de ruído
-            if n_noise > 0:
-                results.append({
-                    'cluster_id': -1,
-                    'size': n_noise,
-                    'percentage': float(n_noise / len(clusters) * 100)
-                })
-            
-            results_df = pd.DataFrame(results)
+            # Salva dbscan_results.csv e dbscan_summary.csv
             results_df.to_csv(analysis_dir / "dbscan_results.csv", index=False)
-            
-            # Sumário geral
-            summary = {
-                'best_eps': best_eps,
-                'best_min_samples': best_min_samples,
-                'silhouette_score': best_silhouette,
-                'n_clusters': n_clusters,
-                'n_noise': n_noise,
-                'total_samples': len(clusters),
-                'timestamp': pd.Timestamp.now().isoformat()
-            }
-            
-            summary_df = pd.DataFrame([summary])
             summary_df.to_csv(analysis_dir / "dbscan_summary.csv", index=False)
             
             logging.info("✅ Resultados DBSCAN salvos")
