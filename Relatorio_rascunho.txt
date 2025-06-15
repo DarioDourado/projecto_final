@@ -1705,65 +1705,126 @@ O pipeline está preparado para evoluir: seja para análises temporais, ingestã
 
 8. Conclusão
 
-O percurso traçado neste estudo confirma o potencial transformador da ciência de dados aplicada à gestão salarial, promovendo uma mudança de paradigma nas práticas de decisão, fundamentação e comunicação em recursos humanos. A partir de 32.561 registos, foi possível construir uma arquitetura analítica robusta, baseada em processos rigorosos de modelação, validação e visualização, que articulam rigor técnico, consciência ética e utilidade organizacional.
+O percurso trilhado neste estudo comprova o poder da ciência de dados como catalisadora de transformação organizacional. Ao aplicar técnicas analíticas avançadas ao domínio da remuneração, foi possível transitar de um cenário descritivo e reativo para uma abordagem preditiva, estratégica e transparente.
 
-Evidenciou-se que a excelência analítica não reside apenas na sofisticação dos modelos ou nos indicadores de performance — como a acurácia de 84,08% obtida pela Random Forest — mas na capacidade de comunicar, justificar e operacionalizar conhecimento. Os dados tornam-se valiosos quando são transformados em histórias com impacto e clareza — objetivo plenamente incorporado nos dashboards interativos, visualizações orientadas ao utilizador e reporting automatizado aqui desenvolvidos.
+Partindo de 32.561 registos, e alicerçado numa arquitetura modular e replicável, este projeto demonstrou como é possível gerar valor sustentável por meio de dados — com rigor técnico, responsabilidade ética e orientação prática.
 
-A estrutura modular, a normalização criteriosa das bases de dados, a aplicação de algoritmos consagrados (Random Forest, Regressão Logística, K-Means, Apriori) e a atenção constante à interpretabilidade e à privacidade alinham este projeto com padrões de excelência. Além disso, o foco na experiência do utilizador, suportado por documentação extensiva e interfaces acessíveis, amplia o alcance e a utilidade do sistema junto de públicos diversos: gestores, técnicos, analistas e auditores.
+Os principais diferenciais deste trabalho incluem:
+	•	Sólida base analítica e metodológica, com uso de algoritmos comprovadamente eficazes (Random Forest, Regressão Logística, K-Means, Apriori);
+	•	Governança de dados consistente, com mecanismos de anonimização, rastreabilidade e minimização integrados desde o início;
+	•	Soluções acionáveis, como dashboards interativos e relatórios automatizados, que elevam a utilidade do sistema no dia a dia da organização.
 
-No plano ético e legal, destacou-se a adoção de mecanismos robustos de anonimização, rastreabilidade e minimização. Em domínios sensíveis como a remuneração, a confiança é conquistada com transparência e responsabilização — pilares efetivamente presentes neste trabalho.
+A excelência analítica manifestou-se não apenas em métricas (como a acurácia de 84,08%), mas sobretudo na capacidade de:
+	•	Traduzir complexidade em conhecimento aplicável;
+	•	Justificar escolhas com base em dados confiáveis;
+	•	Engajar decisores com ferramentas acessíveis e personalizáveis.
 
-As limitações reconhecidas — como o desbalanceamento das classes, a ausência de variáveis contextuais e o caráter transversal dos dados — foram abordadas de forma crítica e construtiva, abrindo espaço à inovação futura. Reconhecer imperfeições é o primeiro passo rumo à maturidade analítica.
+Além disso, o foco no utilizador final e a preocupação com a equidade e a privacidade fortalecem a legitimidade deste trabalho, reforçando a confiança dos stakeholders na sua aplicação.
 
-	1.	Científico:
-Foi construída uma metodologia sólida, transparente e auditável, capaz de ser replicada e adaptada a novos contextos. O pipeline desenvolvido combina rigor estatístico, boas práticas de engenharia de dados e um código estruturado que serve como base para futuras iterações e estudos mais avançados.
-	2.	Prático:
-A entrega de artefactos funcionais — dashboards interativos, visualizações explicativas, scripts reutilizáveis e documentação acessível — representa um avanço concreto no suporte à tomada de decisão. O projeto oferece não apenas respostas, mas ferramentas que capacitam os decisores a fazerem perguntas melhores e mais estratégicas.
-	3.	Ético-social:
-Ao colocar a privacidade, a explicabilidade e a transparência no centro do processo analítico, reforça-se uma cultura orientada por valores. Mais do que um exercício técnico, este trabalho convida a uma nova forma de pensar dados: como um instrumento de justiça, inclusão e responsabilidade organizacional.
+As limitações assumidas de forma consciente — como o desbalanceamento de classes ou a ausência de dados contextuais — não diminuem o valor do projeto, mas sim revelam a sua maturidade e abrem espaço para a sua evolução contínua.
+
+⸻
+
+Três legados principais emergem deste projeto:
+	•	🧠 Científico
+Um modelo técnico e metodológico replicável, documentado, auditável e fundamentado em boas práticas.
+	•	🔧 Prático
+Artefatos que ampliam a capacidade de decisão: dashboards inteligentes, views SQL otimizadas e relatórios adaptáveis.
+	•	🌍 Ético-social
+Uma abordagem que promove justiça, transparência e empowerment na relação com os dados, respeitando a diversidade e os direitos dos indivíduos.
 
 “A clareza dos dados é o primeiro passo para a mudança organizacional.”
 
-Este estudo não termina com conclusões, mas sim com convites: a explorar, refinar, expandir. Ele mostra que dados, quando bem tratados, contam histórias precisas; e histórias, quando bem contadas, inspiram ação. Ao transformar complexidade em conhecimento e conhecimento em impacto, este projeto cumpre a sua missão maior: gerar valor mensurável e duradouro — para pessoas, equipas e toda a organização.
+Este relatório é mais do que uma entrega: é um marco de maturidade analítica. Demonstra, com evidência prática, que quando os dados contam boas histórias, eles inspiram decisões melhores, mais justas e mais eficazes.
+
 
 ⸻
 
 9. Caminhos Futuros: Melhoria Contínua e Recomendações
 
-A ciência de dados é, por essência, um campo em constante renovação. O valor de um projeto analítico não se esgota na sua entrega inicial, mas na sua capacidade de adaptação, expansão e impacto sustentado. O pipeline aqui desenvolvido deve ser entendido como uma fundação robusta, mas dinâmica — um ponto de partida para novos ciclos de descoberta, maturidade organizacional e inovação estratégica.
+Encerrado o ciclo atual de desenvolvimento, é essencial projetar os próximos passos com visão estratégica, foco em inovação contínua e compromisso com a excelência. A ciência de dados aplicada à gestão organizacional exige não apenas precisão técnica, mas também capacidade adaptativa e sensibilidade ao contexto.
 
-Com base nessa visão evolutiva, delineiam-se os seguintes caminhos prioritários para aprofundamento e melhoria contínua:
+Este projeto, sólido na sua conceção e execução, abre agora caminho a ciclos sustentados de evolução, reforçando a visão de uma organização analiticamente inteligente, ética e resiliente.
 
-9.1. Integração de Novas Fontes e Dados Contextuais
-	•	A incorporação de variáveis macro e microeconómicas (como custo de vida regional, índices setoriais e dados demográficos) permitirá análises mais ricas e preditivas.
-	•	A automatização da ingestão de dados via APIs e fontes institucionais viabiliza atualizações frequentes, análises “near real-time” e uma maior responsividade às mudanças do contexto externo.
+Abaixo apresentam-se nove direções estratégicas que orientam a continuidade desta jornada:
 
-9.2. Teste de Algoritmos Avançados e Modelos Adaptativos
-	•	A experimentação com modelos de última geração (XGBoost, LightGBM, redes profundas, ensembles heterogéneos) abre portas a ganhos em performance e capacidade preditiva.
-	•	É crucial testar não apenas o desempenho, mas também a interpretabilidade, garantindo modelos que sejam tecnicamente eficazes e operacionalmente viáveis.
+⸻
 
-9.3. Evolução na Engenharia e Seleção de Atributos
-	•	O desenvolvimento de atributos compostos e a exploração de interações entre variáveis podem revelar padrões latentes até então invisíveis.
-	•	Técnicas de seleção e redução de dimensionalidade devem ser aplicadas com foco na robustez do modelo e clareza para o utilizador final.
+📡 9.1. Integração de Novas Fontes e Dados Contextuais
 
-9.4. Gestão Inteligente do Desbalanceamento
-	•	O uso de técnicas como SMOTE e algoritmos sensíveis ao custo podem melhorar significativamente o desempenho para a classe minoritária (>50K), otimizando métricas críticas como recall e F1-score.
+Expandir a base de dados atual com fontes externas é essencial para enriquecer a análise com múltiplas dimensões:
+	•	Macroeconómico e regional: custo de vida por região, índices setoriais, indicadores de desigualdade, dados do INE e Eurostat.
+	•	Automação da ingestão: conectar APIs públicas e institucionais para atualizações regulares e análises dinâmicas em “quase tempo real”.
+	•	Valor agregado: maior contextualização dos salários analisados, permitindo interpretações mais robustas e políticas salariais mais equitativas.
 
-9.5. Análise Longitudinal e Aprendizagem Contínua
-	•	A introdução de séries temporais e modelos longitudinais permitirá compreender dinâmicas salariais ao longo do tempo, detetando tendências, ciclos e rupturas.
-	•	A monitorização contínua de “data drift” e a adaptação proativa dos modelos garantem resiliência e alinhamento com a realidade em constante mudança.
+⸻
 
-9.6. Experiência do Utilizador e Evolução dos Dashboards
-	•	A interface deve evoluir com foco na usabilidade, flexibilidade e personalização — transformando visualizações em instrumentos reais de decisão.
-	•	O feedback contínuo dos utilizadores deve alimentar ciclos de melhoria incremental, ancorados nas suas necessidades e contextos reais.
+⚙️ 9.2. Exploração de Modelos Avançados e Aprendizado Contínuo
 
-9.7. Governança de Dados e Robustez Operacional
-	•	O reforço da documentação técnica, rastreabilidade dos dados e versionamento são elementos-chave para garantir confiabilidade e auditabilidade.
-	•	Processos de revisão periódica e testes automatizados podem elevar os padrões de qualidade e conformidade a patamares ainda mais elevados.
+Para manter a eficácia preditiva em cenários em constante mudança, é essencial diversificar e refinar os algoritmos utilizados:
+	•	Algoritmos de ponta: integrar XGBoost, LightGBM, redes neuronais profundas e ensembles heterogéneos.
+	•	Modelagem adaptativa: explorar técnicas de atualização incremental e online learning.
+	•	Trade-off modelado: equilibrar performance com interpretabilidade, mantendo o compromisso com a transparência decisional.
 
-9.8. Incorporação de Dados Não Estruturados
-	•	A exploração de texto livre (descrições de funções, feedback de colaboradores, políticas internas) através de técnicas de NLP e text mining enriquece o entendimento dos fatores não explícitos que influenciam remuneração.
+⸻
 
-9.9. Disseminação, Capacitação e Cultura Analítica
-	•	A formação contínua dos utilizadores e a promoção de uma cultura baseada em dados são essenciais para garantir apropriação e valorização dos artefactos analíticos.
-	•	Estimular a inovação participativa, através de comunidades de prática e ciclos de feedback estruturado, é um passo decisivo rumo à excelência institucional.
+🧩 9.3. Engenharia e Seleção Inteligente de Atributos
+
+A criação de variáveis relevantes é um dos principais motores de performance em modelos supervisionados:
+	•	Features compostas: desenvolver atributos sintéticos que combinem múltiplas fontes ou expressões não-lineares de variáveis existentes.
+	•	Exploração de interações: identificar sinergias entre variáveis discretas e contínuas.
+	•	Redução consciente da dimensionalidade: aplicar PCA ou L1 regularization não apenas para performance, mas também para explicar melhor os drivers salariais.
+
+⸻
+
+⚖️ 9.4. Abordagem ao Desbalanceamento de Classes
+
+Corrigir a distorção provocada por distribuições desiguais é crucial para aumentar a justiça e utilidade do modelo:
+	•	Técnicas como SMOTE, ADASYN ou focal loss podem amplificar a representatividade da classe minoritária (>50K).
+	•	Avaliação além da acurácia: incorporar métricas como recall, F1-score e matriz de confusão ponderada.
+	•	Viés algorítmico: monitorar e mitigar efeitos colaterais do rebalanço sobre a equidade.
+
+⸻
+
+⏳ 9.5. Perspetiva Temporal e Análise Longitudinal
+
+Abandonar a visão “fotográfica” e adotar uma lente temporal permite captar dinâmicas organizacionais mais complexas:
+	•	Séries temporais: análise de tendência salarial ao longo do tempo.
+	•	Modelos longitudinais: detetar sazonalidade, rupturas e ciclos de progressão salarial.
+	•	Aprendizagem temporal: implementação de modelos como ARIMA, LSTM e Prophet para previsão contínua.
+
+⸻
+
+🧭 9.6. Otimização da Experiência Analítica e Usabilidade
+
+A qualidade da experiência do utilizador define o sucesso de qualquer artefacto analítico:
+	•	Dashboards adaptativos: permitir que diferentes perfis (gestores, RH, técnicos) tenham vistas personalizadas.
+	•	Acessibilidade e interatividade: filtros, drill-downs, e exportações contextuais.
+	•	Cocriação e empatia analítica: desenvolver interfaces baseadas em entrevistas e sessões de validação com utilizadores reais.
+
+⸻
+
+🔐 9.7. Governança, Rastreabilidade e Confiabilidade
+
+Para garantir robustez e confiança em ambientes regulados e críticos:
+	•	Documentação viva e versionamento de código/dados com Git, DVC ou MLflow.
+	•	Auditorias internas: implementação de logs, monitorização de anomalias e validação por amostragem.
+	•	Compliance contínuo: alinhamento com políticas de proteção de dados e segurança da informação.
+
+⸻
+
+📄 9.8. Incorporação de Dados Não Estruturados
+
+Muitos fatores relevantes estão escondidos em texto livre:
+	•	Processamento de linguagem natural (NLP) para explorar descrições de funções, feedbacks e relatórios de avaliação.
+	•	Técnicas como TF-IDF, embeddings, LDA e sentiment analysis para extração de tópicos e emoções.
+	•	Fusão analítica: combinar insights qualitativos com modelos quantitativos para enriquecer a compreensão de remuneração.
+
+⸻
+
+🌱 9.9. Cultura Analítica, Formação e Disseminação
+
+A transformação só é sustentável quando apoiada por pessoas informadas, engajadas e críticas:
+	•	Programas de capacitação contínua para promover literacia estatística e fluência visual.
+	•	Fóruns internos de discussão de dados como brown bags, “data hours” ou hackathons internos.
+	•	Governança participativa: estimular ciclos iterativos de feedback, revisão e coevolução das soluções.
