@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent / "src"))
 from src.pipelines.hybrid_pipeline import HybridPipelineSQL
 
 def main():
-    """Função principal com fallback SQL → CSV"""
+    """Função principal do pipeline de análise"""
     print("🔍 DEBUG: Iniciando pipeline híbrido com fallback...")
     
     try:

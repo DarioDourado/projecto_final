@@ -2,7 +2,7 @@
 RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
 ======================================================================
 
-📅 Data: 15/06/2025 16:46
+📅 Data: 16/06/2025 16:28
 📊 Registros: 32,537
 💾 Fonte de Dados: CSV (SQL falhou, usado CSV como fallback)
 
