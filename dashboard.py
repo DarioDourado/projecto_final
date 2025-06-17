@@ -150,10 +150,10 @@ def show_login_interface():
         ">
             <h4>📋 Credenciais de Demonstração:</h4>
             <ul style="margin: 0.5rem 0;">
-                <li><strong>Admin:</strong> admin / admin123</li>
+                <li><strong>Admin:</strong> admin / *****</li>
                 <li><strong>Demo:</strong> demo / demo123</li>
                 <li><strong>Guest:</strong> guest / guest123</li>
-                <li><strong>Académico:</strong> academico / isla2024</li>
+                <li><strong>Académico:</strong> academico / isla2025</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
