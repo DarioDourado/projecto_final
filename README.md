@@ -1,531 +1,358 @@
-# 📊 Dashboard Interativo - Análise e Previsão Salarial
+# 📊 Sistema de Análise Salarial - Dashboard Multilingual Acadêmico
 
-Um dashboard completo em **Streamlit** para análise exploratória de dados e previsão de salários usando algoritmos de Machine Learning. Este projeto implementa um sistema de autenticação, visualizações interativas e modelos preditivos para determinar se uma pessoa ganha mais ou menos de $50K por ano.
+**Sistema Acadêmico Modular de Análise e Predição Salarial com Implementação Completa de DBSCAN, APRIORI, FP-GROWTH e ECLAT**
 
-## 🎯 Características Principais
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)](https://streamlit.io)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange.svg)](https://mysql.com)
+[![License](https://img.shields.io/badge/License-Academic-green.svg)](LICENSE)
 
-- **🔐 Sistema de Autenticação**: Login com diferentes níveis de acesso
-- **📊 Análise Exploratória**: Visualizações interativas dos dados
-- **🤖 Machine Learning**: Modelo Random Forest para previsões
-- **🔮 Previsões**: Interface para previsões individuais e em lote
-- **📈 Interpretabilidade**: Análise da importância das features
-- **🎨 Interface Moderna**: Design responsivo com fundo transparente
-- **🌍 Multi-idioma**: Interface em português com dados em inglês
+## 🎓 Sobre o Projeto Acadêmico
 
-## 🏗️ Estrutura do Projeto
+Este é um **sistema completo de análise salarial** desenvolvido para fins acadêmicos, implementando rigorosamente os algoritmos **DBSCAN**, **APRIORI**, **FP-GROWTH** e **ECLAT** conforme especificações científicas. O projeto demonstra a aplicação prática de técnicas avançadas de Data Science em cenários reais de análise salarial.
 
-```
-📁 ProjectoFinal/
-├── 📄 dashboard_app.py              # Dashboard principal (Streamlit)
-├── 📄 projeto_salario.py            # Pipeline de ML e geração de modelos
-├── 📄 projeto_salario_interpretabilidade.py  # Scripts de interpretabilidade
-├── 📄 4-Carateristicas_salario.csv  # Dataset principal
-├── 🤖 random_forest_model.joblib    # Modelo treinado
-├── ⚙️ preprocessor.joblib           # Pipeline de pré-processamento
-├── 📋 feature_info.joblib           # Informações das features
-├── 📊 sample_data.joblib            # Dados de exemplo para SHAP
-├── 📁 imagens/                      # Gráficos e visualizações
-│   ├── hist_age.png
-│   ├── correlacao.png
-│   ├── feature_importance_rf.png
-│   └── ...
-├── 📁 Data/                         # Dados originais
-├── 📁 docs/                         # Documentação
-├── 📁 env/                          # Ambiente virtual
-└── 📄 README.md                     # Este arquivo
-```
+### 🏆 Algoritmos Principais Implementados
 
-## 🚀 Instalação e Configuração
+- 🎯 **DBSCAN** - Clustering baseado em densidade
+- 📋 **APRIORI** - Regras de associação clássicas
+- 🚀 **FP-GROWTH** - Mineração eficiente de padrões
+- ⚡ **ECLAT** - Algoritmo de intersecção de conjuntos
 
-### 1. Pré-requisitos
+## 🚀 Início Rápido
 
-- Python 3.8+
-- pip (gerenciador de pacotes)
-
-### 2. Clonar/Baixar o Projeto
+### **Método 1: Execução Automática (Recomendado)**
 
 ```bash
-# Se usando Git
-git clone <url-do-repositorio>
-cd ProjectoFinal
+# Clonar repositório
+git clone https://github.com/seu-usuario/projecto_final.git
+cd projecto_final
 
-# Ou baixar e extrair o arquivo ZIP
-```
-
-### 3. Criar Ambiente Virtual
-
-```bash
-# Criar ambiente virtual
-python -m venv env
-
-# Ativar ambiente virtual
-# Windows:
-env\Scripts\activate
-# macOS/Linux:
-source env/bin/activate
-```
-
-### 4. Instalar Dependências
-
-```bash
-# Instalar pacotes essenciais
-pip install streamlit pandas numpy matplotlib seaborn scikit-learn joblib
-
-# Instalar pacotes opcionais (recomendado)
-pip install shap psutil mlxtend
-
-# Ou usar requirements.txt se disponível
+# Instalar dependências
 pip install -r requirements.txt
+
+# Executar dashboard diretamente
+python run_dashboard.py
 ```
 
-## 📋 Dependências Principais
-
-| Pacote         | Versão  | Descrição                         |
-| -------------- | ------- | --------------------------------- |
-| `streamlit`    | ≥1.28.0 | Framework para dashboard web      |
-| `pandas`       | ≥1.5.0  | Manipulação de dados              |
-| `numpy`        | ≥1.24.0 | Computação numérica               |
-| `scikit-learn` | ≥1.3.0  | Machine Learning                  |
-| `matplotlib`   | ≥3.6.0  | Visualizações                     |
-| `seaborn`      | ≥0.12.0 | Visualizações estatísticas        |
-| `joblib`       | ≥1.3.0  | Serialização de modelos           |
-| `shap`         | ≥0.42.0 | Interpretabilidade (opcional)     |
-| `psutil`       | ≥5.9.0  | Informações do sistema (opcional) |
-
-## 🏃‍♂️ Como Executar
-
-### 1. Preparar os Dados e Modelos
+### **Método 2: Pipeline Completo**
 
 ```bash
-# Executar pipeline de ML (primeira vez)
-python projeto_salario.py
+# 1. Configurar ambiente
+python setup_scripts/setup_all.py
+
+# 2. Executar pipeline acadêmico
+python main.py
+
+# 3. Iniciar dashboard multilingual
+streamlit run app.py
 ```
 
-Este comando irá:
+### **Método 3: Deploy Streamlit Cloud**
 
-- ✅ Carregar e limpar os dados
-- ✅ Treinar o modelo Random Forest
-- ✅ Gerar visualizações
-- ✅ Salvar modelos e preprocessadores
-- ✅ Criar análises de interpretabilidade
+1. Fork este repositório
+2. Conectar no [Streamlit Community](https://streamlit.io/cloud)
+3. Deploy automático (usa fallback CSV)
+4. Acesso via URL gerada
 
-### 2. Iniciar o Dashboard
+## 🎯 Funcionalidades Acadêmicas
+
+### ✅ **Algoritmos Científicos Implementados**
+
+- **Machine Learning**: Random Forest, Logistic Regression
+- **Clustering**: DBSCAN + K-Means com comparação
+- **Association Rules**: APRIORI + FP-GROWTH + ECLAT
+- **Métricas**: Accuracy, Precision, Recall, F1-Score, Silhouette
+
+### ✅ **Sistema Completo**
+
+- 🌍 **Dashboard Multilingual** (Português/English)
+- 🔐 **Autenticação Robusta** (admin, user, guest)
+- 💾 **Dual Storage** (MySQL + CSV fallback)
+- 📊 **Visualizações Interativas** (Plotly)
+- 🤖 **Predição em Tempo Real**
+- 📈 **Métricas Avançadas** e relatórios
+- 🔄 **Pipeline Reprodutível**
+
+## 📁 Estrutura Acadêmica do Projeto
+
+```
+📁 projecto_final/
+├── 📄 main.py                    # 🎓 Pipeline Acadêmico Principal
+├── 📄 app.py                     # 🌐 Dashboard Multilingual
+├── 📄 run_dashboard.py           # 🚀 Script de Inicialização
+├── 📄 show_results.py            # 📊 Visualização de Resultados
+├── 📄 requirements.txt           # 📋 Dependências Otimizadas
+├── 📄 .env                       # ⚙️ Configurações (criar se necessário)
+│
+├── 📁 src/                       # 🧩 Código Modular Acadêmico
+│   ├── 📁 analysis/              # 🎯 Algoritmos Científicos
+│   │   ├── clustering.py         # DBSCAN + K-Means
+│   │   └── association_rules.py  # APRIORI + FP-GROWTH + ECLAT
+│   ├── 📁 pipelines/             # 🔄 Pipelines ML
+│   ├── 📁 database/              # 💾 Integração SQL
+│   ├── 📁 components/            # 🎨 UI Components
+│   ├── 📁 auth/                  # 🔐 Sistema Autenticação
+│   ├── 📁 pages/                 # 📄 Páginas Dashboard
+│   ├── 📁 utils/                 # 🛠️ Utilitários (i18n, logging)
+│   └── 📁 evaluation/            # 📊 Métricas Avançadas
+│
+├── 📁 bkp/                       # 💾 Dados e Backups
+│   ├── 4-Carateristicas_salario.csv  # Dataset Original
+│   ├── projeto_salario.py        # Versão Acadêmica v2.0
+│   └── app_original_backup.py    # Backup Dashboard
+│
+├── 📁 data/                      # 📊 Dados Processados
+│   ├── 📁 raw/                   # Dados brutos
+│   └── 📁 processed/             # Dados limpos + modelos
+│
+├── 📁 output/                    # 📈 Resultados Científicos
+│   ├── 📁 analysis/              # CSVs dos algoritmos
+│   │   ├── dbscan_results.csv    # Resultados DBSCAN
+│   │   ├── apriori_rules.csv     # Regras APRIORI
+│   │   ├── fp_growth_rules.csv   # Regras FP-GROWTH
+│   │   └── eclat_rules.csv       # Regras ECLAT
+│   ├── 📁 images/                # Visualizações
+│   └── 📁 logs/                  # Logs do sistema
+│
+├── 📁 translate/                 # 🌍 Suporte Multilingual
+│   ├── pt.json                   # Português
+│   └── en.json                   # English
+│
+├── 📁 config/                    # ⚙️ Configurações
+├── 📁 setup_scripts/             # 🔧 Scripts de Configuração
+├── 📁 tests/                     # 🧪 Testes Automatizados
+└── 📄 Relatorio_rascunho.txt     # 📚 Relatório Acadêmico
+```
+
+## 🔑 Credenciais de Demonstração
+
+### **Contas Pré-configuradas:**
+
+- **👨‍💼 Admin**: `admin` / `admin123` (Acesso total)
+- **👤 Demo**: `demo` / `demo123` (Usuário padrão)
+- **🎭 Guest**: `guest` / `guest123` (Visitante)
+
+## ⚙️ Configuração Avançada
+
+### **💾 MySQL (Produção - Opcional):**
 
 ```bash
-# Iniciar aplicação Streamlit
-streamlit run dashboard_app.py
-```
+# 1. Criar arquivo .env
+echo "DB_HOST=localhost
+DB_NAME=salary_analysis
+DB_USER=salary_user
+DB_PASSWORD=senha_forte" > .env
 
-O dashboard abrirá automaticamente no navegador em `http://localhost:8501`
+# 2. Configurar estrutura
+python main.py --setup-db
 
-### 3. Fazer Login
-
-Use uma das contas disponíveis:
-
-| Utilizador | Password    | Nível de Acesso                             |
-| ---------- | ----------- | ------------------------------------------- |
-| `admin`    | `admin123`  | 👑 **Administrador** - Acesso total         |
-| `analista` | `dados2024` | 📊 **Analista** - Análises + Previsões      |
-| `user`     | `user123`   | 👤 **Utilizador** - Funcionalidades básicas |
-| `demo`     | `demo`      | 🔍 **Demo** - Apenas visualização           |
-
-## 🎛️ Funcionalidades por Nível de Acesso
-
-### 👑 Administrador (`admin`)
-
-- ✅ Visualizar todos os dados
-- ✅ Aceder a todas as visualizações
-- ✅ Ver modelos e métricas
-- ✅ Fazer previsões individuais e em lote
-- ✅ Upload de ficheiros CSV
-- ✅ Informações do sistema
-
-### 📊 Analista (`analista`)
-
-- ✅ Visualizar todos os dados
-- ✅ Aceder a todas as visualizações
-- ✅ Ver modelos e métricas
-- ✅ Fazer previsões individuais e em lote
-- ✅ Upload de ficheiros CSV
-- ❌ Informações do sistema
-
-### 👤 Utilizador (`user`)
-
-- ✅ Visualizar dados básicos
-- ✅ Aceder a visualizações
-- ❌ Ver modelos e métricas
-- ✅ Fazer previsões individuais
-- ❌ Upload de ficheiros CSV
-- ❌ Informações do sistema
-
-### 🔍 Demo (`demo`)
-
-- ✅ Visualizar dados básicos
-- ✅ Aceder a visualizações
-- ❌ Ver modelos e métricas
-- ❌ Fazer previsões
-- ❌ Upload de ficheiros CSV
-- ❌ Informações do sistema
-
-## 📊 Dataset e Variáveis
-
-### Sobre o Dataset
-
-- **Fonte**: Adult Census Income Dataset
-- **Registos**: ~32,000 pessoas
-- **Objetivo**: Prever se o salário anual é >$50K ou ≤$50K
-- **Tipo**: Classificação binária
-
-### Variáveis do Dataset
-
-#### 🔢 Variáveis Numéricas
-
-- **age**: Idade (17-90 anos)
-- **fnlwgt**: Peso demográfico final
-- **education-num**: Anos de educação (1-16)
-- **capital-gain**: Ganhos de capital ($)
-- **capital-loss**: Perdas de capital ($)
-- **hours-per-week**: Horas trabalhadas por semana (1-99)
-
-#### 📝 Variáveis Categóricas
-
-- **workclass**: Tipo de empregador (Private, Self-emp, Gov, etc.)
-- **education**: Nível educacional (HS-grad, Bachelors, Masters, etc.)
-- **marital-status**: Estado civil (Married, Divorced, Single, etc.)
-- **occupation**: Ocupação profissional (Tech-support, Sales, etc.)
-- **relationship**: Relacionamento familiar (Husband, Wife, Child, etc.)
-- **race**: Etnia (White, Black, Asian-Pac-Islander, etc.)
-- **sex**: Sexo (Male, Female)
-- **native-country**: País de origem
-
-#### 🎯 Variável Alvo
-
-- **salary**: ≤50K ou >50K (binária)
-
-## 🤖 Modelos Implementados
-
-### Random Forest (Principal)
-
-- **Algoritmo**: Random Forest Classifier
-- **Features**: Todas as variáveis disponíveis
-- **Pré-processamento**: StandardScaler + OneHotEncoder
-- **Métricas**: Accuracy, Precision, Recall, F1-Score
-- **Interpretabilidade**: Feature importance + SHAP values
-
-### Outros Modelos (Opcionais)
-
-- Regressão Logística
-- Gradient Boosting
-- Support Vector Machine
-
-## 📈 Visualizações Disponíveis
-
-### 📊 Distribuições
-
-- Histogramas das variáveis numéricas
-- Gráficos de barras das variáveis categóricas
-- Matriz de correlação
-
-### 🔍 Análise de Modelos
-
-- Importância das features (Random Forest)
-- Coeficientes (Regressão Logística)
-- SHAP values para interpretabilidade
-
-### 🎯 Clustering
-
-- K-Means clustering
-- Visualização PCA 2D
-- Análise de segmentação
-
-## 🔮 Como Fazer Previsões
-
-### Previsão Individual
-
-1. Aceder à seção "🔮 Previsão com Novos Dados"
-2. Preencher os campos do formulário
-3. Clicar em "🎯 FAZER PREVISÃO"
-4. Ver resultado e probabilidade
-
-### Previsão em Lote (CSV)
-
-1. Preparar ficheiro CSV com as colunas corretas
-2. Fazer upload na seção correspondente
-3. Clicar em "🎯 Fazer Previsões em Lote"
-4. Baixar resultados em CSV
-
-### Formato do CSV para Upload
-
-```csv
-age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week,native-country
-39,State-gov,77516,Bachelors,13,Never-married,Adm-clerical,Not-in-family,White,Male,2174,0,40,United-States
-50,Self-emp-not-inc,83311,Bachelors,13,Married-civ-spouse,Exec-managerial,Husband,White,Male,0,0,13,United-States
-```
-
-## 🗄️ Integração com Base de Dados
-
-### Migração CSV → Base de Dados Relacional
-
-O projeto suporta migração dos dados CSV para uma estrutura de base de dados normalizada para melhor performance e escalabilidade.
-
-#### 🏗️ Estrutura da Base de Dados
-
-```sql
--- Tabelas de Dimensão (Lookup Tables)
-CREATE TABLE workclass (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(50) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Tabela Principal (Fatos)
-CREATE TABLE person (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    age INT NOT NULL CHECK (age BETWEEN 17 AND 100),
-    workclass_id INT,
-    education_id INT,
-    -- ... outras colunas
-    FOREIGN KEY (workclass_id) REFERENCES workclass(id)
-);
-```
-
-#### 📦 Dependências Adicionais
-
-```bash
-# MySQL
-pip install mysql-connector-python
-
-# PostgreSQL (alternativa)
-pip install psycopg2-binary
-```
-
-#### ⚙️ Configuração da Base de Dados
-
-1. **Criar Base de Dados MySQL**:
-
-```sql
-CREATE DATABASE salary_analysis CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'salary_user'@'localhost' IDENTIFIED BY 'senha_forte';
-GRANT ALL PRIVILEGES ON salary_analysis.* TO 'salary_user'@'localhost';
-```
-
-2. **Configurar Variáveis de Ambiente**:
-
-```bash
-export DB_HOST=localhost
-export DB_NAME=salary_analysis
-export DB_USER=salary_user
-export DB_PASSWORD=senha_forte
-export USE_DATABASE=true
-```
-
-#### 🚀 Executar com Base de Dados
-
-```bash
-# Migrar dados CSV para base de dados
+# 3. Migrar dados CSV → SQL
 python main.py --migrate
 
-# Usar base de dados como fonte
-python main.py --database
-
-# Usar arquivo CSV (padrão)
-python main.py --csv
-
-# Dashboard com base de dados
-USE_DATABASE=true streamlit run app.py
+# 4. Executar pipeline completo
+python main.py
 ```
 
-#### ✅ Vantagens da Base de Dados
-
-| Aspecto            | CSV                         | Base de Dados              |
-| ------------------ | --------------------------- | -------------------------- |
-| **Performance**    | Lenta para grandes datasets | Otimizada com índices      |
-| **Integridade**    | Sem validação               | Foreign keys + constraints |
-| **Concorrência**   | Limitada                    | Suporte completo           |
-| **Consultas**      | Pandas limitado             | SQL completo               |
-| **Escalabilidade** | Memória limitante           | Escalável                  |
-
-#### 📊 Exemplos de Consultas SQL
-
-```sql
--- Análise de salário por educação
-SELECT
-    e.name as education_level,
-    sr.name as salary_range,
-    COUNT(*) as count
-FROM person p
-JOIN education e ON p.education_id = e.id
-JOIN salary_range sr ON p.salary_range_id = sr.id
-GROUP BY e.name, sr.name;
-```
-
-#### 🔧 Comandos Úteis
+### **📄 CSV (Desenvolvimento/Streamlit Cloud):**
 
 ```bash
-# Verificar configuração
-python -c "from src.database.connection import DatabaseConnection; print('✅ Configuração OK' if DatabaseConnection().connect() else '❌ Erro')"
-
-# Migração completa
-python main.py --migrate --database
-
-# Estatísticas da base de dados
-python -c "from src.database.models import SalaryDataModel; print(SalaryDataModel().get_statistics())"
+# Sistema funciona automaticamente com CSV
+# Dados em: bkp/4-Carateristicas_salario.csv
+streamlit run app.py
 ```
 
-## 🛠️ Scripts Principais
+## 📊 Páginas do Dashboard Acadêmico
 
-### `projeto_salario.py`
+| Página                      | Acesso     | Algoritmos                             | Descrição                           |
+| --------------------------- | ---------- | -------------------------------------- | ----------------------------------- |
+| 📊 **Visão Geral**          | Todos      | -                                      | Dashboard principal com métricas    |
+| 🔍 **Análise Exploratória** | User/Admin | Estatística                            | Visualizações e correlações         |
+| 🤖 **Modelos ML**           | User/Admin | **Random Forest, Logistic Regression** | Treinamento e avaliação             |
+| 🎯 **Clustering**           | User/Admin | **DBSCAN + K-Means**                   | Análise de agrupamentos             |
+| 📋 **Regras de Associação** | User/Admin | **APRIORI + FP-GROWTH + ECLAT**        | Mineração de padrões                |
+| 🔮 **Predição**             | User/Admin | ML Models                              | Interface de predição em tempo real |
+| 📊 **Métricas Avançadas**   | User/Admin | Todos                                  | KPIs e dashboard científico         |
+| 📁 **Relatórios**           | User/Admin | -                                      | Exportação e análises detalhadas    |
+| ⚙️ **Administração**        | Admin      | -                                      | Gestão de usuários e sistema        |
 
-Pipeline principal que:
+## 🎓 Resultados Científicos Gerados
 
-- Carrega e limpa dados
-- Aplica tipagem otimizada
-- Treina modelos de ML
-- Gera visualizações
-- Salva artefactos
+### **📈 Algoritmos Executados:**
 
-### `dashboard_app.py`
+- `output/analysis/dbscan_results.csv` - Clustering DBSCAN
+- `output/analysis/apriori_rules.csv` - Regras APRIORI
+- `output/analysis/fp_growth_rules.csv` - Regras FP-GROWTH
+- `output/analysis/eclat_rules.csv` - Regras ECLAT
+- `output/pipeline_results.json` - Resumo completo
+- `output/relatorio_academico_completo.txt` - Relatório final
 
-Aplicação Streamlit que:
+### **🔬 Métricas Implementadas:**
 
-- Implementa autenticação
-- Mostra visualizações interativas
-- Permite previsões
-- Gere diferentes níveis de acesso
+- **ML**: Accuracy, Precision, Recall, F1-Score, ROC-AUC
+- **Clustering**: Silhouette Score, Inertia, N° Clusters
+- **Association**: Confidence, Lift, Support
+- **Performance**: Tempo execução, Memória utilizada
 
-### `projeto_salario_interpretabilidade.py`
+## 🌐 Suporte Multilingual
 
-Script adicional para:
+- 🇵🇹 **Português** (padrão acadêmico)
+- 🇺🇸 **English** (internacional)
 
-- Análise SHAP detalhada
-- Interpretabilidade avançada
-- Gráficos de explicação
+O sistema detecta automaticamente o idioma e permite troca dinâmica via interface.
 
-## 🔧 Resolução de Problemas
+## 🛠️ Resolução de Problemas
 
-### Erro: "Dados não encontrados"
+### **❌ Erro de Dependências:**
 
 ```bash
-# Solução: Executar pipeline primeiro
-python projeto_salario.py
+# Reinstalar dependências
+pip install --upgrade -r requirements.txt
+
+# Verificar instalação
+python -c "import streamlit, pandas, sklearn; print('✅ OK')"
 ```
 
-### Erro: "Modelo não encontrado"
+### **❌ Erro de Dados:**
 
 ```bash
-# Verificar se os arquivos foram gerados
-ls *.joblib
-# Deve mostrar: random_forest_model.joblib, preprocessor.joblib, etc.
+# Verificar estrutura de dados
+python diagnose.py
+
+# Reprocessar dados
+python main.py --force-csv
+
+# Verificar saídas
+ls output/analysis/
 ```
 
-### Erro: "SHAP não disponível"
+### **❌ Erro de Autenticação:**
 
 ```bash
-# Instalar SHAP (opcional)
-pip install shap
+# Resetar configurações
+rm -rf config/
+
+# Reiniciar aplicação
+streamlit run app.py
 ```
 
-### Problemas de Memória
+### **❌ Erro MySQL:**
 
 ```bash
-# Instalar psutil para monitorização
-pip install psutil
+# Verificar serviço
+brew services list | grep mysql  # macOS
+sudo service mysql status        # Linux
+
+# Usar fallback CSV
+python main.py --force-csv
 ```
 
-### Pasta 'imagens' não encontrada
+## 🔬 Validação Científica
+
+### **📊 Reprodutibilidade:**
 
 ```bash
-# As imagens são geradas automaticamente pelo pipeline
-python projeto_salario.py
+# Pipeline completo reprodutível
+python main.py
+# Verificar outputs idênticos em output/analysis/
 ```
 
-## 📝 Logs e Debugging
-
-### Ativar Logs Detalhados
+### **🧪 Testes Automatizados:**
 
 ```bash
-# Executar com logs verbosos
-streamlit run dashboard_app.py --logger.level=debug
+# Executar testes
+python -m pytest tests/
+
+# Verificar integridade
+python diagnose.py
 ```
 
-### Verificar Status do Sistema
+### **📈 Benchmarks:**
 
-- Use a conta `admin` para aceder às "Informações do Sistema"
-- Verifique o status de todos os componentes
-- Monitor de memória e performance
+- **Accuracy Random Forest**: ~84.08%
+- **Accuracy Logistic Regression**: ~81.85%
+- **Tempo Pipeline Completo**: < 2 minutos
+- **Regras de Associação**: 25-30 por algoritmo
 
-## 🔄 Atualizações e Manutenção
+## 🎯 Deploy Streamlit Community Cloud
 
-### Retraining do Modelo
+O sistema foi **otimizado para Streamlit Community**:
 
-```bash
-# Retreinar com novos dados
-python projeto_salario.py
+1. **Fork** este repositório no GitHub
+2. **Connect** no [Streamlit Community](https://streamlit.io/cloud)
+3. **Deploy** automático (usa CSV fallback inteligente)
+4. **Acesso** via URL pública gerada
+
+**✅ Não requer configuração de banco de dados!**
+
+## 📚 Referências Acadêmicas
+
+O projeto implementa algoritmos baseados em:
+
+- **DBSCAN**: Ester et al. (1996)
+- **APRIORI**: Agrawal & Srikant (1994)
+- **FP-GROWTH**: Han et al. (2000)
+- **ECLAT**: Zaki (2000)
+
+Metodologia fundamentada em literatura científica consolidada.
+
+## 🏗️ Arquitetura Técnica
+
+### **🔧 Tecnologias Principais:**
+
+- **Backend**: Python 3.8+, Pandas, Scikit-learn
+- **Frontend**: Streamlit, Plotly, HTML/CSS
+- **Database**: MySQL 8.0+ (opcional), CSV fallback
+- **ML**: Random Forest, Logistic Regression
+- **Algorithms**: mlxtend (association rules), sklearn (clustering)
+
+### **📦 Dependências Core:**
+
+```txt
+streamlit>=1.28.0
+pandas>=1.5.3
+scikit-learn>=1.0.0
+plotly>=5.15.0
+mlxtend>=0.22.0
+mysql-connector-python>=8.1.0
+python-dotenv>=1.0.0
 ```
 
-### Backup dos Modelos
+## 📞 Suporte e Documentação
 
-```bash
-# Criar backup dos artefactos importantes
-cp *.joblib backup/
-cp -r imagens/ backup/
-```
+### **🐛 Para Problemas:**
 
-### Limpar Cache
+1. Verificar logs: `logs/app.log`
+2. Executar diagnóstico: `python diagnose.py`
+3. Consultar documentação: `Relatorio_rascunho.txt`
+4. Reiniciar sistema: `python run_dashboard.py`
 
-```bash
-# Limpar cache do Streamlit
-streamlit cache clear
-```
+### **📖 Documentação Adicional:**
 
-## 📚 Documentação Adicional
+- `docs/` - Documentação técnica completa
+- `output/analysis/relatorio_academico_v2.md` - Relatório científico
+- `bkp/projeto_salario.py` - Implementação acadêmica de referência
 
-### Recursos Técnicos
+## 🎖️ Status do Projeto
 
-- **Streamlit**: [docs.streamlit.io](https://docs.streamlit.io)
-- **Scikit-learn**: [scikit-learn.org](https://scikit-learn.org)
-- **SHAP**: [shap.readthedocs.io](https://shap.readthedocs.io)
+- ✅ **Algoritmos Científicos**: 100% implementados
+- ✅ **Dashboard Multilingual**: Funcional
+- ✅ **Sistema de Autenticação**: Robusto
+- ✅ **Pipeline Reprodutível**: Validado
+- ✅ **Deploy Streamlit Cloud**: Otimizado
+- ✅ **Documentação**: Completa
 
-### Tutoriais Relacionados
-
-- **Machine Learning**: [Documentação Scikit-learn](https://scikit-learn.org/stable/tutorial/index.html)
-- **Dashboard Streamlit**: [30 days of Streamlit](https://30days.streamlit.app)
-
-## 🤝 Contribuições
-
-### Como Contribuir
-
-1. Fork do projeto
-2. Criar branch para feature (`git checkout -b feature/AmazingFeature`)
-3. Commit das mudanças (`git commit -m 'Add AmazingFeature'`)
-4. Push para branch (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-### Áreas para Melhoria
-
-- [ ] Novos algoritmos de ML
-- [ ] Mais visualizações interativas
-- [ ] Integração com bases de dados
-- [ ] Testes automatizados
-- [ ] Deploy em cloud
+---
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 📞 Contacto
-
-**Desenvolvedor**: [Seu Nome]
-**Email**: [seu.email@example.com]
-**LinkedIn**: [Seu LinkedIn]
+Este projeto foi desenvolvido para fins **acadêmicos e educacionais**. Consulte o arquivo LICENSE para detalhes.
 
 ---
 
-### 🚀 Versão: 1.0.0
+**💰 Sistema de Análise Salarial Acadêmico v6.2** - Implementação Completa dos Algoritmos DBSCAN, APRIORI, FP-GROWTH e ECLAT
 
-### 📅 Última Atualização: Dezembro 2024
+**🎓 Projeto Acadêmico** | **📊 Data Science** | **🤖 Machine Learning** | **🌐 Dashboard Multilingual**
 
 ---
 
-**⭐ Se este projeto foi útil, considere dar uma estrela no repositório!**# projecto_final
+_Desenvolvido com rigor científico e metodologia acadêmica consolidada_

@@ -1,371 +1,524 @@
 """
-📊 Página de Visão Geral
-Dashboard principal com métricas e visualizações resumidas
+Página de Visão Geral - Overview
+Dashboard de Análise Salarial Científica
 """
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from pathlib import Path
+from datetime import datetime
 
-def show_overview_page(data, i18n):
-    """Página principal de visão geral"""
-    from src.components.navigation import show_page_header
+def show_overview_page(data):
+    """Página de visão geral"""
+    st.title("📊 Visão Geral")
+    st.markdown("### Dashboard de Análise Salarial Científica")
     
-    # ✅ IMPORT DIRETO DAS FUNÇÕES (correção do erro)
-    show_page_header(
-        i18n.t('navigation.overview', 'Visão Geral'),
-        i18n.t('overview.subtitle', 'Dashboard principal com métricas e insights dos dados'),
-        "📊"
-    )
+    # Subtitle com informações contextuais
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+    ">
+        <p style="margin: 0; color: #495057;">
+            📈 <strong>Sistema integrado de análise científica</strong> utilizando algoritmos de clustering (DBSCAN) 
+            e mineração de regras de associação (APRIORI, FP-GROWTH, ECLAT) para análise salarial.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    df = data.get('df')
-    if df is None or len(df) == 0:
-        st.warning(i18n.t('messages.pipeline_needed', '⚠️ Execute: python main.py'))
-        _show_system_status(data, i18n)
+    if not data:
+        show_no_data_warning()
         return
     
-    # Status dos dados
-    status = data.get('status', '❌ Dados não encontrados')
-    if "✅" in status:
-        st.success(status)
-    elif "⚠️" in status:
-        st.warning(status)
-    else:
-        st.error(status)
+    # Status dos algoritmos
+    show_algorithm_status(data)
     
-    # MÉTRICAS PRINCIPAIS - Usando st.metric diretamente (sem create_metric_card)
-    _show_main_metrics_corrected(df, i18n)
+    # Métricas principais
+    show_main_metrics(data)
     
-    # Visualizações resumidas
-    col1, col2 = st.columns(2)
+    # Análise dos dados originais
+    if 'original' in data:
+        show_dataset_analysis(data['original'])
     
-    with col1:
-        _show_salary_distribution(df, i18n)
-        _show_age_distribution(df, i18n)
-    
-    with col2:
-        _show_education_distribution(df, i18n)
-        _show_gender_distribution(df, i18n)
-    
-    # Métricas avançadas se disponíveis
-    _show_advanced_overview(data, i18n)
+    # Resumo executivo
+    show_executive_summary(data)
 
-def _show_main_metrics_corrected(df, i18n):
-    """Mostrar métricas principais usando st.metric diretamente"""
-    st.markdown(f"## 📋 {i18n.t('overview.main_metrics', 'Métricas Principais')}")
+def show_no_data_warning():
+    """Mostrar aviso quando dados não estão disponíveis"""
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        margin: 2rem 0;
+        border: 1px solid #ffecb5;
+    ">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h3 style="color: #856404; margin-bottom: 1rem;">Dados Não Encontrados</h3>
+        <p style="color: #856404; margin-bottom: 1.5rem;">
+            Para visualizar a análise completa, execute o pipeline de dados.
+        </p>
+        <div style="
+            background: rgba(133, 100, 4, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #856404;
+            font-weight: bold;
+        ">
+            python main.py
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # 4 colunas para as métricas principais
+    st.info("""
+    💡 **O pipeline irá executar:**
+    - Carregamento e preprocessamento dos dados
+    - Análise de clustering com DBSCAN
+    - Mineração de regras de associação (APRIORI, FP-GROWTH, ECLAT)
+    - Geração de métricas e visualizações
+    """)
+
+def show_algorithm_status(data):
+    """Mostrar status dos algoritmos com cards modernos"""
+    st.subheader("🔄 Status dos Algoritmos")
+    
+    algorithms = {
+        "DBSCAN": {
+            "key": "dbscan_results",
+            "icon": "🎯",
+            "description": "Clustering baseado em densidade"
+        },
+        "APRIORI": {
+            "key": "apriori_rules",
+            "icon": "⛏️",
+            "description": "Mineração clássica de regras"
+        },
+        "FP-GROWTH": {
+            "key": "fp_growth_rules",
+            "icon": "🌳",
+            "description": "Algoritmo de árvore FP"
+        },
+        "ECLAT": {
+            "key": "eclat_rules",
+            "icon": "📊",
+            "description": "Busca vertical de itemsets"
+        }
+    }
+    
+    cols = st.columns(4)
+    
+    for i, (name, info) in enumerate(algorithms.items()):
+        with cols[i]:
+            is_active = info["key"] in data and len(data[info["key"]]) > 0
+            count = len(data[info["key"]]) if is_active else 0
+            
+            # Cores baseadas no status
+            bg_color = "#d4edda" if is_active else "#f8d7da"
+            border_color = "#28a745" if is_active else "#dc3545"
+            text_color = "#155724" if is_active else "#721c24"
+            status_icon = "✅" if is_active else "❌"
+            
+            st.markdown(f"""
+            <div style="
+                background: {bg_color};
+                padding: 1.2rem;
+                border-radius: 10px;
+                border: 2px solid {border_color};
+                text-align: center;
+                margin-bottom: 1rem;
+                min-height: 140px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            ">
+                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+                    {info['icon']}
+                </div>
+                <h4 style="margin: 0; color: {text_color}; font-weight: bold;">
+                    {status_icon} {name}
+                </h4>
+                <p style="margin: 0.5rem 0; color: {text_color}; font-size: 0.85rem;">
+                    {info['description']}
+                </p>
+                <div style="color: {text_color}; font-weight: bold; font-size: 1.1rem;">
+                    {'Resultados: ' + str(count) if is_active else 'Não executado'}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+def show_main_metrics(data):
+    """Mostrar métricas principais em cards elegantes"""
+    st.subheader("📈 Métricas Principais")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        # Métrica 1: Total de Registros
-        total_records = len(df)
-        st.metric(
-            label=f"📋 {i18n.t('data.records', 'Registros')}",
-            value=f"{total_records:,}"
-        )
+        # Número de registros
+        if 'original' in data:
+            records = len(data['original'])
+            create_metric_card("📋 Registros", f"{records:,}", "Total de observações", "#4285f4")
+        else:
+            create_metric_card("📋 Registros", "N/A", "Dados não disponíveis", "#6c757d")
     
     with col2:
-        # Métrica 2: Total de Colunas
-        total_columns = len(df.columns)
-        st.metric(
-            label=f"📊 {i18n.t('data.columns', 'Colunas')}",
-            value=f"{total_columns}"
-        )
+        # Número de colunas
+        if 'original' in data:
+            columns = len(data['original'].columns)
+            create_metric_card("📊 Colunas", columns, "Variáveis no dataset", "#28a745")
+        else:
+            create_metric_card("📊 Colunas", "N/A", "Dados não disponíveis", "#6c757d")
     
     with col3:
-        # Métrica 3: Taxa de Salário Alto
-        if 'salary' in df.columns:
-            high_salary_rate = (df['salary'] == '>50K').mean()
-            st.metric(
-                label=f"💰 {i18n.t('data.high_salary', 'Salário Alto')}",
-                value=f"{high_salary_rate:.1%}",
-                delta=f"+{high_salary_rate-0.24:.1%}" if high_salary_rate > 0.24 else None
-            )
+        # Idade média
+        if 'original' in data and 'age' in data['original'].columns:
+            avg_age = data['original']['age'].mean()
+            create_metric_card("👤 Idade Média", f"{avg_age:.1f}", "Anos", "#ffc107")
         else:
-            st.metric(
-                label=f"💰 {i18n.t('data.high_salary', 'Salário Alto')}",
-                value="N/A"
-            )
+            create_metric_card("👤 Idade Média", "N/A", "Dados não disponíveis", "#6c757d")
     
     with col4:
-        # Métrica 4: Taxa de Valores Ausentes - ✅ MÉTRICA EM FALTA ADICIONADA
-        missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
-        st.metric(
-            label=f"❌ {i18n.t('data.missing', 'Missing')}",
-            value=f"{missing_rate:.1%}",
-            delta=f"-{0.05-missing_rate:.1%}" if missing_rate < 0.05 else None,
-            delta_color="inverse"  # Verde para menos missing values
-        )
-    
-    # Métricas secundárias em uma segunda linha
-    col5, col6, col7, col8 = st.columns(4)
-    
-    with col5:
-        # Duplicatas
-        if hasattr(df, 'duplicated'):
-            duplicates = df.duplicated().sum()
-            duplicate_rate = (duplicates / len(df)) * 100
-            st.metric(
-                label=f"🔄 {i18n.t('data.duplicates', 'Duplicatas')}",
-                value=f"{duplicate_rate:.1f}%",
-                delta=f"-{2.0-duplicate_rate:.1f}%" if duplicate_rate < 2.0 else None,
-                delta_color="inverse"
-            )
-    
-    with col6:
-        # Idade média
-        if 'age' in df.columns:
-            avg_age = df['age'].mean()
-            st.metric(
-                label=f"🎂 {i18n.t('data.avg_age', 'Idade Média')}",
-                value=f"{avg_age:.1f}",
-                delta="anos"
-            )
-    
-    with col7:
-        # Variáveis numéricas
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        st.metric(
-            label=f"🔢 {i18n.t('data.numeric_vars', 'Vars. Numéricas')}",
-            value=f"{len(numeric_cols)}"
-        )
-    
-    with col8:
-        # Variáveis categóricas
-        categorical_cols = df.select_dtypes(include=['object']).columns
-        st.metric(
-            label=f"📝 {i18n.t('data.categorical_vars', 'Vars. Categóricas')}",
-            value=f"{len(categorical_cols)}"
-        )
+        # Grau acadêmico com melhor remuneração
+        if 'original' in data and 'education' in data['original'].columns and 'salary' in data['original'].columns:
+            best_education = get_best_paid_education(data['original'])
+            create_metric_card("🎓 Melhor Grau", best_education['education'], f"{best_education['percentage']:.1f}% >50K", "#17a2b8")
+        else:
+            create_metric_card("🎓 Melhor Grau", "N/A", "Dados não disponíveis", "#6c757d")
 
-def _show_salary_distribution(df, i18n):
-    """Mostrar distribuição de salários"""
-    if 'salary' not in df.columns:
-        return
-    
-    st.markdown(f"### 💰 {i18n.t('charts.salary_distribution', 'Distribuição de Salários')}")
-    
-    salary_counts = df['salary'].value_counts()
-    
-    # Gráfico de pizza moderno
-    fig = go.Figure(data=[go.Pie(
-        labels=salary_counts.index,
-        values=salary_counts.values,
-        hole=0.4,
-        marker=dict(
-            colors=['#FF6B6B', '#4ECDC4'],
-            line=dict(color='#FFFFFF', width=2)
-        ),
-        textinfo='label+percent',
-        textfont_size=12
-    )])
-    
-    fig.update_layout(
-        title=i18n.t('charts.salary_distribution', 'Distribuição de Salários'),
-        height=400,
-        showlegend=True,
-        template="plotly_white"
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-def _show_age_distribution(df, i18n):
-    """Mostrar distribuição de idades"""
-    if 'age' not in df.columns:
-        return
-    
-    st.markdown(f"### 🎂 {i18n.t('charts.age_distribution', 'Distribuição de Idades')}")
-    
-    fig = px.histogram(
-        df, 
-        x='age',
-        nbins=30,
-        title=i18n.t('charts.age_distribution', 'Distribuição de Idades'),
-        color_discrete_sequence=['#667eea'],
-        template="plotly_white"
-    )
-    
-    fig.update_layout(
-        xaxis_title=i18n.t('data.age', 'Idade'),
-        yaxis_title=i18n.t('charts.frequency', 'Frequência'),
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-def _show_education_distribution(df, i18n):
-    """Mostrar distribuição de educação"""
-    if 'education' not in df.columns:
-        return
-    
-    st.markdown(f"### 🎓 {i18n.t('charts.education_distribution', 'Distribuição de Educação')}")
-    
-    # Top 8 níveis de educação
-    education_counts = df['education'].value_counts().head(8)
-    
-    fig = px.bar(
-        x=education_counts.values,
-        y=education_counts.index,
-        orientation='h',
-        title=i18n.t('charts.education_distribution', 'Top 8 Níveis de Educação'),
-        color=education_counts.values,
-        color_continuous_scale='viridis',
-        template="plotly_white"
-    )
-    
-    fig.update_layout(
-        xaxis_title=i18n.t('charts.count', 'Quantidade'),
-        yaxis_title=i18n.t('data.education', 'Educação'),
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-def _show_gender_distribution(df, i18n):
-    """Mostrar distribuição por sexo"""
-    if 'sex' not in df.columns:
-        return
-    
-    st.markdown(f"### 👥 {i18n.t('charts.sex_distribution', 'Distribuição por Sexo')}")
-    
-    sex_counts = df['sex'].value_counts()
-    
-    # Gráfico de barras com cores personalizadas
-    colors = ['#FF6B6B', '#4ECDC4']
-    
-    fig = go.Figure(data=[
-        go.Bar(
-            x=sex_counts.index,
-            y=sex_counts.values,
-            marker=dict(
-                color=colors[:len(sex_counts)],
-                line=dict(color='rgba(50, 50, 50, 0.5)', width=1)
-            ),
-            text=sex_counts.values,
-            textposition='auto'
-        )
-    ])
-    
-    fig.update_layout(
-        title=i18n.t('charts.sex_distribution', 'Distribuição por Sexo'),
-        xaxis_title=i18n.t('data.sex', 'Sexo'),
-        yaxis_title=i18n.t('charts.count', 'Quantidade'),
-        height=400,
-        template="plotly_white"
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-def _show_advanced_overview(data, i18n):
-    """Mostrar visão geral avançada se dados disponíveis"""
-    models = data.get('models', {})
-    
-    if models:
-        st.markdown(f"## 🤖 {i18n.t('overview.models_summary', 'Resumo dos Modelos')}")
+def get_best_paid_education(df):
+    """Encontrar o grau acadêmico com melhor remuneração"""
+    try:
+        # Calcular percentual de salários >50K por nível educacional
+        education_salary = df.groupby('education')['salary'].apply(
+            lambda x: (x == '>50K').mean() * 100
+        ).sort_values(ascending=False)
         
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric(
-                label=f"🤖 {i18n.t('models.total', 'Total de Modelos')}",
-                value=f"{len(models)}"
-            )
-        
-        # Buscar melhor modelo por accuracy
-        best_model = None
-        best_accuracy = 0
-        
-        for model_name, model_data in models.items():
-            if isinstance(model_data, dict) and 'accuracy' in model_data:
-                if model_data['accuracy'] > best_accuracy:
-                    best_accuracy = model_data['accuracy']
-                    best_model = model_name
-        
-        if best_model:
-            with col2:
-                st.metric(
-                    label=f"🏆 {i18n.t('models.best_model', 'Melhor Modelo')}",
-                    value=best_model
-                )
+        if len(education_salary) > 0:
+            best_education = education_salary.index[0]
+            best_percentage = education_salary.iloc[0]
             
-            with col3:
-                st.metric(
-                    label=f"🎯 {i18n.t('models.best_accuracy', 'Melhor Accuracy')}",
-                    value=f"{best_accuracy:.3f}",
-                    delta=f"+{best_accuracy-0.8:.3f}" if best_accuracy > 0.8 else None
-                )
-    
-    # Status dos arquivos gerados
-    _show_files_status(data, i18n)
+            # Mapear nomes para versões mais legíveis
+            education_mapping = {
+                'Doctorate': 'Doutorado',
+                'Masters': 'Mestrado', 
+                'Prof-school': 'Escola Prof.',
+                'Bachelors': 'Bacharelado',
+                'Assoc-acdm': 'Assoc. Acad.',
+                'Assoc-voc': 'Assoc. Tec.',
+                'Some-college': 'Sup. Incomp.',
+                'HS-grad': 'Ens. Médio',
+                '11th': '11º ano',
+                '10th': '10º ano',
+                '9th': '9º ano',
+                '7th-8th': '7º-8º ano',
+                '5th-6th': '5º-6º ano',
+                '1st-4th': '1º-4º ano',
+                'Preschool': 'Pré-escola'
+            }
+            
+            display_name = education_mapping.get(best_education, best_education)
+            
+            return {
+                'education': display_name,
+                'percentage': best_percentage,
+                'original_name': best_education
+            }
+        else:
+            return {
+                'education': 'N/A',
+                'percentage': 0,
+                'original_name': 'N/A'
+            }
+    except Exception as e:
+        return {
+            'education': 'Erro',
+            'percentage': 0,
+            'original_name': 'Error'
+        }
 
-def _show_files_status(data, i18n):
-    """Mostrar status dos arquivos gerados"""
-    st.markdown(f"## 📁 {i18n.t('overview.files_status', 'Status dos Arquivos')}")
+def create_metric_card(title, value, description, color):
+    """Criar card de métrica estilizado"""
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, {color}15, {color}08);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 4px solid {color};
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    ">
+        <h4 style="margin: 0; color: #333; font-size: 0.9rem; font-weight: 600;">
+            {title}
+        </h4>
+        <h2 style="margin: 0.8rem 0; color: {color}; font-size: 2rem; font-weight: bold;">
+            {value}
+        </h2>
+        <p style="margin: 0; color: #666; font-size: 0.8rem; opacity: 0.8;">
+            {description}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def show_dataset_analysis(df):
+    """Análise detalhada do dataset"""
+    st.subheader("📊 Análise do Dataset")
     
-    # Verificar arquivos importantes
-    important_paths = {
-        'Imagens': Path("output/images"),
-        'Análises': Path("output/analysis"), 
-        'Modelos': Path("models"),
-        'Logs': Path("logs")
-    }
-    
+    # Cards de informações básicas
     col1, col2 = st.columns(2)
     
     with col1:
-        for i, (name, path) in enumerate(list(important_paths.items())[:2]):
-            if path.exists():
-                file_count = len(list(path.glob("*")))
-                st.metric(f"📂 {name}", file_count)
-            else:
-                st.metric(f"📂 {name}", "0", "❌ Não encontrado")
+        st.markdown("""
+        #### 📋 Informações Básicas
+        """)
+        
+        info_data = {
+            "📏 Dimensões": f"{len(df):,} × {len(df.columns)}",
+            "💾 Memória": f"{df.memory_usage(deep=True).sum() / 1024**2:.1f} MB",
+            "🔍 Valores Nulos": f"{df.isnull().sum().sum():,}",
+            "📊 Completude": f"{((df.count().sum() / (len(df) * len(df.columns))) * 100):.1f}%"
+        }
+        
+        for label, value in info_data.items():
+            st.markdown(f"""
+            <div style="
+                background: rgba(102, 126, 234, 0.1);
+                padding: 0.8rem;
+                border-radius: 8px;
+                margin: 0.3rem 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <span style="font-weight: 500;">{label}</span>
+                <span style="color: #667eea; font-weight: bold;">{value}</span>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col2:
-        for i, (name, path) in enumerate(list(important_paths.items())[2:]):
-            if path.exists():
-                file_count = len(list(path.glob("*")))
-                st.metric(f"📂 {name}", file_count)
-            else:
-                st.metric(f"📂 {name}", "0", "❌ Não encontrado")
-
-def _show_system_status(data, i18n):
-    """Mostrar status do sistema quando não há dados"""
-    st.markdown(f"## ⚙️ {i18n.t('overview.system_status', 'Status do Sistema')}")
+        # Análise educacional detalhada
+        if 'education' in df.columns and 'salary' in df.columns:
+            st.markdown("#### 🎓 Análise Educacional")
+            
+            # Top 3 graus com melhor remuneração
+            education_salary = df.groupby('education')['salary'].apply(
+                lambda x: (x == '>50K').mean() * 100
+            ).sort_values(ascending=False)
+            
+            top_3_education = education_salary.head(3)
+            
+            education_mapping = {
+                'Doctorate': 'Doutorado',
+                'Masters': 'Mestrado', 
+                'Prof-school': 'Escola Prof.',
+                'Bachelors': 'Bacharelado',
+                'Assoc-acdm': 'Assoc. Acad.',
+                'Assoc-voc': 'Assoc. Tec.',
+                'Some-college': 'Sup. Incomp.',
+                'HS-grad': 'Ens. Médio'
+            }
+            
+            for i, (edu, pct) in enumerate(top_3_education.items(), 1):
+                display_name = education_mapping.get(edu, edu)
+                color = ["#28a745", "#ffc107", "#17a2b8"][i-1]
+                
+                st.markdown(f"""
+                <div style="
+                    background: rgba(40, 167, 69, 0.1);
+                    padding: 0.8rem;
+                    border-radius: 8px;
+                    margin: 0.3rem 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-left: 3px solid {color};
+                ">
+                    <span style="font-weight: 500;">{i}º {display_name}</span>
+                    <span style="color: {color}; font-weight: bold;">{pct:.1f}%</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Informações educacionais não disponíveis no dataset")
     
-    status_checks = [
-        ("📊 Dados CSV", Path("data/raw/4-Carateristicas_salario.csv").exists()),
-        ("🗄️ Base de Dados", "sql" in data.get('source', '').lower()),
-        ("🤖 Pipeline ML", Path("models").exists()),
-        ("📈 Análises", Path("output/analysis").exists()),
-        ("🎨 Visualizações", Path("output/images").exists()),
-    ]
-    
-    col1, col2 = st.columns(2)
-    
-    for i, (check_name, status) in enumerate(status_checks):
-        target_col = col1 if i % 2 == 0 else col2
+    # Análise de idade se disponível
+    if 'age' in df.columns:
+        st.markdown("#### 👤 Distribuição Etária")
         
-        with target_col:
-            if status:
-                st.success(f"✅ {check_name}")
-            else:
-                st.error(f"❌ {check_name}")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Estatísticas de idade
+            age_stats = {
+                "Idade Mínima": df['age'].min(),
+                "Idade Máxima": df['age'].max(),
+                "Idade Média": df['age'].mean(),
+                "Mediana": df['age'].median(),
+                "Desvio Padrão": df['age'].std()
+            }
+            
+            for stat, value in age_stats.items():
+                st.markdown(f"- **{stat}**: {value:.1f} anos")
+        
+        with col2:
+            # Faixas etárias
+            df_temp = df.copy()
+            df_temp['faixa_etaria'] = pd.cut(
+                df_temp['age'], 
+                bins=[0, 25, 35, 45, 55, 100], 
+                labels=['18-25', '26-35', '36-45', '46-55', '55+']
+            )
+            
+            faixa_counts = df_temp['faixa_etaria'].value_counts().sort_index()
+            
+            for faixa, count in faixa_counts.items():
+                pct = (count / len(df)) * 100
+                st.markdown(f"- **{faixa} anos**: {count:,} ({pct:.1f}%)")
     
-    # Instruções
+    # Gráfico de distribuição salarial por educação
+    if 'salary' in df.columns and 'education' in df.columns:
+        st.markdown("#### 📈 Distribuição Salarial por Nível Educacional")
+        
+        # Criar cross-tabulation
+        crosstab = pd.crosstab(df['education'], df['salary'], normalize='index') * 100
+        crosstab = crosstab.sort_values('>50K', ascending=False)
+        
+        # Gráfico de barras horizontal
+        fig_education = px.bar(
+            crosstab.reset_index(),
+            x='>50K',
+            y='education',
+            orientation='h',
+            title="Percentual de Salários >50K por Nível Educacional",
+            labels={'education': 'Nível Educacional', '>50K': 'Percentual com Salário >50K (%)'},
+            color='>50K',
+            color_continuous_scale='Blues'
+        )
+        
+        fig_education.update_layout(
+            height=400,
+            yaxis={'categoryorder': 'total ascending'},
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig_education, use_container_width=True)
+    
+    # Análise de correlação idade vs salário se disponível
+    if 'age' in df.columns and 'salary' in df.columns:
+        st.markdown("#### 📊 Idade vs Faixa Salarial")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Box plot idade por salário
+            fig_box = px.box(
+                df,
+                x='salary',
+                y='age',
+                title="Distribuição de Idade por Faixa Salarial"
+            )
+            fig_box.update_layout(height=350)
+            st.plotly_chart(fig_box, use_container_width=True)
+        
+        with col2:
+            # Idade média por faixa salarial
+            age_by_salary = df.groupby('salary')['age'].agg(['mean', 'median', 'std']).round(1)
+            
+            st.markdown("**Estatísticas por Faixa Salarial:**")
+            
+            for salary_range in age_by_salary.index:
+                stats = age_by_salary.loc[salary_range]
+                st.markdown(f"""
+                **{salary_range}:**
+                - Média: {stats['mean']:.1f} anos
+                - Mediana: {stats['median']:.1f} anos
+                - Desvio: {stats['std']:.1f} anos
+                """)
+
+def show_executive_summary(data):
+    """Resumo executivo do sistema"""
+    st.subheader("📋 Resumo Executivo")
+    
+    # Calcular estatísticas do sistema
+    total_algorithms = 4
+    active_algorithms = sum(1 for key in ['dbscan_results', 'apriori_rules', 'fp_growth_rules', 'eclat_rules'] if key in data and len(data[key]) > 0)
+    system_health = (active_algorithms / total_algorithms) * 100
+    
+    # Determinar status geral
+    if system_health >= 75:
+        status_color = "#28a745"
+        status_icon = "🟢"
+        status_text = "Excelente"
+    elif system_health >= 50:
+        status_color = "#ffc107"
+        status_icon = "🟡"
+        status_text = "Bom"
+    else:
+        status_color = "#dc3545"
+        status_icon = "🔴"
+        status_text = "Requer Atenção"
+    
     st.markdown(f"""
-    ### 💡 {i18n.t('overview.instructions', 'Como Começar')}:
+    <div style="
+        background: linear-gradient(135deg, {status_color}15, {status_color}08);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 2px solid {status_color};
+        margin: 1rem 0;
+    ">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <div style="font-size: 2rem; margin-right: 1rem;">{status_icon}</div>
+            <div>
+                <h3 style="margin: 0; color: {status_color};">
+                    Status do Sistema: {status_text}
+                </h3>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    {active_algorithms}/{total_algorithms} algoritmos ativos • {system_health:.0f}% de completude
+                </p>
+            </div>
+        </div>
+        
+        <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px;">
+            <p style="margin: 0; color: #333; line-height: 1.6;">
+                <strong>🎯 Status Atual:</strong> O sistema de análise científica está 
+                {"funcionando adequadamente" if system_health >= 50 else "com problemas"}
+                com {active_algorithms} de {total_algorithms} algoritmos em execução.
+                {"Todos os componentes principais estão operacionais." if system_health >= 75 else 
+                 "A maioria dos componentes está funcional." if system_health >= 50 else
+                 "Vários componentes necessitam de atenção."}
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    1. **{i18n.t('overview.step1', 'Execute o pipeline principal')}**: 
-       ```bash
-       python main.py
-       ```
-    
-    2. **{i18n.t('overview.step2', 'Aguarde o processamento')}**: O sistema irá carregar dados e treinar modelos
-    
-    3. **{i18n.t('overview.step3', 'Explore o dashboard')}**: Todas as funcionalidades estarão disponíveis
-    """)
+    # Próximos passos
+    if system_health < 100:
+        st.markdown("#### 🚀 Próximos Passos Recomendados")
+        
+        recommendations = []
+        
+        if 'dbscan_results' not in data:
+            recommendations.append("🎯 Executar análise de clustering DBSCAN")
+        
+        if 'apriori_rules' not in data:
+            recommendations.append("⛏️ Gerar regras de associação APRIORI")
+            
+        if 'fp_growth_rules' not in data:
+            recommendations.append("🌳 Implementar algoritmo FP-GROWTH")
+            
+        if 'eclat_rules' not in data:
+            recommendations.append("📊 Executar mineração ECLAT")
+        
+        for i, rec in enumerate(recommendations, 1):
+            st.markdown(f"{i}. {rec}")
+        
+        if recommendations:
+            st.info("💡 Execute `python main.py` para completar todas as análises pendentes.")

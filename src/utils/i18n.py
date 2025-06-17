@@ -7,359 +7,254 @@ import streamlit as st
 import json
 from pathlib import Path
 import logging
+from typing import Optional, Dict
 
 logger = logging.getLogger(__name__)
 
 class I18nSystem:
-    """Sistema de internacionalização com JSON"""
+    """Sistema de internacionalização com arquivos JSON separados"""
     
     def __init__(self):
-        self.translations_dir = Path("translate")
+        self.logger = logging.getLogger(__name__)
+        self.current_language = 'pt'  # Idioma padrão
         self.translations = {}
-        self.config = self._load_config()
-        self.default_language = self.config.get('default_language', 'pt')
+        self.fallback_translations = {}
         
-        # Carregar todas as traduções
-        self._load_all_translations()
-        
-        # Inicializar idioma
-        if 'language' not in st.session_state:
-            st.session_state.language = self.default_language
-    
-    def _load_config(self):
-        """Carregar configuração de idiomas"""
-        config_file = self.translations_dir / "config.json"
+        # Carregar traduções dos arquivos JSON
+        self._load_translations()
+
+    def _load_translations(self):
+        """Carregar traduções dos arquivos JSON da pasta translate/"""
         try:
-            if config_file.exists():
-                return json.loads(config_file.read_text(encoding='utf-8'))
-        except Exception as e:
-            logger.error(f"Erro ao carregar config i18n: {e}")
-        
-        # Configuração padrão
-        return {
-            "default_language": "pt",
-            "available_languages": {
-                "pt": {"name": "🇵🇹 Português", "flag": "🇵🇹"},
-                "en": {"name": "🇬🇧 English", "flag": "🇬🇧"}
-            }
-        }
-    
-    def _load_all_translations(self):
-        """Carregar todas as traduções disponíveis"""
-        if not self.translations_dir.exists():
-            self._create_default_translations()
-            return
-        
-        for lang_file in self.translations_dir.glob("*.json"):
-            if lang_file.stem == "config":
-                continue
+            # Procurar pasta translate/ (baseada na estrutura do projeto)
+            translations_paths = [
+                Path("translate"),
+                Path("translations"), 
+                Path("./translate"),
+                Path("../translate")
+            ]
+            
+            translations_dir = None
+            for path in translations_paths:
+                if path.exists() and any(path.glob("*.json")):
+                    translations_dir = path
+                    self.logger.info(f"📁 Pasta de traduções encontrada: {translations_dir}")
+                    break
+            
+            if not translations_dir:
+                self.logger.warning("📁 Pasta translate/ não encontrada, usando traduções padrão")
+                self._load_default_translations()
+                return
+            
+            # Carregar todos os arquivos JSON da pasta
+            for json_file in translations_dir.glob("*.json"):
+                language = json_file.stem  # Nome do arquivo sem extensão
                 
-            try:
-                lang_code = lang_file.stem
-                self.translations[lang_code] = json.loads(
-                    lang_file.read_text(encoding='utf-8')
-                )
-                logger.info(f"✅ Tradução carregada: {lang_code}")
-            except Exception as e:
-                logger.error(f"Erro ao carregar {lang_file}: {e}")
-    
-    def _create_default_translations(self):
-        """Criar traduções padrão se não existirem"""
-        try:
-            self.translations_dir.mkdir(exist_ok=True)
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        self.translations[language] = json.load(f)
+                    self.logger.info(f"✅ Traduções {language.upper()} carregadas de {json_file.name}")
+                except Exception as e:
+                    self.logger.error(f"❌ Erro ao carregar {json_file.name}: {e}")
             
-            # Traduções mínimas em português
-            default_pt = {
-                "app": {"title": "💰 Dashboard de Análise Salarial"},
-                "auth": {
-                    "login_title": "🔓 Acesso ao Sistema",
-                    "username": "👤 Utilizador", 
-                    "password": "🔑 Palavra-passe",
-                    "login_button": "🚀 Entrar",
-                    "demo_button": "🎮 Demo",
-                    "logout": "🚪 Sair",
-                    "welcome": "Bem-vindo",
-                    "invalid_credentials": "❌ Credenciais inválidas!",
-                    "logout_success": "✅ Logout realizado com sucesso!",
-                    "logged_user": "👤 Utilizador Ligado",
-                    "role": "🎯 Papel"
-                },
-                "navigation": {
-                    "title": "Navegação",
-                    "overview": "📊 Visão Geral",
-                    "exploratory": "📈 Análise Exploratória", 
-                    "models": "🤖 Modelos ML",
-                    "prediction": "🔮 Predição"
-                },
-                "data": {
-                    "records": "📋 Registos",
-                    "columns": "📊 Colunas",
-                    "high_salary": "💰 Salário Alto",
-                    "missing": "❌ Em Falta",
-                    "age": "🎂 Idade",
-                    "salary": "💰 Salário",
-                    "education": "🎓 Educação",
-                    "sex": "👥 Sexo",
-                    "workclass": "💼 Classe Trabalhadora",
-                    "marital_status": "💑 Estado Civil"
-                },
-                "charts": {
-                    "salary_distribution": "💰 Distribuição de Salários",
-                    "sex_distribution": "👥 Distribuição por Sexo",
-                    "age_distribution": "📊 Distribuição de Idades",
-                    "correlation_matrix": "🔗 Matriz de Correlação"
-                },
-                "messages": {
-                    "pipeline_needed": "⚠️ Execute: python main.py",
-                    "success": "✅ Sucesso!",
-                    "error": "❌ Erro"
-                },
-                "models": {
-                    "random_forest": "🌲 Random Forest",
-                    "logistic_regression": "📊 Regressão Logística",
-                    "svm": "🎯 SVM",
-                    "accuracy": "📊 Precisão",
-                    "precision": "🎯 Precision"
-                }
-            }
-            
-            # Traduções em inglês
-            default_en = {
-                "app": {"title": "💰 Salary Analysis Dashboard"},
-                "auth": {
-                    "login_title": "🔓 System Access",
-                    "username": "👤 Username",
-                    "password": "🔑 Password", 
-                    "login_button": "🚀 Login",
-                    "demo_button": "🎮 Demo",
-                    "logout": "🚪 Logout",
-                    "welcome": "Welcome",
-                    "invalid_credentials": "❌ Invalid credentials!",
-                    "logout_success": "✅ Logout successful!",
-                    "logged_user": "👤 Logged User",
-                    "role": "🎯 Role"
-                },
-                "navigation": {
-                    "title": "Navigation",
-                    "overview": "📊 Overview",
-                    "exploratory": "📈 Exploratory Analysis",
-                    "models": "🤖 ML Models", 
-                    "prediction": "🔮 Prediction"
-                },
-                "data": {
-                    "records": "📋 Records",
-                    "columns": "📊 Columns",
-                    "high_salary": "💰 High Salary",
-                    "missing": "❌ Missing",
-                    "age": "🎂 Age",
-                    "salary": "💰 Salary",
-                    "education": "🎓 Education",
-                    "sex": "👥 Sex",
-                    "workclass": "💼 Work Class",
-                    "marital_status": "💑 Marital Status"
-                },
-                "charts": {
-                    "salary_distribution": "💰 Salary Distribution",
-                    "sex_distribution": "👥 Distribution by Sex",
-                    "age_distribution": "📊 Age Distribution",
-                    "correlation_matrix": "🔗 Correlation Matrix"
-                },
-                "messages": {
-                    "pipeline_needed": "⚠️ Execute: python main.py",
-                    "success": "✅ Success!",
-                    "error": "❌ Error"
-                },
-                "models": {
-                    "random_forest": "🌲 Random Forest",
-                    "logistic_regression": "📊 Logistic Regression",
-                    "svm": "🎯 SVM",
-                    "accuracy": "📊 Accuracy",
-                    "precision": "🎯 Precision"
-                }
-            }
-            
-            # Salvar arquivos
-            (self.translations_dir / "pt.json").write_text(
-                json.dumps(default_pt, indent=2, ensure_ascii=False), encoding='utf-8'
-            )
-            (self.translations_dir / "en.json").write_text(
-                json.dumps(default_en, indent=2, ensure_ascii=False), encoding='utf-8'
-            )
-            
-            # Config
-            default_config = {
-                "default_language": "pt",
-                "available_languages": {
-                    "pt": {"name": "🇵🇹 Português", "flag": "🇵🇹"},
-                    "en": {"name": "🇬🇧 English", "flag": "🇬🇧"}
-                }
-            }
-            (self.translations_dir / "config.json").write_text(
-                json.dumps(default_config, indent=2), encoding='utf-8'
-            )
-            
-            # Recarregar
-            self._load_all_translations()
-            
-            st.success("✅ Estrutura de tradução criada automaticamente!")
-            
-        except Exception as e:
-            st.error(f"❌ Erro ao criar estrutura: {e}")
-    
-    def get_language(self):
-        """Obter idioma atual com fallback seguro"""
-        try:
-            lang = st.session_state.get('current_language', self.default_language)
-            
-            # Validar se o idioma é suportado
-            available = self.get_available_languages()
-            if lang not in available:
-                lang = self.default_language
-            
-            return lang
-        
-        except Exception as e:
-            logging.error(f"Erro ao obter idioma atual: {e}")
-            return self.default_language or 'pt'
-
-    def set_language(self, language_code):
-        """Definir idioma com validação"""
-        try:
-            available = self.get_available_languages()
-            
-            if language_code in available:
-                st.session_state.current_language = language_code
-                logging.info(f"Idioma alterado para: {language_code}")
+            # Usar português como fallback se disponível
+            if 'pt' in self.translations:
+                self.fallback_translations = self._flatten_dict(self.translations['pt'])
+                self.logger.info("✅ Fallback em português configurado")
+            elif self.translations:
+                # Usar primeiro idioma disponível como fallback
+                first_lang = list(self.translations.keys())[0]
+                self.fallback_translations = self._flatten_dict(self.translations[first_lang])
+                self.logger.info(f"✅ Fallback em {first_lang} configurado")
             else:
-                logging.warning(f"Idioma não suportado: {language_code}")
-                st.session_state.current_language = self.default_language
-        
+                self.logger.warning("⚠️ Nenhuma tradução carregada, usando padrão")
+                self._load_default_translations()
+            
         except Exception as e:
-            logging.error(f"Erro ao definir idioma: {e}")
-            st.session_state.current_language = self.default_language or 'pt'
-    
-    def get_available_languages(self):
-        """Obter idiomas disponíveis - SEMPRE retorna dict consistente"""
-        try:
-            # Tentar obter do config
-            langs = self.config.get('available_languages', {})
-            
-            # ✅ CORREÇÃO: Garantir sempre dict válido
-            if not langs or not isinstance(langs, dict):
-                # Configuração padrão robusta
-                langs = {
-                    "pt": {
-                        "name": "🇵🇹 Português",
-                        "flag": "🇵🇹",
-                        "region": "Portugal/Brasil"
-                    },
-                    "en": {
-                        "name": "🇺🇸 English", 
-                        "flag": "🇺🇸",
-                        "region": "United States"
-                    }
-                }
-            
-            # Validar estrutura de cada idioma
-            validated_langs = {}
-            for code, info in langs.items():
-                if isinstance(info, dict):
-                    validated_langs[code] = {
-                        "name": info.get('name', f'🌍 {code.upper()}'),
-                        "flag": info.get('flag', '🌍'),
-                        "region": info.get('region', 'Unknown')
-                    }
-                else:
-                    # Se info não for dict, criar estrutura padrão
-                    validated_langs[code] = {
-                        "name": f'🌍 {code.upper()}',
-                        "flag": '🌍',
-                        "region": 'Unknown'
-                    }
-            
-            return validated_langs
-        
-        except Exception as e:
-            logging.error(f"Erro ao obter idiomas disponíveis: {e}")
-            # Retorno de emergência
-            return {
-                "pt": {"name": "🇵🇹 Português", "flag": "🇵🇹", "region": "Portugal"},
-                "en": {"name": "🇺🇸 English", "flag": "🇺🇸", "region": "United States"}
-            }
-    
-    def t(self, key, fallback=None):
-        """
-        Traduzir chave usando notação de ponto
-        Exemplo: t('auth.login_button') -> busca translations[lang]['auth']['login_button']
-        """
-        current_lang = self.get_language()
-        
-        # Buscar tradução no idioma atual
-        text = self._get_nested_value(self.translations.get(current_lang, {}), key)
-        
-        # Fallback para inglês se não encontrar
-        if text is None and current_lang != 'en':
-            text = self._get_nested_value(self.translations.get('en', {}), key)
-        
-        # Fallback final
-        if text is None:
-            text = fallback if fallback is not None else key
-        
-        return text
-    
-    def _get_nested_value(self, data, key):
-        """Buscar valor usando notação de ponto (ex: 'auth.login_button')"""
-        keys = key.split('.')
-        current = data
-        
-        for k in keys:
-            if isinstance(current, dict) and k in current:
-                current = current[k]
-            else:
-                return None
-        
-        return current
-    
-    def show_language_selector(self):
-        """Mostrar seletor de idioma na sidebar - REMOVIDO (movido para app_multilingual.py)"""
-        # Esta função foi movida para app_multilingual.py para evitar conflitos
-        pass
+            self.logger.error(f"❌ Erro ao carregar traduções: {e}")
+            self._load_default_translations()
 
-    def translate_data_value(self, value):
-        """Traduzir valores específicos dos dados"""
-        current_lang = self.get_language()
-        
-        # Mapeamentos de tradução para valores comuns
-        value_translations = {
+    def _load_default_translations(self):
+        """Carregar traduções padrão se os arquivos JSON não existirem"""
+        self.translations = {
             'pt': {
-                '>50K': 'Acima de 50K',
-                '<=50K': 'Até 50K',
-                'Male': 'Masculino',
-                'Female': 'Feminino',
-                'Private': 'Privado',
-                'Self-emp-not-inc': 'Autônomo (não incorporado)',
-                'Self-emp-inc': 'Autônomo (incorporado)',
-                'Federal-gov': 'Governo Federal',
-                'Local-gov': 'Governo Local',
-                'State-gov': 'Governo Estadual',
-                'Without-pay': 'Sem Pagamento',
-                'Never-worked': 'Nunca Trabalhou',
-                'Married-civ-spouse': 'Casado(a)',
-                'Never-married': 'Solteiro(a)',
-                'Divorced': 'Divorciado(a)',
-                'Separated': 'Separado(a)',
-                'Widowed': 'Viúvo(a)',
-                'HS-grad': 'Ensino Médio',
-                'Some-college': 'Faculdade Incompleta',
-                'Bachelors': 'Bacharelado',
-                'Masters': 'Mestrado',
-                'Doctorate': 'Doutorado',
-                'Prof-school': 'Escola Profissional'
+                # Navegação
+                'navigation': {
+                    'overview': 'Visão Geral',
+                    'exploratory': 'Análise Exploratória',
+                    'models': 'Modelos ML',
+                    'clustering': 'Clustering',
+                    'association_rules': 'Regras de Associação',
+                    'prediction': 'Predição',
+                    'metrics': 'Métricas',
+                    'reports': 'Relatórios',
+                    'admin': 'Administração',
+                    'data_status': 'Status dos Dados'
+                },
+                
+                # Authentication
+                'auth': {
+                    'login': 'Login',
+                    'username': 'Nome de usuário',
+                    'password': 'Senha',
+                    'login_button': 'Entrar',
+                    'login_required': 'Login necessário',
+                    'admin_required': 'Acesso restrito a administradores',
+                    'invalid_credentials': 'Credenciais inválidas',
+                    'logout': 'Sair',
+                    'welcome': 'Bem-vindo'
+                },
+                
+                # Association Rules
+                'association': {
+                    'title': 'Análise de Regras de Associação',
+                    'comparison': 'Comparação de Algoritmos',
+                    'apriori': 'Algoritmo Apriori',
+                    'fp_growth': 'Algoritmo FP-Growth',
+                    'eclat': 'Algoritmo Eclat',
+                    'visualizations': 'Visualizações',
+                    'rules_found': 'Regras Encontradas',
+                    'avg_confidence': 'Confiança Média',
+                    'avg_lift': 'Lift Médio',
+                    'max_confidence': 'Confiança Máxima',
+                    'execution_status': 'Status de Execução',
+                    'min_confidence': 'Confiança Mínima',
+                    'min_lift': 'Lift Mínimo',
+                    'top_rules': 'Top Regras',
+                    'no_rules': 'Nenhuma regra encontrada',
+                    'total_rules': 'Total de Regras',
+                    'best_algorithm': 'Melhor Algoritmo',
+                    'general_confidence': 'Confiança Geral',
+                    'algorithms_ok': 'Algoritmos OK'
+                }
             },
             'en': {
-                # Valores já em inglês - retornar como estão
+                # Navigation
+                'navigation': {
+                    'overview': 'Overview',
+                    'exploratory': 'Exploratory Analysis',
+                    'models': 'ML Models',
+                    'clustering': 'Clustering',
+                    'association_rules': 'Association Rules',
+                    'prediction': 'Prediction',
+                    'metrics': 'Metrics',
+                    'reports': 'Reports',
+                    'admin': 'Administration',
+                    'data_status': 'Data Status'
+                },
+                
+                # Authentication
+                'auth': {
+                    'login': 'Login',
+                    'username': 'Username',
+                    'password': 'Password',
+                    'login_button': 'Sign In',
+                    'login_required': 'Login required',
+                    'admin_required': 'Admin access required',
+                    'invalid_credentials': 'Invalid credentials',
+                    'logout': 'Logout',
+                    'welcome': 'Welcome'
+                },
+                
+                # Association Rules
+                'association': {
+                    'title': 'Association Rules Analysis',
+                    'comparison': 'Algorithm Comparison',
+                    'apriori': 'Apriori Algorithm',
+                    'fp_growth': 'FP-Growth Algorithm',
+                    'eclat': 'Eclat Algorithm',
+                    'visualizations': 'Visualizations',
+                    'rules_found': 'Rules Found',
+                    'avg_confidence': 'Average Confidence',
+                    'avg_lift': 'Average Lift',
+                    'max_confidence': 'Max Confidence',
+                    'execution_status': 'Execution Status',
+                    'min_confidence': 'Min Confidence',
+                    'min_lift': 'Min Lift',
+                    'top_rules': 'Top Rules',
+                    'no_rules': 'No rules found',
+                    'total_rules': 'Total Rules',
+                    'best_algorithm': 'Best Algorithm',
+                    'general_confidence': 'General Confidence',
+                    'algorithms_ok': 'Algorithms OK'
+                }
             }
         }
         
-        translations = value_translations.get(current_lang, {})
-        return translations.get(value, value)
+        self.fallback_translations = self._flatten_dict(self.translations.get('pt', {}))
+
+    def set_language(self, language: str):
+        """Definir idioma atual"""
+        if language in self.translations:
+            self.current_language = language
+            self.logger.info(f"🌍 Idioma alterado para: {language}")
+        else:
+            self.logger.warning(f"⚠️ Idioma '{language}' não disponível")
+    
+    def get_language(self) -> str:
+        """Obter idioma atual"""
+        return self.current_language
+    
+    def get_available_languages(self) -> list:
+        """Obter lista de idiomas disponíveis"""
+        return list(self.translations.keys())
+
+    def t(self, key: str, default: Optional[str] = None) -> str:
+        """Traduzir chave (suporta estrutura aninhada dos JSONs)"""
+        try:
+            # Tentar idioma atual
+            current_translations = self.translations.get(self.current_language, {})
+            
+            # Buscar por chave aninhada (ex: 'navigation.overview')
+            if '.' in key:
+                keys = key.split('.')
+                value = current_translations
+                
+                for k in keys:
+                    if isinstance(value, dict) and k in value:
+                        value = value[k]
+                    else:
+                        # Tentar fallback
+                        flattened_fallback = self.fallback_translations
+                        fallback_value = flattened_fallback.get(key)
+                        return fallback_value or default or key
+                
+                return str(value) if not isinstance(value, dict) else (default or key)
+            
+            # Chave simples - tentar primeiro nível
+            translation = current_translations.get(key)
+            if translation:
+                return translation
+            
+            # Fallback
+            fallback = self.fallback_translations.get(key)
+            if fallback:
+                return fallback
+            
+            # Retornar default ou a própria chave
+            return default or key
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro na tradução da chave '{key}': {e}")
+            return default or key
+
+    def _flatten_dict(self, d: dict, parent_key: str = '', sep: str = '.') -> dict:
+        """Achatar dicionário aninhado para busca mais eficiente"""
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self._flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+    def debug_translations(self):
+        """Debug das traduções carregadas"""
+        self.logger.info("🔍 DEBUG DE TRADUÇÕES")
+        self.logger.info(f"   Idioma atual: {self.current_language}")
+        self.logger.info(f"   Idiomas disponíveis: {list(self.translations.keys())}")
+        
+        for lang, translations in self.translations.items():
+            flat_translations = self._flatten_dict(translations)
+            self.logger.info(f"   {lang.upper()}: {len(flat_translations)} chaves")

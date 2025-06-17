@@ -222,3 +222,93 @@ class SidebarComponent:
                 **Demo:** demo / demo123  
                 **Guest:** guest / guest123
                 """)
+    
+def render_modern_sidebar():
+    """Renderiza sidebar com botões modernos para navegação"""
+    
+    # CSS para botões modernos
+    st.markdown("""
+    <style>
+    .nav-button {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 20px;
+        margin: 8px 0;
+        font-size: 16px;
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        text-decoration: none;
+        display: block;
+    }
+    
+    .nav-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+    
+    .nav-button.active {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+    }
+    
+    .sidebar-title {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 24px;
+        font-weight: 700;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Título da sidebar
+    st.markdown('<h2 class="sidebar-title">📊 Análise Salarial</h2>', unsafe_allow_html=True)
+    
+    # Lista de páginas
+    pages = {
+        "🏠 Home": "home",
+        "📈 Análise Exploratória": "analise",
+        "🤖 Machine Learning": "ml",
+        "🎯 Clustering": "clustering", 
+        "🔗 Regras Associação": "regras",
+        "📋 Relatórios": "relatorios",
+        "⚙️ Configurações": "config"
+    }
+    
+    # Inicializar estado da página se não existir
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'home'
+    
+    # Renderizar botões
+    for page_name, page_key in pages.items():
+        # Verificar se é a página ativa
+        is_active = st.session_state.current_page == page_key
+        button_class = "nav-button active" if is_active else "nav-button"
+        
+        # Criar botão usando columns para melhor controle
+        col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
+        with col2:
+            if st.button(page_name, key=f"btn_{page_key}", use_container_width=True):
+                st.session_state.current_page = page_key
+                st.rerun()
+    
+    # Separator
+    st.markdown("---")
+    
+    # Informações adicionais
+    st.markdown("""
+    <div style='text-align: center; color: #7f8c8d; font-size: 12px; margin-top: 20px;'>
+        <p>📊 Dataset: 32.561 registos</p>
+        <p>🎓 ISLA Santarém</p>
+        <p>👨‍💻 Dario Dourado</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    return st.session_state.current_page

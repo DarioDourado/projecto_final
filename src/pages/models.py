@@ -1,363 +1,322 @@
 """
-🤖 Página de Modelos ML
-Interface para visualização e análise dos modelos treinados
+Página de Modelos de Machine Learning
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 from pathlib import Path
 import joblib
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 def show_models_page(data, i18n):
-    """Página principal de modelos ML"""
-    # Import safe
-    try:
-        from src.components.navigation import show_page_header
-    except ImportError:
-        def show_page_header(title, subtitle, icon):
-            st.markdown(f"## {icon} {title}")
-            if subtitle:
-                st.markdown(f"*{subtitle}*")
+    """
+    Mostrar página de modelos de ML
+    """
+    st.header("🤖 Modelos de Machine Learning")
     
-    show_page_header(
-        i18n.t('navigation.models', 'Modelos ML'),
-        i18n.t('models.subtitle', 'Análise e comparação dos modelos de Machine Learning'),
-        "🤖"
+    if data is None or data.empty:
+        st.warning("⚠️ Dados não carregados. Verifique a conexão com a fonte de dados.")
+        return
+    
+    # Sidebar para opções
+    st.sidebar.header("🔧 Configurações do Modelo")
+    
+    model_action = st.sidebar.selectbox(
+        "Ação:",
+        ["Treinar Novo Modelo", "Carregar Modelo Existente", "Comparar Modelos"]
     )
     
-    df = data.get('df')
-    models = data.get('models', {})
-    
-    if df is None:
-        st.warning(i18n.t('messages.pipeline_needed', 'Execute pipeline primeiro'))
-        return
-    
-    # Tabs para diferentes aspectos dos modelos
-    tab1, tab2, tab3, tab4 = st.tabs([
-        f"📊 {i18n.t('models.performance', 'Performance')}",
-        f"🎯 {i18n.t('models.feature_importance', 'Importância Features')}",
-        f"📈 {i18n.t('models.comparison', 'Comparação')}",
-        f"🔍 {i18n.t('models.details', 'Detalhes')}"
-    ])
-    
-    with tab1:
-        _show_model_performance(models, i18n)
-    
-    with tab2:
-        _show_feature_importance(data, i18n)
-    
-    with tab3:
-        _show_model_comparison(models, i18n)
-    
-    with tab4:
-        _show_model_details(models, data, i18n)
+    if model_action == "Treinar Novo Modelo":
+        show_train_model(data)
+    elif model_action == "Carregar Modelo Existente":
+        show_load_model(data)
+    elif model_action == "Comparar Modelos":
+        show_compare_models(data)
 
-def _show_model_performance(models, i18n):
-    """Mostrar performance dos modelos"""
-    st.subheader(f"📊 {i18n.t('models.performance_title', 'Performance dos Modelos')}")
+def show_train_model(data):
+    """Interface para treinar novo modelo"""
+    st.subheader("🏋️ Treinar Novo Modelo")
     
-    if not models:
-        st.info(i18n.t('models.no_models', 'Nenhum modelo encontrado. Execute o pipeline primeiro.'))
+    # Verificar se há dados numéricos suficientes
+    numeric_cols = data.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    
+    if len(numeric_cols) < 2:
+        st.error("Necessário pelo menos 2 variáveis numéricas para treinar um modelo")
         return
     
-    # Extrair métricas dos modelos
-    performance_data = []
-    for model_name, model_info in models.items():
-        if isinstance(model_info, dict):
-            metrics = {
-                'Modelo': model_name,
-                'Accuracy': model_info.get('accuracy', 0),
-                'Precision': model_info.get('precision', 0),
-                'Recall': model_info.get('recall', 0),
-                'F1-Score': model_info.get('f1', model_info.get('f1_score', 0))
-            }
-            performance_data.append(metrics)
+    # Seleção de variáveis
+    col1, col2 = st.columns(2)
     
-    if performance_data:
-        df_performance = pd.DataFrame(performance_data)
+    with col1:
+        target_var = st.selectbox("Variável Target (y):", numeric_cols)
+    
+    with col2:
+        feature_vars = st.multiselect(
+            "Variáveis Features (X):", 
+            [col for col in numeric_cols if col != target_var],
+            default=[col for col in numeric_cols if col != target_var][:3]
+        )
+    
+    if not feature_vars:
+        st.warning("Selecione pelo menos uma variável feature")
+        return
+    
+    # Parâmetros do modelo
+    st.subheader("⚙️ Parâmetros do Modelo")
+    
+    model_type = st.selectbox(
+        "Tipo de Modelo:",
+        ["Random Forest", "Regressão Linear"]
+    )
+    
+    test_size = st.slider("Tamanho do conjunto de teste:", 0.1, 0.5, 0.2, 0.05)
+    
+    if st.button("🚀 Treinar Modelo", type="primary"):
+        train_and_evaluate_model(data, target_var, feature_vars, model_type, test_size)
+
+def train_and_evaluate_model(data, target_var, feature_vars, model_type, test_size):
+    """Treinar e avaliar modelo"""
+    try:
+        # Preparar dados
+        X = data[feature_vars].dropna()
+        y = data.loc[X.index, target_var]
         
-        # Mostrar tabela
-        st.dataframe(df_performance.round(4), use_container_width=True)
-        
-        # Gráfico de barras para comparação
-        metrics_to_plot = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
-        
-        fig = go.Figure()
-        
-        for metric in metrics_to_plot:
-            if metric in df_performance.columns:
-                fig.add_trace(go.Bar(
-                    name=metric,
-                    x=df_performance['Modelo'],
-                    y=df_performance[metric],
-                    text=df_performance[metric].round(3),
-                    textposition='auto'
-                ))
-        
-        fig.update_layout(
-            title="Comparação de Métricas entre Modelos",
-            xaxis_title="Modelos",
-            yaxis_title="Score",
-            barmode='group',
-            height=500,
-            template="plotly_white"
+        # Dividir dados
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        # Treinar modelo
+        if model_type == "Random Forest":
+            model = RandomForestRegressor(n_estimators=100, random_state=42)
+        else:
+            model = LinearRegression()
         
-        # Destacar melhor modelo
-        if len(df_performance) > 1:
-            best_model_idx = df_performance['Accuracy'].idxmax()
-            best_model = df_performance.loc[best_model_idx]
-            
-            st.success(f"🏆 **Melhor Modelo**: {best_model['Modelo']} com {best_model['Accuracy']:.4f} de accuracy")
-
-def _show_feature_importance(data, i18n):
-    """Mostrar importância das features"""
-    st.subheader(f"🎯 {i18n.t('models.feature_importance_title', 'Importância das Features')}")
-    
-    # Procurar arquivos de importância de features
-    importance_files = []
-    
-    # Verificar diferentes locais possíveis
-    search_paths = [
-        Path("output/analysis"),
-        Path("analysis"),
-        Path(".")
-    ]
-    
-    for path in search_paths:
-        if path.exists():
-            importance_files.extend(list(path.glob("*feature_importance*")))
-            importance_files.extend(list(path.glob("*importance*")))
-    
-    if importance_files:
-        for file in importance_files:
-            try:
-                if file.suffix == '.csv':
-                    importance_df = pd.read_csv(file)
-                    
-                    st.markdown(f"#### 📊 {file.name}")
-                    
-                    # Verificar se tem as colunas necessárias
-                    if 'feature' in importance_df.columns.str.lower():
-                        feature_col = [col for col in importance_df.columns if 'feature' in col.lower()][0]
-                        importance_col = [col for col in importance_df.columns if 'importance' in col.lower() or 'score' in col.lower()]
-                        
-                        if importance_col:
-                            importance_col = importance_col[0]
-                            
-                            # Ordenar por importância
-                            importance_df = importance_df.sort_values(importance_col, ascending=False).head(15)
-                            
-                            # Criar gráfico
-                            fig = px.bar(
-                                importance_df,
-                                x=importance_col,
-                                y=feature_col,
-                                orientation='h',
-                                title=f"Top 15 Features - {file.stem}",
-                                template="plotly_white"
-                            )
-                            
-                            fig.update_layout(height=600)
-                            st.plotly_chart(fig, use_container_width=True)
-                            
-                            # Mostrar tabela
-                            st.dataframe(importance_df, use_container_width=True)
-                        
-            except Exception as e:
-                st.error(f"Erro ao carregar {file}: {e}")
-    
-    else:
-        st.info("Nenhum arquivo de importância de features encontrado.")
+        with st.spinner("Treinando modelo..."):
+            model.fit(X_train, y_train)
         
-        # Tentar carregar modelo diretamente se disponível
-        model_files = list(Path(".").glob("*random_forest*.joblib"))
-        if model_files:
-            try:
-                model = joblib.load(model_files[0])
-                if hasattr(model, 'feature_importances_'):
-                    _show_direct_feature_importance(model, i18n)
-            except Exception as e:
-                st.error(f"Erro ao carregar modelo: {e}")
-
-def _show_direct_feature_importance(model, i18n):
-    """Mostrar importância direta do modelo"""
-    st.markdown("#### 🤖 Importância Direct do Modelo")
-    
-    try:
-        importances = model.feature_importances_
+        # Fazer predições
+        y_pred_train = model.predict(X_train)
+        y_pred_test = model.predict(X_test)
         
-        # Tentar obter nomes das features
-        try:
-            feature_info = joblib.load("feature_info.joblib")
-            feature_names = feature_info.get('feature_names', [f'Feature_{i}' for i in range(len(importances))])
-        except:
-            feature_names = [f'Feature_{i}' for i in range(len(importances))]
+        # Avaliar modelo
+        train_r2 = r2_score(y_train, y_pred_train)
+        test_r2 = r2_score(y_test, y_pred_test)
+        train_rmse = np.sqrt(mean_squared_error(y_train, y_pred_train))
+        test_rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
+        train_mae = mean_absolute_error(y_train, y_pred_train)
+        test_mae = mean_absolute_error(y_test, y_pred_test)
         
-        # Criar DataFrame
-        importance_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Importance': importances
-        }).sort_values('Importance', ascending=False).head(15)
+        # Mostrar resultados
+        st.success("✅ Modelo treinado com sucesso!")
         
-        # Criar gráfico
-        fig = px.bar(
-            importance_df,
-            x='Importance',
-            y='Feature',
-            orientation='h',
-            title="Top 15 Features - Random Forest",
-            template="plotly_white"
-        )
+        # Métricas
+        col1, col2, col3 = st.columns(3)
         
-        fig.update_layout(height=600)
-        st.plotly_chart(fig, use_container_width=True)
+        with col1:
+            st.metric("R² (Treino)", f"{train_r2:.3f}")
+            st.metric("R² (Teste)", f"{test_r2:.3f}")
         
-        # Mostrar tabela
-        st.dataframe(importance_df, use_container_width=True)
+        with col2:
+            st.metric("RMSE (Treino)", f"{train_rmse:.2f}")
+            st.metric("RMSE (Teste)", f"{test_rmse:.2f}")
         
-    except Exception as e:
-        st.error(f"Erro ao processar importância das features: {e}")
-
-def _show_model_comparison(models, i18n):
-    """Comparação detalhada entre modelos"""
-    st.subheader(f"📈 {i18n.t('models.comparison_title', 'Comparação Detalhada')}")
-    
-    if len(models) < 2:
-        st.info("Pelo menos 2 modelos são necessários para comparação.")
-        return
-    
-    # Criar gráfico radar para comparação
-    try:
-        model_data = []
-        metrics = ['accuracy', 'precision', 'recall', 'f1_score']
+        with col3:
+            st.metric("MAE (Treino)", f"{train_mae:.2f}")
+            st.metric("MAE (Teste)", f"{test_mae:.2f}")
         
-        for model_name, model_info in models.items():
-            if isinstance(model_info, dict):
-                model_metrics = []
-                for metric in metrics:
-                    value = model_info.get(metric, model_info.get(metric.replace('_score', ''), 0))
-                    model_metrics.append(value)
-                
-                model_data.append({
-                    'model': model_name,
-                    'metrics': model_metrics
-                })
+        # Gráficos de avaliação
+        col1, col2 = st.columns(2)
         
-        if model_data:
-            fig = go.Figure()
-            
-            for model in model_data:
-                # Fechar o polígono repetindo o primeiro valor
-                values = model['metrics'] + [model['metrics'][0]]
-                theta = metrics + [metrics[0]]
-                
-                fig.add_trace(go.Scatterpolar(
-                    r=values,
-                    theta=theta,
-                    fill='toself',
-                    name=model['model'],
-                    opacity=0.7
-                ))
-            
-            fig.update_layout(
-                polar=dict(
-                    radialaxis=dict(
-                        visible=True,
-                        range=[0, 1]
-                    )),
-                title="Comparação Radar dos Modelos",
-                height=600
+        with col1:
+            # Scatter plot: Real vs Predito
+            fig_scatter = go.Figure()
+            fig_scatter.add_trace(go.Scatter(
+                x=y_test, 
+                y=y_pred_test,
+                mode='markers',
+                name='Teste',
+                opacity=0.7
+            ))
+            fig_scatter.add_trace(go.Scatter(
+                x=[y_test.min(), y_test.max()],
+                y=[y_test.min(), y_test.max()],
+                mode='lines',
+                name='Linha Perfeita',
+                line=dict(dash='dash', color='red')
+            ))
+            fig_scatter.update_layout(
+                title="Real vs Predito",
+                xaxis_title="Valor Real",
+                yaxis_title="Valor Predito"
             )
+            st.plotly_chart(fig_scatter, use_container_width=True)
+        
+        with col2:
+            # Resíduos
+            residuals = y_test - y_pred_test
+            fig_residuals = px.scatter(
+                x=y_pred_test,
+                y=residuals,
+                title="Gráfico de Resíduos",
+                labels={'x': 'Valores Preditos', 'y': 'Resíduos'}
+            )
+            fig_residuals.add_hline(y=0, line_dash="dash", line_color="red")
+            st.plotly_chart(fig_residuals, use_container_width=True)
+        
+        # Importância das features (para Random Forest)
+        if model_type == "Random Forest":
+            st.subheader("📊 Importância das Features")
+            feature_importance = pd.DataFrame({
+                'Feature': feature_vars,
+                'Importância': model.feature_importances_
+            }).sort_values('Importância', ascending=False)
             
-            st.plotly_chart(fig, use_container_width=True)
+            fig_importance = px.bar(
+                feature_importance,
+                x='Importância',
+                y='Feature',
+                orientation='h',
+                title="Importância das Features"
+            )
+            st.plotly_chart(fig_importance, use_container_width=True)
+        
+        # Salvar modelo
+        if st.button("💾 Salvar Modelo"):
+            models_dir = Path("models")
+            models_dir.mkdir(exist_ok=True)
             
-    except Exception as e:
-        st.error(f"Erro na comparação: {e}")
-
-def _show_model_details(models, data, i18n):
-    """Detalhes específicos dos modelos"""
-    st.subheader(f"🔍 {i18n.t('models.details_title', 'Detalhes dos Modelos')}")
+            model_filename = f"{model_type.lower().replace(' ', '_')}_{target_var}_{len(feature_vars)}features.pkl"
+            model_path = models_dir / model_filename
+            
+            joblib.dump({
+                'model': model,
+                'target_var': target_var,
+                'feature_vars': feature_vars,
+                'model_type': model_type,
+                'metrics': {
+                    'train_r2': train_r2,
+                    'test_r2': test_r2,
+                    'train_rmse': train_rmse,
+                    'test_rmse': test_rmse
+                }
+            }, model_path)
+            
+            st.success(f"✅ Modelo salvo em: {model_path}")
     
-    if not models:
-        st.info("Nenhum modelo disponível.")
+    except Exception as e:
+        st.error(f"❌ Erro ao treinar modelo: {e}")
+
+def show_load_model(data):
+    """Interface para carregar modelo existente"""
+    st.subheader("📂 Carregar Modelo Existente")
+    
+    models_dir = Path("models")
+    if not models_dir.exists():
+        st.warning("Diretório 'models' não encontrado")
         return
     
-    # Seletor de modelo
-    model_names = list(models.keys())
-    selected_model = st.selectbox("Selecionar Modelo:", model_names)
+    model_files = list(models_dir.glob("*.pkl"))
+    if not model_files:
+        st.warning("Nenhum modelo encontrado no diretório")
+        return
     
-    if selected_model and selected_model in models:
-        model_info = models[selected_model]
+    selected_model = st.selectbox(
+        "Selecione o modelo:",
+        model_files,
+        format_func=lambda x: x.name
+    )
+    
+    if st.button("📁 Carregar Modelo"):
+        try:
+            model_data = joblib.load(selected_model)
+            
+            st.success("✅ Modelo carregado com sucesso!")
+            
+            # Mostrar informações do modelo
+            st.json({
+                'Tipo': model_data['model_type'],
+                'Target': model_data['target_var'],
+                'Features': model_data['feature_vars'],
+                'Métricas': model_data['metrics']
+            })
+            
+            # Interface de predição
+            st.subheader("🔮 Fazer Predições")
+            
+            # Criar inputs para cada feature
+            feature_values = {}
+            for feature in model_data['feature_vars']:
+                if feature in data.columns:
+                    min_val = float(data[feature].min())
+                    max_val = float(data[feature].max())
+                    mean_val = float(data[feature].mean())
+                    
+                    feature_values[feature] = st.number_input(
+                        f"{feature}:",
+                        min_value=min_val,
+                        max_value=max_val,
+                        value=mean_val,
+                        key=f"pred_{feature}"
+                    )
+            
+            if st.button("🎯 Fazer Predição"):
+                input_data = pd.DataFrame([feature_values])
+                prediction = model_data['model'].predict(input_data)[0]
+                
+                st.success(f"📊 Predição: {prediction:.2f}")
         
-        if isinstance(model_info, dict):
-            # Mostrar métricas em cards
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                accuracy = model_info.get('accuracy', 0)
-                st.metric("🎯 Accuracy", f"{accuracy:.4f}")
-            
-            with col2:
-                precision = model_info.get('precision', 0)
-                st.metric("🎯 Precision", f"{precision:.4f}")
-            
-            with col3:
-                recall = model_info.get('recall', 0)
-                st.metric("📊 Recall", f"{recall:.4f}")
-            
-            with col4:
-                f1 = model_info.get('f1', model_info.get('f1_score', 0))
-                st.metric("⚖️ F1-Score", f"{f1:.4f}")
-            
-            # Informações adicionais se disponíveis
-            st.markdown("#### ℹ️ Informações Adicionais")
-            
-            additional_info = {}
-            for key, value in model_info.items():
-                if key not in ['accuracy', 'precision', 'recall', 'f1', 'f1_score']:
-                    additional_info[key] = value
-            
-            if additional_info:
-                for key, value in additional_info.items():
-                    if isinstance(value, (int, float)):
-                        st.write(f"**{key.replace('_', ' ').title()}**: {value:.4f}")
-                    else:
-                        st.write(f"**{key.replace('_', ' ').title()}**: {value}")
-            
-            # Mostrar arquivos relacionados
-            _show_related_files(selected_model, i18n)
+        except Exception as e:
+            st.error(f"❌ Erro ao carregar modelo: {e}")
 
-def _show_related_files(model_name, i18n):
-    """Mostrar arquivos relacionados ao modelo"""
-    st.markdown("#### 📁 Arquivos Relacionados")
+def show_compare_models(data):
+    """Interface para comparar modelos"""
+    st.subheader("⚖️ Comparar Modelos")
     
-    # Procurar arquivos do modelo
-    model_files = []
+    models_dir = Path("models")
+    if not models_dir.exists() or not list(models_dir.glob("*.pkl")):
+        st.warning("Nenhum modelo encontrado para comparação")
+        return
     
-    # Padrões de busca
-    patterns = [
-        f"*{model_name.lower().replace(' ', '_')}*",
-        f"*{model_name.lower()}*",
-        "*.joblib",
-        "*.pkl"
-    ]
+    model_files = list(models_dir.glob("*.pkl"))
     
-    for pattern in patterns:
-        model_files.extend(list(Path(".").glob(pattern)))
+    # Carregar métricas de todos os modelos
+    models_comparison = []
     
-    # Remover duplicatas
-    model_files = list(set(model_files))
+    for model_file in model_files:
+        try:
+            model_data = joblib.load(model_file)
+            models_comparison.append({
+                'Nome': model_file.name,
+                'Tipo': model_data['model_type'],
+                'Target': model_data['target_var'],
+                'Features': len(model_data['feature_vars']),
+                'R² Teste': model_data['metrics']['test_r2'],
+                'RMSE Teste': model_data['metrics']['test_rmse']
+            })
+        except Exception as e:
+            st.warning(f"Erro ao carregar {model_file.name}: {e}")
     
-    if model_files:
-        for file in model_files:
-            if file.exists():
-                size_mb = file.stat().st_size / (1024 * 1024)
-                st.write(f"📄 **{file.name}** ({size_mb:.2f} MB)")
+    if models_comparison:
+        comparison_df = pd.DataFrame(models_comparison)
+        st.dataframe(comparison_df, use_container_width=True)
+        
+        # Gráfico de comparação
+        fig_comparison = px.scatter(
+            comparison_df,
+            x='RMSE Teste',
+            y='R² Teste',
+            size='Features',
+            color='Tipo',
+            title="Comparação de Modelos",
+            hover_data=['Nome']
+        )
+        st.plotly_chart(fig_comparison, use_container_width=True)
     else:
-        st.info("Nenhum arquivo específico encontrado para este modelo.")
+        st.warning("Nenhum modelo válido encontrado")
