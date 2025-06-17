@@ -1143,6 +1143,27 @@ def show_admin_config():
                 st.success("✅ Cache recarregado!")
                 st.rerun()
 
+try:
+    from src.pages.prediction import show_prediction_page
+except ImportError:
+    def show_prediction_page(data):
+        st.error("❌ Módulo de predição não encontrado")
+        st.info("Verifique se o arquivo src/pages/prediction.py existe")
+
+# ADICIONAR ESTES IMPORTS:
+try:
+    from src.pages.overview import show_overview_page
+    from src.pages.exploratory import show_exploratory_page  
+    from src.pages.models import show_models_page
+    from src.pages.admin import show_admin_page
+    from src.pages.prediction import show_prediction_page
+    from src.pages.clustering import show_clustering_page
+    from src.pages.association_rules import show_association_rules_page
+    PAGES_IMPORTED = True
+except ImportError as e:
+    st.error(f"❌ Erro ao importar páginas: {e}")
+    PAGES_IMPORTED = False
+
 def main():
     """Interface principal com autenticação"""
     
@@ -1309,7 +1330,11 @@ def main():
         elif current_page == "📊 Métricas Avançadas":
             show_advanced_metrics_enhanced(filtered_df, files_status)
         elif current_page == "🔮 Predição":
-            show_prediction_interface_enhanced(filtered_df, files_status)
+            # ALTERAR ESTA LINHA:
+            # show_prediction_interface_enhanced(filtered_df, files_status)  # Função antiga
+            # PARA:
+            data_dict = {'original': filtered_df}  # Preparar dados no formato esperado
+            show_prediction_page(data_dict)  # Nova função
         elif current_page == "📁 Relatórios":
             show_reports_enhanced(files_status)
         elif current_page == "⚙️ Configurações":
@@ -1359,14 +1384,14 @@ def show_overview_enhanced(df, load_message, files_status):
             high_salary_rate = (df['salary'] == '>50K').mean()
             st.markdown(f"""
             <div class="metric-card">
-                <h3>💰 Salário Alto</h3>
+                <h3>💰 Salário +50k</h3>
                 <h2>{high_salary_rate:.1%}</h2>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="metric-card">
-                <h3>💰 Salário Alto</h3>
+                <h3>💰 Salário +50k</h3>
                 <h2>N/A</h2>
             </div>
             """, unsafe_allow_html=True)
