@@ -277,7 +277,7 @@ def show_login_page():
                             st.session_state.session_id = session_id
                             st.session_state.user_data = user_data
                             st.session_state.authenticated = True
-                            st.session_state.username = username  # Salvar username
+                            st.session_state.username = username
                             st.success(f"✅ Bem-vindo, {user_data['name']}!")
                             time.sleep(1)
                             st.rerun()
@@ -505,12 +505,12 @@ def apply_custom_css():
     /* Botões customizados */
     .stButton > button {
         width: 100%;
-        border-radius: 25px;
+        border-radius: 12px;
         border: none;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         color: white;
         font-weight: 600;
-        padding: 0.7rem 2rem;
+        padding: 12px;
         transition: all 0.3s ease;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
@@ -537,7 +537,7 @@ def apply_custom_css():
         background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
         color: white;
         padding: 1rem;
-        border-radius: 15px;
+        border-radius: 12px;
         margin: 1rem 0;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
@@ -1375,7 +1375,7 @@ def show_overview_enhanced(df, load_message, files_status):
         missing_rate = df.isnull().sum().sum() / (len(df) * len(df.columns))
         st.markdown(f"""
         <div class="metric-card">
-            <h3>❌ Missing</h3>
+            <h3>❌ Dados Nulos</h3>
             <h2>{missing_rate:.1%}</h2>
         </div>
         """, unsafe_allow_html=True)

@@ -149,7 +149,7 @@ class MultilingualDashboard:
             if st.button(
                 f"🚪 {self.i18n.t('auth.logout', 'Logout')}", 
                 use_container_width=True,
-                key="main_logout_button"  # ✅ KEY ÚNICO
+                key="main_logout_button" 
             ):
                 self.auth.logout(st.session_state.get('session_id'))
                 # Limpar sessão completamente
