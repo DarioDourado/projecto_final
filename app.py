@@ -633,7 +633,6 @@ def load_data():
     try:
         # Prioridade: dados processados
         data_paths = [
-            Path("data/processed/data_processed.csv"),
             Path("data/raw/4-Carateristicas_salario.csv"),
             Path("bkp/4-Carateristicas_salario.csv"),
             Path("4-Carateristicas_salario.csv")
@@ -641,26 +640,56 @@ def load_data():
         
         for path in data_paths:
             if path.exists():
-                df = pd.read_csv(path)
-                df = clean_dataframe(df)
-                status = "✅ Dados processados" if "processed" in str(path) else "⚠️ Dados brutos"
-                return df, f"{status} carregados: {path.name}"
+                try:
+                    df = pd.read_csv(path)
+                    df = clean_dataframe(df)
+                    
+                    # Verificar se tem dados válidos
+                    if len(df) == 0:
+                        continue
+                    
+                    # Mensagem baseada no tipo de dados
+                    if "processed" in str(path):
+                        status = "✅ Dados processados carregados"
+                    else:
+                        status = "📊 Dados brutos carregados"
+                    
+                    return df, f"{status}: {path.name} ({len(df):,} registros)"
+                    
+                except Exception as e:
+                    print(f"❌ Erro ao carregar {path}: {e}")
+                    continue
         
         return None, "❌ Nenhum arquivo de dados encontrado!"
+        
     except Exception as e:
-        return None, f"❌ Erro ao carregar dados: {e}"
+        return None, f"❌ Erro geral no carregamento: {e}"
 
 def clean_dataframe(df):
-    """Limpeza otimizada do DataFrame"""
-    # Converter categóricas
-    for col in df.select_dtypes(include=['object']).columns:
-        df[col] = df[col].astype(str).replace(['None', 'nan', 'NaN', '?'], 'Unknown')
+    """Limpeza robusta do dataframe"""
+    if df is None or len(df) == 0:
+        return df
     
-    # Garantir numéricas
-    for col in df.select_dtypes(include=[np.number]).columns:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-    
-    return df
+    try:
+        # Remover espaços em branco
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].astype(str).str.strip()
+        
+        # Substituir valores ausentes
+        df = df.replace('?', np.nan)
+        df = df.replace('', np.nan)
+        
+        # Remover linhas completamente vazias
+        df = df.dropna(how='all')
+        
+        # Log da limpeza
+        print(f"✅ DataFrame limpo: {len(df)} registros, {len(df.columns)} colunas")
+        
+        return df
+        
+    except Exception as e:
+        print(f"❌ Erro na limpeza: {e}")
+        return df
 
 @st.cache_data
 def load_analysis_files():
