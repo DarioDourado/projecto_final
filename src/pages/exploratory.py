@@ -10,6 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
 import numpy as np
+import os
 
 def show_exploratory_page(data, i18n):
     """
@@ -264,3 +265,19 @@ def show_outlier_analysis(data):
     if len(outliers) > 0:
         st.subheader("📋 Registros com Outliers")
         st.dataframe(outliers, use_container_width=True)
+
+def plot_salary_by_education_hours(df):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    # Boxplot: Escolaridade vs Salário
+    plt.figure(figsize=(10, 5))
+    sns.boxplot(x='education-num', y='hours-per-week', hue='salary', data=df)
+    plt.title('Horas de Trabalho por Escolaridade e Faixa Salarial')
+    plt.xlabel('Anos de Escolaridade')
+    plt.ylabel('Horas por Semana')
+    plt.legend(title='Salário')
+    plt.tight_layout()
+    os.makedirs("output/imagens", exist_ok=True)
+    plt.savefig("output/imagens/correlacao_educacao_horas_salario.png", dpi=300, bbox_inches='tight')
+    plt.close()  # Opcional: fecha a figura para liberar memória
