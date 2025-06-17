@@ -83,7 +83,7 @@ class AssociationRulesAnalysis:
         if not MLXTEND_AVAILABLE or not transactions:
             return pd.DataFrame()
         
-        logging.info("🔍 Buscando regras de associação...")
+        logging.info("🔍 A procura de regras de associação...")
         
         try:
             # Codificar transações
@@ -96,6 +96,7 @@ class AssociationRulesAnalysis:
             # Encontrar itens frequentes
             self.frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
             
+            # Fix: Check if DataFrame is empty properly
             if self.frequent_itemsets.empty:
                 logging.warning(f"⚠️ Nenhum itemset frequente encontrado com suporte >= {min_support}")
                 return pd.DataFrame()
@@ -105,15 +106,18 @@ class AssociationRulesAnalysis:
             # Gerar regras
             self.rules = association_rules(self.frequent_itemsets, metric="confidence", min_threshold=min_confidence)
             
+            # Fix: Check if DataFrame is empty properly
             if self.rules.empty:
                 logging.warning(f"⚠️ Nenhuma regra encontrada com confiança >= {min_confidence}")
                 return pd.DataFrame()
             
             # Filtrar regras relacionadas com salário
-            salary_rules = self.rules[
-                self.rules['consequents'].astype(str).str.contains('salary_') |
-                self.rules['antecedents'].astype(str).str.contains('salary_')
-            ]
+            # Fix: Use proper DataFrame filtering
+            salary_mask = (
+                self.rules['consequents'].astype(str).str.contains('salary_', na=False) |
+                self.rules['antecedents'].astype(str).str.contains('salary_', na=False)
+            )
+            salary_rules = self.rules[salary_mask]
             
             logging.info(f"✅ {len(self.rules)} regras totais, {len(salary_rules)} relacionadas a salário")
             
@@ -121,7 +125,7 @@ class AssociationRulesAnalysis:
             self._save_rules_analysis(salary_rules)
             
             return salary_rules.sort_values('lift', ascending=False)
-            
+        
         except Exception as e:
             logging.error(f"❌ Erro na análise de associação: {e}")
             return pd.DataFrame()

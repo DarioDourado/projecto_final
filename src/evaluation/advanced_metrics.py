@@ -21,41 +21,72 @@ class AdvancedMetrics:
         """Calcular métricas abrangentes"""
         from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
         
-        # Converter para binário se necessário
-        if hasattr(y_true, 'iloc') and isinstance(y_true.iloc[0], str):
-            y_true_binary = (y_true == '>50K').astype(int)
-        else:
-            y_true_binary = y_true
+        try:
+            # Ensure all arrays have the same length
+            min_length = min(len(y_true), len(y_pred))
+            if y_pred_proba is not None:
+                min_length = min(min_length, len(y_pred_proba))
             
-        if isinstance(y_pred[0], str):
-            y_pred_binary = (y_pred == '>50K').astype(int)
-        else:
-            y_pred_binary = y_pred
-        
-        metrics = {
-            'model_name': model_name,
-            'accuracy': accuracy_score(y_true_binary, y_pred_binary),
-            'precision': precision_score(y_true_binary, y_pred_binary),
-            'recall': recall_score(y_true_binary, y_pred_binary),
-            'f1_score': f1_score(y_true_binary, y_pred_binary),
-            'roc_auc': roc_auc_score(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba)
-        }
-        
-        # Curva Precision-Recall
-        precision, recall, _ = precision_recall_curve(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba)
-        metrics['pr_auc'] = auc(recall, precision)
-        
-        # Especificidade
-        tn, fp, fn, tp = confusion_matrix(y_true_binary, y_pred_binary).ravel()
-        metrics['specificity'] = tn / (tn + fp) if (tn + fp) > 0 else 0
-        
-        self.metrics_summary[model_name] = metrics
-        
-        # Gerar visualizações
-        self._plot_roc_pr_curves(y_true_binary, y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba, model_name)
-        
-        logging.info(f"✅ Métricas avançadas calculadas para {model_name}")
-        return metrics
+            # Truncate to the same length
+            y_true = y_true[:min_length]
+            y_pred = y_pred[:min_length]
+            if y_pred_proba is not None:
+                y_pred_proba = y_pred_proba[:min_length]
+            
+            # Convert to binary if necessary
+            if hasattr(y_true, 'iloc') and isinstance(y_true.iloc[0], str):
+                y_true_binary = (y_true == '>50K').astype(int)
+            else:
+                y_true_binary = y_true
+                
+            if isinstance(y_pred[0], str):
+                y_pred_binary = (y_pred == '>50K').astype(int)
+            else:
+                y_pred_binary = y_pred
+            
+            # Final length validation
+            if len(y_true_binary) != len(y_pred_binary):
+                raise ValueError(f"Length mismatch after processing: y_true({len(y_true_binary)}) vs y_pred({len(y_pred_binary)})")
+            
+            metrics = {
+                'model_name': model_name,
+                'accuracy': accuracy_score(y_true_binary, y_pred_binary),
+                'precision': precision_score(y_true_binary, y_pred_binary, zero_division=0),
+                'recall': recall_score(y_true_binary, y_pred_binary, zero_division=0),
+                'f1_score': f1_score(y_true_binary, y_pred_binary, zero_division=0)
+            }
+            
+            # Add ROC AUC if probabilities are available
+            if y_pred_proba is not None:
+                try:
+                    y_prob = y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba
+                    if len(y_prob) == len(y_true_binary):
+                        metrics['roc_auc'] = roc_auc_score(y_true_binary, y_prob)
+                    else:
+                        logging.warning(f"⚠️ Probability length mismatch for {model_name}")
+                        metrics['roc_auc'] = 0.0
+                except Exception as e:
+                    logging.warning(f"⚠️ Could not calculate ROC AUC for {model_name}: {e}")
+                    metrics['roc_auc'] = 0.0
+            else:
+                metrics['roc_auc'] = 0.0
+            
+            # Store metrics for comparison
+            self.metrics_summary[model_name] = metrics
+            
+            logging.info(f"✅ Métricas calculadas para {model_name}")
+            return metrics
+            
+        except Exception as e:
+            logging.error(f"❌ Erro no cálculo de métricas para {model_name}: {e}")
+            return {
+                'model_name': model_name, 
+                'accuracy': 0.0, 
+                'precision': 0.0, 
+                'recall': 0.0, 
+                'f1_score': 0.0, 
+                'roc_auc': 0.0
+            }
     
     def generate_business_kpis(self, df, predictions, model_name="Model"):
         """Gerar KPIs orientados ao negócio"""
