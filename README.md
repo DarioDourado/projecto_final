@@ -19,14 +19,16 @@ Este é um **sistema completo de análise salarial** desenvolvido para fins acad
 
 ```bash
 # Clonar repositório
-git clone https://github.com/seu-usuario/projecto_final.git
+https://github.com/DarioDourado/projecto_final.git
 cd projecto_final
+
+
+# Criar ambiente virtual (Windows)
+python -m venv .venv
 
 # Ativar ambiente virtual (Linux/macOS)
 source .venv/bin/activate
 
-# Criar ambiente virtual (Windows)
-python -m venv .venv
 
 # Ativar ambiente virtual (Windows)
 .venv\Scripts\activate
@@ -34,8 +36,11 @@ python -m venv .venv
 # Instalar dependências
 pip install -r requirements.txt
 
+# Executar data diretamente
+python main.py
+
 # Executar dashboard diretamente
-python run_dashboard.py
+streamlit run app.py
 ```
 
 ### **Método 2: Pipeline Completo**
