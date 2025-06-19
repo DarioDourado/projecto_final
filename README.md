@@ -2,11 +2,6 @@
 
 **Sistema Acadêmico Modular de Análise e Predição Salarial com Implementação Completa de DBSCAN, APRIORI, FP-GROWTH e ECLAT**
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)](https://streamlit.io)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange.svg)](https://mysql.com)
-[![License](https://img.shields.io/badge/License-Academic-green.svg)](LICENSE)
-
 ## 🎓 Sobre o Projeto Acadêmico
 
 Este é um **sistema completo de análise salarial** desenvolvido para fins acadêmicos, implementando rigorosamente os algoritmos **DBSCAN**, **APRIORI**, **FP-GROWTH** e **ECLAT** conforme especificações científicas. O projeto demonstra a aplicação prática de técnicas avançadas de Data Science em cenários reais de análise salarial.
@@ -26,6 +21,15 @@ Este é um **sistema completo de análise salarial** desenvolvido para fins acad
 # Clonar repositório
 git clone https://github.com/seu-usuario/projecto_final.git
 cd projecto_final
+
+# Ativar ambiente virtual (Linux/macOS)
+source .venv/bin/activate
+
+# Criar ambiente virtual (Windows)
+python -m venv .venv
+
+# Ativar ambiente virtual (Windows)
+.venv\Scripts\activate
 
 # Instalar dependências
 pip install -r requirements.txt
