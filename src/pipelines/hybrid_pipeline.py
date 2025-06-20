@@ -313,8 +313,8 @@ class HybridPipelineSQL:
             
             results = self.association_pipeline.run_complete_analysis(
                 self.df, 
-                min_support=0.1, 
-                min_confidence=0.8
+                min_support=0.2, 
+                min_confidence=0.9
             )
             
             if results:
