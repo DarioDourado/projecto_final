@@ -309,59 +309,38 @@ class HybridPipelineSQL:
             return None
         
         try:
-            # Verificar arquivos existentes
-            analysis_dir = Path("output/analysis")
-            existing_files = {
-                "apriori_rules.csv": (analysis_dir / "apriori_rules.csv").exists(),
-                "fp_growth_rules.csv": (analysis_dir / "fp_growth_rules.csv").exists(),
-                "eclat_rules.csv": (analysis_dir / "eclat_rules.csv").exists()
-            }
+            self.logger.info("🚀 Executando análise completa de regras de associação...")
             
-            files_exist = [name for name, exists in existing_files.items() if exists]
+            results = self.association_pipeline.run_complete_analysis(
+                self.df, 
+                min_support=0.1, 
+                min_confidence=0.8
+            )
             
-            if len(files_exist) >= 2:  # Se pelo menos 2 algoritmos têm resultados
-                if self._ask_user_permission("regras de associação (APRIORI, FP-GROWTH, ECLAT)", existing_files):
-                    # Re-executar análise
-                    results = self.association_pipeline.run_complete_analysis(
-                        self.df, 
-                        min_support=0.01, 
-                        min_confidence=0.6
-                    )
-                    if results:
-                        self.results['association_rules'] = results
-                        return results
-                else:
-                    # Carregar resultados existentes
-                    self.logger.info("⏭️ Regras de associação puladas - carregando resultados existentes...")
-                    self.logger.info(f"📁 {len(files_exist)} arquivos de regras encontrados")
-                    
-                    # Simular carregamento de resultados
-                    self.results['association_rules'] = {
-                        'apriori': {
-                            'rules': [{'confidence': 0.8, 'lift': 1.5, 'support': 0.1}] * 25
-                        },
-                        'fp_growth': {
-                            'rules': [{'confidence': 0.75, 'lift': 1.3, 'support': 0.08}] * 30
-                        },
-                        'eclat': {
-                            'rules': [{'confidence': 0.82, 'lift': 1.6, 'support': 0.12}] * 20
-                        },
-                        'loaded_from_cache': True
-                    }
-                    return self.results['association_rules']
+            if results:
+                self.results['association_rules'] = results
+                self.logger.info(f"✅ Association rules executadas com sucesso")
+                
+                # Log results for each algorithm
+                for alg_name in ['apriori', 'fp_growth', 'eclat']:
+                    if alg_name in results and results[alg_name].get('rules'):
+                        self.logger.info(f"✅ {alg_name.upper()}: {len(results[alg_name]['rules'])} regras")
+                    else:
+                        self.logger.warning(f"⚠️ {alg_name.upper()}: Nenhuma regra encontrada")
+                
+                # Forçar criação de visualizações
+                self.logger.info("📊 Criando visualizações...")
+                self.association_pipeline.create_visualizations()
+                
+                return results
             else:
-                # Executar análise se poucos arquivos existem
-                results = self.association_pipeline.run_complete_analysis(
-                    self.df, 
-                    min_support=0.01, 
-                    min_confidence=0.6
-                )
-                if results:
-                    self.results['association_rules'] = results
-                    return results
+                self.logger.error("❌ Falha na execução das regras de associação")
+                return None
                 
         except Exception as e:
             self.logger.error(f"❌ Erro no pipeline de association rules: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _ask_user_permission(self, analysis_type, existing_files):

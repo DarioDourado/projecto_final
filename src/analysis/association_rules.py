@@ -43,20 +43,22 @@ class AssociationRulesAnalysis:
             
             self.logger.info(f"📋 Colunas categóricas: {categorical_cols}")
             
-            # Adicionar bins de variáveis numéricas
+            # Criar bins para variáveis numéricas
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             if 'salary' in numeric_cols:
                 numeric_cols.remove('salary')
             
-            # Criar bins para variáveis numéricas
             df_processed = df.copy()
             
-            for col in numeric_cols[:3]:  # Limitar a 3 para não explodir o número de itens
+            # Simplificar bins para reduzir dimensionalidade
+            for col in numeric_cols[:3]:  # Apenas top 3 colunas numéricas
                 try:
-                    df_processed[f"{col}_bin"] = pd.cut(
+                    # Usar quantis para criar bins mais balanceados
+                    df_processed[f"{col}_bin"] = pd.qcut(
                         df_processed[col], 
-                        bins=3, 
-                        labels=[f"{col}_low", f"{col}_medium", f"{col}_high"]
+                        q=3, 
+                        labels=[f"{col}_low", f"{col}_medium", f"{col}_high"],
+                        duplicates='drop'
                     )
                     categorical_cols.append(f"{col}_bin")
                 except Exception as e:
@@ -69,14 +71,16 @@ class AssociationRulesAnalysis:
                 # Adicionar variáveis categóricas
                 for col in categorical_cols:
                     if col in row and pd.notna(row[col]):
-                        transaction.append(f"{col}_{row[col]}")
+                        # Simplificar nomes para evitar items muito específicos
+                        item_name = f"{col}_{str(row[col]).replace(' ', '_')}"
+                        transaction.append(item_name)
                 
                 # Adicionar target se existir
                 if 'salary' in df.columns and pd.notna(row['salary']):
                     transaction.append(f"salary_{row['salary']}")
                 
                 # Adicionar apenas se temos items suficientes
-                if len(transaction) >= 3:
+                if len(transaction) >= 2:  # Reduzir requisito mínimo
                     transactions.append(transaction)
             
             self.logger.info(f"✅ {len(transactions)} transações preparadas")
@@ -85,58 +89,7 @@ class AssociationRulesAnalysis:
         except Exception as e:
             self.logger.error(f"❌ Erro na preparação dos dados: {e}")
             return []
-        
-        logging.info("🔧 Preparando dados para análise de associação...")
-        
-        # Discretizar variáveis numéricas
-        df_discrete = df.copy()
-        
-        # Idade em faixas
-        if 'age' in df.columns:
-            df_discrete['age_group'] = pd.cut(df['age'], 
-                                            bins=[0, 30, 40, 50, 100], 
-                                            labels=['jovem', 'adulto', 'maduro', 'senior'])
-        
-        # Horas em faixas
-        if 'hours-per-week' in df.columns:
-            df_discrete['hours_group'] = pd.cut(df['hours-per-week'], 
-                                              bins=[0, 35, 45, 100], 
-                                              labels=['part_time', 'full_time', 'overtime'])
-        
-        # Educação em faixas
-        if 'education-num' in df.columns:
-            df_discrete['education_level'] = pd.cut(df['education-num'], 
-                                                  bins=[0, 9, 12, 16, 20], 
-                                                  labels=['basico', 'medio', 'superior', 'pos_grad'])
-        
-        # Criar transações
-        transactions = []
-        for _, row in df_discrete.iterrows():
-            transaction = []
-            
-            # Adicionar características categóricas disponíveis
-            categorical_features = [
-                ('workclass', 'workclass'),
-                ('education', 'education'), 
-                ('marital-status', 'marital'),
-                ('occupation', 'occupation'),
-                ('sex', 'sex'),
-                ('age_group', 'age'),
-                ('hours_group', 'hours'),
-                ('education_level', 'edu_level'),
-                ('salary', 'salary')
-            ]
-            
-            for col, prefix in categorical_features:
-                if col in row and pd.notna(row[col]):
-                    transaction.append(f"{prefix}_{row[col]}")
-            
-            # Adicionar apenas se temos items suficientes
-            if len(transaction) >= 3:
-                transactions.append(transaction)
-        
-        logging.info(f"✅ {len(transactions)} transações preparadas")
-        return transactions
+    
     
     def find_association_rules(self, transactions, min_support=0.03, min_confidence=0.5):
         """Encontrar regras de associação"""
@@ -183,8 +136,9 @@ class AssociationRulesAnalysis:
             return salary_rules.sort_values('lift', ascending=False)
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no Eclat: {e}")
-            return {}
+            # Fix: Wrong error message and return type
+            self.logger.error(f"❌ Erro na análise de regras: {e}")  # Was: "Erro no Eclat"
+            return pd.DataFrame() 
 
     def _eclat_recursive(self, current_itemsets: Dict, all_frequent: Dict, min_support: int, k: int):
         """Recursão do Eclat para gerar itemsets de tamanho k"""
@@ -216,6 +170,79 @@ class AssociationRulesAnalysis:
     def _generate_rules_eclat(self, frequent_itemsets: Dict[int, Dict], n_transactions: int, min_confidence: float = 0.6) -> List[Dict]:
         """Gerar regras para Eclat (mesmo método do Apriori)"""
         return self._generate_rules_apriori(frequent_itemsets, n_transactions, min_confidence)
+
+    def _generate_rules_apriori(self, frequent_itemsets: Dict[int, Dict], n_transactions: int, min_confidence: float = 0.6) -> List[Dict]:
+        """Gerar regras de associação a partir de itemsets frequentes"""
+        rules = []
+        
+        try:
+            # Apenas itemsets de tamanho >= 2 podem gerar regras
+            for size in range(2, len(frequent_itemsets) + 1):
+                if size not in frequent_itemsets:
+                    continue
+                
+                for itemset, support_count in frequent_itemsets[size].items():
+                    if len(itemset) < 2:
+                        continue
+                    
+                    # Gerar todas as combinações possíveis de antecedente/consequente
+                    items = list(itemset)
+                    
+                    for i in range(1, len(items)):
+                        for antecedent in combinations(items, i):
+                            antecedent = frozenset(antecedent)
+                            consequent = itemset - antecedent
+                            
+                            if not consequent:
+                                continue
+                            
+                            # Calcular suporte do antecedente
+                            antecedent_support = 0
+                            for fs_size, fs_dict in frequent_itemsets.items():
+                                if antecedent in fs_dict:
+                                    antecedent_support = fs_dict[antecedent]
+                                    break
+                            
+                            if antecedent_support == 0:
+                                continue
+                            
+                            # Calcular métricas
+                            support = support_count / n_transactions
+                            confidence = support_count / antecedent_support
+                            
+                            if confidence >= min_confidence:
+                                # Calcular lift
+                                consequent_support = 0
+                                for fs_size, fs_dict in frequent_itemsets.items():
+                                    if consequent in fs_dict:
+                                        consequent_support = fs_dict[consequent]
+                                        break
+                                
+                                if consequent_support > 0:
+                                    lift = confidence / (consequent_support / n_transactions)
+                                else:
+                                    lift = 1.0
+                                
+                                # Calcular conviction
+                                if confidence < 1:
+                                    conviction = (1 - (consequent_support / n_transactions)) / (1 - confidence)
+                                else:
+                                    conviction = float('inf')
+                                
+                                rules.append({
+                                    'antecedents': list(antecedent),
+                                    'consequents': list(consequent),
+                                    'support': support,
+                                    'confidence': confidence,
+                                    'lift': lift,
+                                    'conviction': conviction
+                                })
+            
+            return rules
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao gerar regras: {e}")
+            return []
 
     def compare_algorithms(self) -> Dict[str, Any]:
         """Comparar resultados dos três algoritmos"""
@@ -267,7 +294,7 @@ class AssociationRulesAnalysis:
                 rules_df.to_csv(output_path / f"{alg_name}_rules.csv", index=False)
                 
                 self.logger.info(f"💾 {alg_name.upper()} salvo: {len(results['rules'])} regras")
-        
+    
         # Salvar comparação
         comparison = self.compare_algorithms()
         if comparison.get('results'):
@@ -275,6 +302,9 @@ class AssociationRulesAnalysis:
             comparison_df.to_csv(output_path / "association_algorithms_comparison.csv", index=False)
             
             self.logger.info("💾 Comparação salva: association_algorithms_comparison.csv")
+    
+        # Criar visualizações
+        self.create_visualizations()
 
     def run_complete_analysis(self, df: pd.DataFrame, min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
         """Executar análise completa com todos os algoritmos"""
@@ -521,3 +551,195 @@ class AssociationRulesAnalysis:
     def _run_fp_growth_basic(self, transactions: List[List[str]], min_support: float, min_confidence: float) -> Dict[str, Any]:
         """Implementação básica do FP-Growth quando MLxtend não está disponível"""
         # Por simplicidade, usar a mesma implementação
+        return self._run_apriori_basic(transactions, min_support, min_confidence)
+    
+    def create_visualizations(self, output_dir: str = "output/imagens"):
+        """Criar visualizações dos resultados"""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        self.logger.info("📊 Criando visualizações...")
+        
+        try:
+            # 1. Gráfico de comparação de algoritmos
+            self._plot_algorithm_comparison(output_path)
+            
+            # 2. Gráficos de regras por algoritmo
+            if self.apriori_results.get('rules'):
+                self._plot_rules_metrics(self.apriori_results['rules'], 'Apriori', output_path)
+            
+            if self.fp_growth_results.get('rules'):
+                self._plot_rules_metrics(self.fp_growth_results['rules'], 'FP-Growth', output_path)
+            
+            if self.eclat_results.get('rules'):
+                self._plot_rules_metrics(self.eclat_results['rules'], 'Eclat', output_path)
+            
+            # 3. Gráfico combinado de métricas
+            self._plot_combined_metrics(output_path)
+            
+            self.logger.info(f"✅ Visualizações salvas em: {output_path}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao criar visualizações: {e}")
+
+    def _plot_algorithm_comparison(self, output_path: Path):
+        """Gráfico de comparação entre algoritmos"""
+        import matplotlib.pyplot as plt
+        
+        comparison = self.compare_algorithms()
+        if not comparison.get('results'):
+            return
+        
+        df_comp = pd.DataFrame(comparison['results'])
+        
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        fig.suptitle('Comparação de Algoritmos de Regras de Associação', fontsize=16)
+        
+        # Número de regras encontradas
+        axes[0, 0].bar(df_comp['Algorithm'], df_comp['Rules_Found'], 
+                       color=['#FF6B6B', '#4ECDC4', '#45B7D1'])
+        axes[0, 0].set_title('Número de Regras Encontradas')
+        axes[0, 0].set_ylabel('Quantidade')
+        
+        # Confiança média
+        axes[0, 1].bar(df_comp['Algorithm'], df_comp['Avg_Confidence'], 
+                       color=['#96CEB4', '#FFEAA7', '#DDA0DD'])
+        axes[0, 1].set_title('Confiança Média')
+        axes[0, 1].set_ylabel('Confiança')
+        
+        # Lift médio
+        axes[1, 0].bar(df_comp['Algorithm'], df_comp['Avg_Lift'], 
+                       color=['#FD79A8', '#FDCB6E', '#6C5CE7'])
+        axes[1, 0].set_title('Lift Médio')
+        axes[1, 0].set_ylabel('Lift')
+        
+        # Status de execução
+        status_counts = df_comp['Execution_Status'].value_counts()
+        axes[1, 1].pie(status_counts.values, labels=status_counts.index, autopct='%1.1f%%')
+        axes[1, 1].set_title('Status de Execução')
+        
+        plt.tight_layout()
+        plt.savefig(output_path / 'algorithm_comparison.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def _plot_rules_metrics(self, rules: List[Dict], algorithm_name: str, output_path: Path):
+        """Gráfico de métricas das regras para um algoritmo específico"""
+        import matplotlib.pyplot as plt
+        
+        if not rules:
+            return
+        
+        # Extrair métricas
+        confidences = [rule['confidence'] for rule in rules[:20]]  # Top 20
+        lifts = [rule['lift'] for rule in rules[:20]]
+        supports = [rule['support'] for rule in rules[:20]]
+        
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        fig.suptitle(f'Métricas das Regras - {algorithm_name}', fontsize=16)
+        
+        # Distribuição de confiança
+        axes[0, 0].hist(confidences, bins=10, alpha=0.7, color='skyblue')
+        axes[0, 0].set_title('Distribuição de Confiança')
+        axes[0, 0].set_xlabel('Confiança')
+        axes[0, 0].set_ylabel('Frequência')
+        
+        # Distribuição de lift
+        axes[0, 1].hist(lifts, bins=10, alpha=0.7, color='lightgreen')
+        axes[0, 1].set_title('Distribuição de Lift')
+        axes[0, 1].set_xlabel('Lift')
+        axes[0, 1].set_ylabel('Frequência')
+        
+        # Scatter plot: Confiança vs Lift
+        axes[1, 0].scatter(confidences, lifts, alpha=0.6, c='red')
+        axes[1, 0].set_title('Confiança vs Lift')
+        axes[1, 0].set_xlabel('Confiança')
+        axes[1, 0].set_ylabel('Lift')
+        
+        # Scatter plot: Suporte vs Confiança
+        axes[1, 1].scatter(supports, confidences, alpha=0.6, c='purple')
+        axes[1, 1].set_title('Suporte vs Confiança')
+        axes[1, 1].set_xlabel('Suporte')
+        axes[1, 1].set_ylabel('Confiança')
+        
+        plt.tight_layout()
+        plt.savefig(output_path / f'{algorithm_name.lower()}_metrics.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def _plot_combined_metrics(self, output_path: Path):
+        """Gráfico combinado de todas as métricas"""
+        import matplotlib.pyplot as plt
+        
+        all_rules = []
+        algorithms = []
+        
+        # Coletar todas as regras
+        for alg_name, results in [
+            ('Apriori', self.apriori_results),
+            ('FP-Growth', self.fp_growth_results),
+            ('Eclat', self.eclat_results)
+        ]:
+            if results.get('rules'):
+                for rule in results['rules'][:10]:  # Top 10 de cada
+                    all_rules.append(rule)
+                    algorithms.append(alg_name)
+        
+        if not all_rules:
+            return
+        
+        # Criar DataFrame
+        df_rules = pd.DataFrame(all_rules)
+        df_rules['Algorithm'] = algorithms
+        
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        fig.suptitle('Comparação de Métricas - Todos os Algoritmos', fontsize=16)
+        
+        # Boxplot de confiança por algoritmo
+        df_rules.boxplot(column='confidence', by='Algorithm', ax=axes[0, 0])
+        axes[0, 0].set_title('Confiança por Algoritmo')
+        axes[0, 0].set_xlabel('Algoritmo')
+        axes[0, 0].set_ylabel('Confiança')
+        
+        # Boxplot de lift por algoritmo
+        df_rules.boxplot(column='lift', by='Algorithm', ax=axes[0, 1])
+        axes[0, 1].set_title('Lift por Algoritmo')
+        axes[0, 1].set_xlabel('Algoritmo')
+        axes[0, 1].set_ylabel('Lift')
+        
+        # Scatter plot colorido por algoritmo
+        for alg in df_rules['Algorithm'].unique():
+            mask = df_rules['Algorithm'] == alg
+            axes[1, 0].scatter(df_rules[mask]['confidence'], df_rules[mask]['lift'], 
+                              label=alg, alpha=0.7)
+        axes[1, 0].set_title('Confiança vs Lift por Algoritmo')
+        axes[1, 0].set_xlabel('Confiança')
+        axes[1, 0].set_ylabel('Lift')
+        axes[1, 0].legend()
+        
+        # Distribuição de suporte
+        axes[1, 1].hist([df_rules[df_rules['Algorithm'] == alg]['support'].values 
+                        for alg in df_rules['Algorithm'].unique()], 
+                       label=df_rules['Algorithm'].unique(), alpha=0.7)
+        axes[1, 1].set_title('Distribuição de Suporte')
+        axes[1, 1].set_xlabel('Suporte')
+        axes[1, 1].set_ylabel('Frequência')
+        axes[1, 1].legend()
+        
+        plt.tight_layout()
+        plt.savefig(output_path / 'combined_metrics.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def _save_rules_analysis(self, rules_df: pd.DataFrame):
+        """Salvar análise das regras de associação"""
+        try:
+            output_dir = Path("output/analysis")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            if not rules_df.empty:
+                # Salvar regras relacionadas a salário
+                rules_df.to_csv(output_dir / "salary_association_rules.csv", index=False)
+                self.logger.info(f"💾 Regras de salário salvas: {len(rules_df)} regras")
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao salvar análise: {e}")
