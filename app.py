@@ -702,7 +702,7 @@ def load_analysis_files():
     
     # Buscar em múltiplas localizações
     search_paths = {
-        'images': [Path("output/images"), Path("imagens"), Path("bkp/imagens")],
+        'images': [Path("output/imagens"), Path("imagens"), Path("bkp/imagens")],
         'analysis': [Path("output/analysis"), Path("output"), Path(".")],
         'models': [Path("data/processed"), Path("bkp"), Path(".")]
     }
@@ -1193,8 +1193,552 @@ except ImportError as e:
     st.error(f"❌ Erro ao importar páginas: {e}")
     PAGES_IMPORTED = False
 
+@st.cache_data
+def load_all_visualizations():
+    """Carregar TODAS as visualizações disponíveis - VERSÃO EXPANDIDA"""
+    visualizations = {
+        'clustering': [],
+        'association_rules': [],
+        'eda': [],
+        'models': [],
+        'statistical': [],
+        'predictions': []
+    }
+    
+    # Buscar em todos os diretórios possíveis
+    search_paths = [
+        Path("output/images"),
+        Path("output/analysis"), 
+        Path("imagens"),
+        Path("bkp/imagens"),
+        Path("data/processed"),
+        Path("results"),
+        Path("plots"),
+        Path(".")
+    ]
+    
+    # Padrões de arquivos por categoria
+    patterns = {
+        'clustering': [
+            '*clustering*.png', '*cluster*.png', '*dbscan*.png', 
+            '*kmeans*.png', '*pca*.png', '*silhouette*.png'
+        ],
+        'association_rules': [
+            '*apriori*.png', '*fp_growth*.png', '*eclat*.png',
+            '*association*.png', '*rules*.png', '*support*.png'
+        ],
+        'eda': [
+            '*hist*.png', '*distribution*.png', '*correlation*.png',
+            '*box*.png', '*scatter*.png', '*violin*.png'
+        ],
+        'models': [
+            '*roc*.png', '*accuracy*.png', '*precision*.png',
+            '*recall*.png', '*model*.png', '*performance*.png'
+        ],
+        'statistical': [
+            '*stats*.png', '*analysis*.png', '*summary*.png',
+            '*report*.png', '*feature*.png'
+        ],
+        'predictions': [
+            '*prediction*.png', '*forecast*.png', '*target*.png'
+        ]
+    }
+    
+    # Buscar arquivos
+    for path in search_paths:
+        if path.exists():
+            for category, pattern_list in patterns.items():
+                for pattern in pattern_list:
+                    visualizations[category].extend(list(path.glob(pattern)))
+    
+    # Remover duplicatas
+    for category in visualizations:
+        visualizations[category] = list(set(visualizations[category]))
+    
+    # Log do que foi encontrado
+    total_images = sum(len(imgs) for imgs in visualizations.values())
+    print(f"📊 Total de visualizações encontradas: {total_images}")
+    for category, images in visualizations.items():
+        print(f"   • {category}: {len(images)} imagens")
+    
+    return visualizations
+
+def show_all_clustering_analysis(df, visualizations):
+    """Análise completa de clustering com TODOS os gráficos"""
+    st.header("🎯 Análise Completa de Clustering")
+    
+    # Mostrar todas as imagens de clustering
+    clustering_images = visualizations.get('clustering', [])
+    
+    if clustering_images:
+        st.subheader("📊 Visualizações Pré-computadas")
+        
+        # Organizar em colunas
+        for i in range(0, len(clustering_images), 2):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if i < len(clustering_images):
+                    img = clustering_images[i]
+                    st.image(str(img), caption=img.name, use_column_width=True)
+            
+            with col2:
+                if i + 1 < len(clustering_images):
+                    img = clustering_images[i + 1]
+                    st.image(str(img), caption=img.name, use_column_width=True)
+    
+    # Clustering interativo EXPANDIDO
+    st.subheader("🔧 Clustering Interativo Avançado")
+    
+    with st.container():
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            algorithm = st.selectbox("🤖 Algoritmo", 
+                                   ["K-Means", "DBSCAN", "Agglomerative", "OPTICS"])
+        
+        with col2:
+            n_clusters = st.slider("📊 Clusters", 2, 15, 4)
+        
+        with col3:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if 'salary' in numeric_cols:
+                numeric_cols.remove('salary')
+            
+            features = st.multiselect("🎯 Features", numeric_cols,
+                                    default=numeric_cols[:4] if len(numeric_cols) >= 4 else numeric_cols)
+        
+        with col4:
+            visualization_type = st.selectbox("📊 Visualização",
+                                            ["Scatter 2D", "Scatter 3D", "PCA", "t-SNE"])
+    
+    if len(features) >= 2 and st.button("🚀 Executar Clustering Completo", type="primary"):
+        show_advanced_clustering_analysis(df, algorithm, n_clusters, features, visualization_type)
+
+def show_advanced_clustering_analysis(df, algorithm, n_clusters, features, viz_type):
+    """Executar análise avançada de clustering com múltiplas visualizações"""
+    try:
+        from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.decomposition import PCA
+        from sklearn.manifold import TSNE
+        from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+        
+        with st.spinner("🔄 Processando clustering avançado..."):
+            # Preparar dados
+            X = df[features].dropna()
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            
+            # Aplicar algoritmo
+            if algorithm == "K-Means":
+                clusterer = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            elif algorithm == "DBSCAN":
+                eps = st.sidebar.slider("DBSCAN - eps", 0.1, 2.0, 0.5)
+                min_samples = st.sidebar.slider("DBSCAN - min_samples", 2, 20, 5)
+                clusterer = DBSCAN(eps=eps, min_samples=min_samples)
+            elif algorithm == "OPTICS":
+                min_samples = st.sidebar.slider("OPTICS - min_samples", 2, 20, 5)
+                clusterer = OPTICS(min_samples=min_samples)
+            else:  # Agglomerative
+                clusterer = AgglomerativeClustering(n_clusters=n_clusters)
+            
+            clusters = clusterer.fit_predict(X_scaled)
+            
+            # Múltiplas visualizações
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Visualização principal
+                if viz_type == "Scatter 2D":
+                    show_2d_clustering_plot(X, clusters, features)
+                elif viz_type == "Scatter 3D":
+                    show_3d_clustering_plot(X, clusters, features)
+                elif viz_type == "PCA":
+                    show_pca_clustering_plot(X_scaled, clusters)
+                elif viz_type == "t-SNE":
+                    show_tsne_clustering_plot(X_scaled, clusters)
+            
+            with col2:
+                # Análise complementar
+                show_cluster_distribution_analysis(clusters)
+            
+            # Métricas avançadas
+            show_advanced_clustering_metrics(X_scaled, clusters)
+            
+            # Análise por feature
+            show_feature_analysis_by_cluster(X, clusters, features)
+    
+    except Exception as e:
+        st.error(f"❌ Erro no clustering avançado: {e}")
+
+def show_2d_clustering_plot(X, clusters, features):
+    """Gráfico 2D de clustering"""
+    plot_df = X.copy()
+    plot_df['Cluster'] = [f'Cluster {i}' for i in clusters]
+    
+    fig = create_modern_scatter_plot(
+        data=plot_df,
+        x=features[0],
+        y=features[1],
+        color='Cluster',
+        title=f"🎯 Clustering 2D: {features[0]} vs {features[1]}"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_3d_clustering_plot(X, clusters, features):
+    """Gráfico 3D de clustering"""
+    if len(features) >= 3:
+        fig = px.scatter_3d(
+            x=X[features[0]], y=X[features[1]], z=X[features[2]],
+            color=[f'Cluster {i}' for i in clusters],
+            title=f"🎯 Clustering 3D",
+            labels={
+                'x': features[0],
+                'y': features[1], 
+                'z': features[2]
+            }
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Necessário pelo menos 3 features para visualização 3D")
+
+def show_pca_clustering_plot(X_scaled, clusters):
+    """Gráfico PCA de clustering"""
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    pca_df = pd.DataFrame({
+        'PC1': X_pca[:, 0],
+        'PC2': X_pca[:, 1],
+        'Cluster': [f'Cluster {i}' for i in clusters]
+    })
+    
+    fig = create_modern_scatter_plot(
+        data=pca_df,
+        x='PC1',
+        y='PC2',
+        color='Cluster',
+        title=f"🎨 PCA Clustering (Variância explicada: {pca.explained_variance_ratio_.sum():.1%})"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_tsne_clustering_plot(X_scaled, clusters):
+    """Gráfico t-SNE de clustering"""
+    with st.spinner("Calculando t-SNE..."):
+        tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(X_scaled)-1))
+        X_tsne = tsne.fit_transform(X_scaled)
+        
+        tsne_df = pd.DataFrame({
+            'tSNE1': X_tsne[:, 0],
+            'tSNE2': X_tsne[:, 1],
+            'Cluster': [f'Cluster {i}' for i in clusters]
+        })
+        
+        fig = create_modern_scatter_plot(
+            data=tsne_df,
+            x='tSNE1',
+            y='tSNE2',
+            color='Cluster',
+            title="🎭 t-SNE Clustering"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def show_cluster_distribution_analysis(clusters):
+    """Análise de distribuição dos clusters"""
+    unique_clusters, counts = np.unique(clusters, return_counts=True)
+    
+    # Gráfico de pizza
+    fig = create_modern_pie_chart(
+        data=None,
+        values=counts,
+        names=[f'Cluster {i}' for i in unique_clusters],
+        title="📊 Distribuição dos Clusters"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_advanced_clustering_metrics(X_scaled, clusters):
+    """Métricas avançadas de clustering"""
+    st.subheader("📈 Métricas de Qualidade Avançadas")
+    
+    if len(set(clusters)) > 1:
+        silhouette = silhouette_score(X_scaled, clusters)
+        calinski = calinski_harabasz_score(X_scaled, clusters)
+        davies_bouldin = davies_bouldin_score(X_scaled, clusters)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("🎯 Silhouette Score", f"{silhouette:.3f}")
+        
+        with col2:
+            st.metric("📊 Calinski-Harabasz", f"{calinski:.0f}")
+        
+        with col3:
+            st.metric("🎭 Davies-Bouldin", f"{davies_bouldin:.3f}")
+        
+        with col4:
+            st.metric("📋 Clusters Únicos", len(set(clusters)))
+
+def show_feature_analysis_by_cluster(X, clusters, features):
+    """Análise de features por cluster"""
+    st.subheader("🔍 Análise de Features por Cluster")
+    
+    cluster_df = X.copy()
+    cluster_df['Cluster'] = clusters
+    
+    # Box plots para cada feature
+    for feature in features[:4]:  # Limitar a 4 features
+        fig = px.box(
+            cluster_df, x='Cluster', y=feature,
+            title=f"📊 Distribuição de {feature} por Cluster"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def show_complete_association_rules_analysis(df, visualizations):
+    """Análise completa de regras de associação"""
+    st.header("📋 Análise Completa de Regras de Associação")
+    
+    # Mostrar imagens pré-computadas
+    rules_images = visualizations.get('association_rules', [])
+    
+    if rules_images:
+        st.subheader("📊 Visualizações dos Algoritmos")
+        
+        # Separar por algoritmo
+        apriori_imgs = [img for img in rules_images if 'apriori' in img.name.lower()]
+        fp_growth_imgs = [img for img in rules_images if 'fp' in img.name.lower() or 'growth' in img.name.lower()]
+        eclat_imgs = [img for img in rules_images if 'eclat' in img.name.lower()]
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["🔍 APRIORI", "🌳 FP-GROWTH", "⚡ ECLAT", "📊 Comparação"])
+        
+        with tab1:
+            for img in apriori_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab2:
+            for img in fp_growth_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab3:
+            for img in eclat_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab4:
+            # Mostrar comparações
+            comparison_imgs = [img for img in rules_images if 'comparison' in img.name.lower()]
+            for img in comparison_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+    
+    # Interface interativa para regras de associação
+    show_interactive_association_rules(df)
+
+def show_interactive_association_rules(df):
+    """Interface interativa para regras de associação"""
+    st.subheader("🔧 Gerador Interativo de Regras")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        min_support = st.slider("📊 Suporte Mínimo", 0.001, 0.1, 0.01, step=0.001)
+    
+    with col2:
+        min_confidence = st.slider("🎯 Confiança Mínima", 0.1, 1.0, 0.6, step=0.05)
+    
+    with col3:
+        algorithm = st.selectbox("🤖 Algoritmo", ["APRIORI", "FP-GROWTH", "ECLAT"])
+    
+    if st.button("🚀 Gerar Regras Interativas", type="primary"):
+        with st.spinner("🔄 Processando regras de associação..."):
+            try:
+                # Importar classe de association rules
+                from src.analysis.association_rules import AssociationRulesAnalysis
+                
+                analyzer = AssociationRulesAnalysis()
+                
+                # Preparar dados
+                transactions = analyzer.prepare_data(df)
+                
+                if transactions:
+                    # Executar algoritmo selecionado
+                    if algorithm == "APRIORI":
+                        results = analyzer.run_apriori(transactions, min_support, min_confidence)
+                    elif algorithm == "FP-GROWTH":
+                        results = analyzer.run_fp_growth(transactions, min_support, min_confidence)
+                    else:  # ECLAT
+                        results = analyzer.run_eclat(transactions, min_support, min_confidence)
+                    
+                    if results and results.get('rules'):
+                        rules = results['rules']
+                        st.success(f"✅ {len(rules)} regras encontradas com {algorithm}!")
+                        
+                        # Mostrar regras em DataFrame
+                        rules_df = pd.DataFrame(rules)
+                        st.dataframe(rules_df, use_container_width=True)
+                        
+                        # Visualizações das regras
+                        show_rules_visualizations(rules_df)
+                    else:
+                        st.warning("⚠️ Nenhuma regra encontrada com os parâmetros selecionados")
+                else:
+                    st.error("❌ Erro na preparação dos dados")
+                    
+            except Exception as e:
+                st.error(f"❌ Erro na geração de regras: {e}")
+
+def show_rules_visualizations(rules_df):
+    """Visualizações das regras de associação"""
+    if rules_df.empty:
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Scatter plot: Suporte vs Confiança
+        if 'support' in rules_df.columns and 'confidence' in rules_df.columns:
+            fig = create_modern_scatter_plot(
+                data=rules_df,
+                x='support',
+                y='confidence',
+                color='lift' if 'lift' in rules_df.columns else None,
+                title="📊 Suporte vs Confiança"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Histograma de Lift
+        if 'lift' in rules_df.columns:
+            fig = create_modern_histogram(
+                data=rules_df,
+                column='lift',
+                title="📈 Distribuição de Lift"
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+
+def show_complete_eda_analysis(df, visualizations):
+    """Análise exploratória completa com todos os gráficos"""
+    st.header("📈 Análise Exploratória Completa")
+    
+    # Mostrar todas as visualizações EDA
+    eda_images = visualizations.get('eda', [])
+    
+    if eda_images:
+        st.subheader("📊 Visualizações Pré-computadas")
+        
+        # Organizar por tipo
+        hist_imgs = [img for img in eda_images if 'hist' in img.name.lower()]
+        corr_imgs = [img for img in eda_images if 'corr' in img.name.lower()]
+        dist_imgs = [img for img in eda_images if 'dist' in img.name.lower()]
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Histogramas", "🔗 Correlações", "📈 Distribuições", "🎯 Outros"])
+        
+        with tab1:
+            for i in range(0, len(hist_imgs), 2):
+                col1, col2 = st.columns(2)
+                with col1:
+                    if i < len(hist_imgs):
+                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_column_width=True)
+                with col2:
+                    if i + 1 < len(hist_imgs):
+                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_column_width=True)
+        
+        with tab2:
+            for img in corr_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab3:
+            for img in dist_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab4:
+            other_imgs = [img for img in eda_images if img not in hist_imgs + corr_imgs + dist_imgs]
+            for img in other_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+    
+    # Análise interativa expandida
+    show_interactive_eda_analysis(df)
+
+def show_interactive_eda_analysis(df):
+    """Análise EDA interativa expandida"""
+    st.subheader("🔧 Análise Interativa Avançada")
+    
+    # Controles expandidos
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        x_var = st.selectbox("🔢 Variável X:", numeric_cols)
+    
+    with col2:
+        y_var = st.selectbox("📊 Variável Y:", ["Nenhuma"] + numeric_cols)
+    
+    with col3:
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        color_var = st.selectbox("🎨 Cor por:", ["Nenhuma"] + categorical_cols)
+    
+    with col4:
+        size_var = st.selectbox("📏 Tamanho por:", ["Nenhuma"] + numeric_cols)
+    
+    # Tipos de gráfico expandidos
+    chart_type = st.selectbox("📊 Tipo de Gráfico:", 
+                            ["Scatter Plot", "Histograma", "Box Plot", "Violin Plot", 
+                             "Heatmap", "Pair Plot", "Distribution Plot"])
+    
+    if st.button("🚀 Gerar Visualização Avançada", type="primary"):
+        show_advanced_eda_visualization(df, x_var, y_var, color_var, size_var, chart_type)
+
+def show_advanced_eda_visualization(df, x_var, y_var, color_var, size_var, chart_type):
+    """Gerar visualização EDA avançada"""
+    try:
+        if chart_type == "Scatter Plot" and y_var != "Nenhuma":
+            fig = create_modern_scatter_plot(
+                data=df,
+                x=x_var,
+                y=y_var,
+                color=color_var if color_var != "Nenhuma" else None,
+                size=size_var if size_var != "Nenhuma" else None,
+                title=f"📊 {x_var} vs {y_var}"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Histograma":
+            fig = create_modern_histogram(
+                data=df,
+                column=x_var,
+                title=f"📊 Distribuição de {x_var}",
+                color_column=color_var if color_var != "Nenhuma" else None
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Box Plot":
+            if color_var != "Nenhuma":
+                fig = px.box(df, y=x_var, x=color_var, title=f"📦 {x_var} por {color_var}")
+            else:
+                fig = px.box(df, y=x_var, title=f"📦 Box Plot de {x_var}")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Violin Plot":
+            if color_var != "Nenhuma":
+                fig = px.violin(df, y=x_var, x=color_var, title=f"🎻 {x_var} por {color_var}")
+            else:
+                fig = px.violin(df, y=x_var, title=f"🎻 Violin Plot de {x_var}")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Heatmap":
+            fig = create_interactive_correlation_heatmap(df)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Adicionar mais tipos conforme necessário
+        
+    except Exception as e:
+        st.error(f"❌ Erro na visualização: {e}")
+
+# ATUALIZAR A FUNÇÃO MAIN PARA USAR AS NOVAS FUNÇÕES:
 def main():
-    """Interface principal com autenticação"""
+    """Interface principal com visualizações expandidas"""
     
     # Aplicar CSS customizado
     apply_custom_css()
@@ -1216,6 +1760,7 @@ def main():
     
     # Carregar dados
     df, load_message = load_data()
+    visualizations = load_all_visualizations()  # NOVA FUNÇÃO
     files_status = load_analysis_files()
     
     # Sidebar melhorada
@@ -1353,9 +1898,9 @@ def main():
         elif current_page == "🤖 Modelos ML":
             show_ml_models_enhanced(filtered_df, files_status)
         elif current_page == "🎯 Clustering":
-            show_clustering_analysis_enhanced(filtered_df, files_status)
+            show_all_clustering_analysis(df, visualizations)  # NOVA FUNÇÃO
         elif current_page == "📋 Regras de Associação":
-            show_association_rules_enhanced(filtered_df, files_status)
+            show_complete_association_rules_analysis(df, visualizations)  # NOVA FUNÇÃO
         elif current_page == "📊 Métricas Avançadas":
             show_advanced_metrics_enhanced(filtered_df, files_status)
         elif current_page == "🔮 Predição":
@@ -1683,280 +2228,478 @@ def show_ml_models_enhanced(df, files_status):
         else:
             st.info("Execute o pipeline para gerar gráficos de performance")
 
-def show_clustering_analysis_enhanced(df, files_status):
-    """Análise de clustering"""
-    st.header("🎯 Análise de Clustering Modernizada")
+def show_all_clustering_analysis(df, visualizations):
+    """Análise completa de clustering com TODOS os gráficos"""
+    st.header("🎯 Análise Completa de Clustering")
     
-    # Verificar arquivos existentes
-    clustering_files = {
-        'analysis_image': Path("output/images/clustering_analysis.png"),
-        'pca_image': Path("output/images/clusters_pca_visualization.png"),
-        'cluster_data': Path("output/analysis/clustering_results.csv")
-    }
+    # Mostrar todas as imagens de clustering
+    clustering_images = visualizations.get('clustering', [])
     
-    files_found = {name: path.exists() for name, path in clustering_files.items()}
+    if clustering_images:
+        st.subheader("📊 Visualizações Pré-computadas")
+        
+        # Organizar em colunas
+        for i in range(0, len(clustering_images), 2):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if i < len(clustering_images):
+                    img = clustering_images[i]
+                    st.image(str(img), caption=img.name, use_column_width=True)
+            
+            with col2:
+                if i + 1 < len(clustering_images):
+                    img = clustering_images[i + 1]
+                    st.image(str(img), caption=img.name, use_column_width=True)
     
-    # Dashboard de status
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        status = "✅" if files_found['analysis_image'] else "❌"
-        st.markdown(f"""
-        <div class="{'success-box' if files_found['analysis_image'] else 'warning-box'}">
-            <h4>{status} Análise do Cotovelo</h4>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        status = "✅" if files_found['pca_image'] else "❌"
-        st.markdown(f"""
-        <div class="{'success-box' if files_found['pca_image'] else 'warning-box'}">
-            <h4>{status} Visualização PCA</h4>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        status = "✅" if files_found['cluster_data'] else "❌"
-        st.markdown(f"""
-        <div class="{'success-box' if files_found['cluster_data'] else 'warning-box'}">
-            <h4>{status} Dados de Cluster</h4>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Clustering interativo modernizado
+    # Clustering interativo EXPANDIDO
     st.subheader("🔧 Clustering Interativo Avançado")
     
     with st.container():
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            algorithm = st.selectbox("🤖 Algoritmo", ["K-Means", "DBSCAN", "Agglomerative"])
+            algorithm = st.selectbox("🤖 Algoritmo", 
+                                   ["K-Means", "DBSCAN", "Agglomerative", "OPTICS"])
         
         with col2:
-            n_clusters = st.slider("📊 Número de Clusters", 2, 10, 4)
+            n_clusters = st.slider("📊 Clusters", 2, 15, 4)
         
         with col3:
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             if 'salary' in numeric_cols:
                 numeric_cols.remove('salary')
             
-            features = st.multiselect(
-                "🎯 Features",
-                numeric_cols,
-                default=numeric_cols[:3] if len(numeric_cols) >= 3 else numeric_cols
-            )
+            features = st.multiselect("🎯 Features", numeric_cols,
+                                    default=numeric_cols[:4] if len(numeric_cols) >= 4 else numeric_cols)
+        
+        with col4:
+            visualization_type = st.selectbox("📊 Visualização",
+                                            ["Scatter 2D", "Scatter 3D", "PCA", "t-SNE"])
     
-    if len(features) >= 2 and st.button("🚀 Executar Clustering Avançado", type="primary"):
-        try:
-            from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
-            from sklearn.preprocessing import StandardScaler
-            from sklearn.decomposition import PCA
-            from sklearn.metrics import silhouette_score
+    if len(features) >= 2 and st.button("🚀 Executar Clustering Completo", type="primary"):
+        show_advanced_clustering_analysis(df, algorithm, n_clusters, features, visualization_type)
+
+def show_advanced_clustering_analysis(df, algorithm, n_clusters, features, viz_type):
+    """Executar análise avançada de clustering com múltiplas visualizações"""
+    try:
+        from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.decomposition import PCA
+        from sklearn.manifold import TSNE
+        from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+        
+        with st.spinner("🔄 Processando clustering avançado..."):
+            # Preparar dados
+            X = df[features].dropna()
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
             
-            with st.spinner("🔄 Processando clustering..."):
+            # Aplicar algoritmo
+            if algorithm == "K-Means":
+                clusterer = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            elif algorithm == "DBSCAN":
+                eps = st.sidebar.slider("DBSCAN - eps", 0.1, 2.0, 0.5)
+                min_samples = st.sidebar.slider("DBSCAN - min_samples", 2, 20, 5)
+                clusterer = DBSCAN(eps=eps, min_samples=min_samples)
+            elif algorithm == "OPTICS":
+                min_samples = st.sidebar.slider("OPTICS - min_samples", 2, 20, 5)
+                clusterer = OPTICS(min_samples=min_samples)
+            else:  # Agglomerative
+                clusterer = AgglomerativeClustering(n_clusters=n_clusters)
+            
+            clusters = clusterer.fit_predict(X_scaled)
+            
+            # Múltiplas visualizações
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Visualização principal
+                if viz_type == "Scatter 2D":
+                    show_2d_clustering_plot(X, clusters, features)
+                elif viz_type == "Scatter 3D":
+                    show_3d_clustering_plot(X, clusters, features)
+                elif viz_type == "PCA":
+                    show_pca_clustering_plot(X_scaled, clusters)
+                elif viz_type == "t-SNE":
+                    show_tsne_clustering_plot(X_scaled, clusters)
+            
+            with col2:
+                # Análise complementar
+                show_cluster_distribution_analysis(clusters)
+            
+            # Métricas avançadas
+            show_advanced_clustering_metrics(X_scaled, clusters)
+            
+            # Análise por feature
+            show_feature_analysis_by_cluster(X, clusters, features)
+    
+    except Exception as e:
+        st.error(f"❌ Erro no clustering avançado: {e}")
+
+def show_2d_clustering_plot(X, clusters, features):
+    """Gráfico 2D de clustering"""
+    plot_df = X.copy()
+    plot_df['Cluster'] = [f'Cluster {i}' for i in clusters]
+    
+    fig = create_modern_scatter_plot(
+        data=plot_df,
+        x=features[0],
+        y=features[1],
+        color='Cluster',
+        title=f"🎯 Clustering 2D: {features[0]} vs {features[1]}"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_3d_clustering_plot(X, clusters, features):
+    """Gráfico 3D de clustering"""
+    if len(features) >= 3:
+        fig = px.scatter_3d(
+            x=X[features[0]], y=X[features[1]], z=X[features[2]],
+            color=[f'Cluster {i}' for i in clusters],
+            title=f"🎯 Clustering 3D",
+            labels={
+                'x': features[0],
+                'y': features[1], 
+                'z': features[2]
+            }
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Necessário pelo menos 3 features para visualização 3D")
+
+def show_pca_clustering_plot(X_scaled, clusters):
+    """Gráfico PCA de clustering"""
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    pca_df = pd.DataFrame({
+        'PC1': X_pca[:, 0],
+        'PC2': X_pca[:, 1],
+        'Cluster': [f'Cluster {i}' for i in clusters]
+    })
+    
+    fig = create_modern_scatter_plot(
+        data=pca_df,
+        x='PC1',
+        y='PC2',
+        color='Cluster',
+        title=f"🎨 PCA Clustering (Variância explicada: {pca.explained_variance_ratio_.sum():.1%})"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_tsne_clustering_plot(X_scaled, clusters):
+    """Gráfico t-SNE de clustering"""
+    with st.spinner("Calculando t-SNE..."):
+        tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(X_scaled)-1))
+        X_tsne = tsne.fit_transform(X_scaled)
+        
+        tsne_df = pd.DataFrame({
+            'tSNE1': X_tsne[:, 0],
+            'tSNE2': X_tsne[:, 1],
+            'Cluster': [f'Cluster {i}' for i in clusters]
+        })
+        
+        fig = create_modern_scatter_plot(
+            data=tsne_df,
+            x='tSNE1',
+            y='tSNE2',
+            color='Cluster',
+            title="🎭 t-SNE Clustering"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def show_cluster_distribution_analysis(clusters):
+    """Análise de distribuição dos clusters"""
+    unique_clusters, counts = np.unique(clusters, return_counts=True)
+    
+    # Gráfico de pizza
+    fig = create_modern_pie_chart(
+        data=None,
+        values=counts,
+        names=[f'Cluster {i}' for i in unique_clusters],
+        title="📊 Distribuição dos Clusters"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_advanced_clustering_metrics(X_scaled, clusters):
+    """Métricas avançadas de clustering"""
+    st.subheader("📈 Métricas de Qualidade Avançadas")
+    
+    if len(set(clusters)) > 1:
+        silhouette = silhouette_score(X_scaled, clusters)
+        calinski = calinski_harabasz_score(X_scaled, clusters)
+        davies_bouldin = davies_bouldin_score(X_scaled, clusters)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("🎯 Silhouette Score", f"{silhouette:.3f}")
+        
+        with col2:
+            st.metric("📊 Calinski-Harabasz", f"{calinski:.0f}")
+        
+        with col3:
+            st.metric("🎭 Davies-Bouldin", f"{davies_bouldin:.3f}")
+        
+        with col4:
+            st.metric("📋 Clusters Únicos", len(set(clusters)))
+
+def show_feature_analysis_by_cluster(X, clusters, features):
+    """Análise de features por cluster"""
+    st.subheader("🔍 Análise de Features por Cluster")
+    
+    cluster_df = X.copy()
+    cluster_df['Cluster'] = clusters
+    
+    # Box plots para cada feature
+    for feature in features[:4]:  # Limitar a 4 features
+        fig = px.box(
+            cluster_df, x='Cluster', y=feature,
+            title=f"📊 Distribuição de {feature} por Cluster"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def show_complete_association_rules_analysis(df, visualizations):
+    """Análise completa de regras de associação"""
+    st.header("📋 Análise Completa de Regras de Associação")
+    
+    # Mostrar imagens pré-computadas
+    rules_images = visualizations.get('association_rules', [])
+    
+    if rules_images:
+        st.subheader("📊 Visualizações dos Algoritmos")
+        
+        # Separar por algoritmo
+        apriori_imgs = [img for img in rules_images if 'apriori' in img.name.lower()]
+        fp_growth_imgs = [img for img in rules_images if 'fp' in img.name.lower() or 'growth' in img.name.lower()]
+        eclat_imgs = [img for img in rules_images if 'eclat' in img.name.lower()]
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["🔍 APRIORI", "🌳 FP-GROWTH", "⚡ ECLAT", "📊 Comparação"])
+        
+        with tab1:
+            for img in apriori_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab2:
+            for img in fp_growth_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab3:
+            for img in eclat_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab4:
+            # Mostrar comparações
+            comparison_imgs = [img for img in rules_images if 'comparison' in img.name.lower()]
+            for img in comparison_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+    
+    # Interface interativa para regras de associação
+    show_interactive_association_rules(df)
+
+def show_interactive_association_rules(df):
+    """Interface interativa para regras de associação"""
+    st.subheader("🔧 Gerador Interativo de Regras")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        min_support = st.slider("📊 Suporte Mínimo", 0.001, 0.1, 0.01, step=0.001)
+    
+    with col2:
+        min_confidence = st.slider("🎯 Confiança Mínima", 0.1, 1.0, 0.6, step=0.05)
+    
+    with col3:
+        algorithm = st.selectbox("🤖 Algoritmo", ["APRIORI", "FP-GROWTH", "ECLAT"])
+    
+    if st.button("🚀 Gerar Regras Interativas", type="primary"):
+        with st.spinner("🔄 Processando regras de associação..."):
+            try:
+                # Importar classe de association rules
+                from src.analysis.association_rules import AssociationRulesAnalysis
+                
+                analyzer = AssociationRulesAnalysis()
+                
                 # Preparar dados
-                X = df[features].dropna()
-                scaler = StandardScaler()
-                X_scaled = scaler.fit_transform(X)
+                transactions = analyzer.prepare_data(df)
                 
-                # Aplicar algoritmo selecionado
-                if algorithm == "K-Means":
-                    clusterer = KMeans(n_clusters=n_clusters, random_state=42)
-                elif algorithm == "DBSCAN":
-                    clusterer = DBSCAN(eps=0.5, min_samples=5)
-                else:  # Agglomerative
-                    clusterer = AgglomerativeClustering(n_clusters=n_clusters)
-                
-                clusters = clusterer.fit_predict(X_scaled)
-                
-                # Calcular métricas
-                if len(set(clusters)) > 1:
-                    silhouette = silhouette_score(X_scaled, clusters)
-                else:
-                    silhouette = 0
-                
-                # Visualizações modernas
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    # Scatter plot 2D
-                    if len(features) >= 2:
-                        plot_df = X.copy()
-                        plot_df['Cluster'] = [f'Cluster {i}' for i in clusters]
+                if transactions:
+                    # Executar algoritmo selecionado
+                    if algorithm == "APRIORI":
+                        results = analyzer.run_apriori(transactions, min_support, min_confidence)
+                    elif algorithm == "FP-GROWTH":
+                        results = analyzer.run_fp_growth(transactions, min_support, min_confidence)
+                    else:  # ECLAT
+                        results = analyzer.run_eclat(transactions, min_support, min_confidence)
+                    
+                    if results and results.get('rules'):
+                        rules = results['rules']
+                        st.success(f"✅ {len(rules)} regras encontradas com {algorithm}!")
                         
-                        fig = create_modern_scatter_plot(
-                            data=plot_df,
-                            x=features[0],
-                            y=features[1],
-                            color='Cluster',
-                            title=f"🎯 Clustering {algorithm}"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    # PCA Visualization
-                    if len(features) > 2:
-                        pca = PCA(n_components=2)
-                        X_pca = pca.fit_transform(X_scaled)
+                        # Mostrar regras em DataFrame
+                        rules_df = pd.DataFrame(rules)
+                        st.dataframe(rules_df, use_container_width=True)
                         
-                        pca_df = pd.DataFrame({
-                            'PC1': X_pca[:, 0],
-                            'PC2': X_pca[:, 1],
-                            'Cluster': [f'Cluster {i}' for i in clusters]
-                        })
-                        
-                        fig = create_modern_scatter_plot(
-                            data=pca_df,
-                            x='PC1',
-                            y='PC2',
-                            color='Cluster',
-                            title="🎨 Visualização PCA"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                # Estatísticas dos clusters
-                unique_clusters, counts = np.unique(clusters, return_counts=True)
-                cluster_stats = pd.DataFrame({
-                    'Cluster': [f'Cluster {i}' for i in unique_clusters],
-                    'Tamanho': counts,
-                    'Percentual': (counts / len(clusters) * 100).round(1)
-                })
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("### 📊 Estatísticas dos Clusters")
-                    st.dataframe(cluster_stats, use_container_width=True)
-                
-                with col2:
-                    # Gráfico de pizza dos clusters
-                    fig = create_modern_pie_chart(
-                        data=None,
-                        values=counts,
-                        names=[f'Cluster {i}' for i in unique_clusters],
-                        title="📊 Distribuição dos Clusters"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Métricas de qualidade
-                st.markdown("### 📈 Métricas de Qualidade")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("🎯 Silhouette Score", f"{silhouette:.3f}")
-                
-                with col2:
-                    st.metric("📊 Número de Clusters", len(unique_clusters))
-                
-                with col3:
-                    st.metric("📋 Pontos Processados", len(X))
-                
-                st.success(f"✅ Clustering {algorithm} executado com sucesso!")
-        
-        except Exception as e:
-            st.error(f"❌ Erro no clustering: {e}")
-    
-    # Mostrar imagens existentes se disponíveis
-    if any(files_found.values()):
-        st.subheader("📊 Análises Pré-computadas")
-        
-        for name, path in clustering_files.items():
-            if path.exists() and path.suffix == '.png':
-                st.image(str(path), caption=path.name, use_column_width=True)
-
-def show_association_rules_enhanced(df, files_status):
-    """Regras de associação"""
-    st.header("📋 Regras de Associação")
-    
-    # Procurar arquivo de regras
-    rules_files = [f for f in files_status['analysis'] 
-                  if 'rule' in f.name.lower() or 'association' in f.name.lower()]
-    
-    if rules_files:
-        for file in rules_files:
-            try:
-                rules_df = pd.read_csv(file)
-                st.dataframe(rules_df, use_container_width=True)
-                
-                # Gráfico de suporte vs confiança
-                if 'support' in rules_df.columns and 'confidence' in rules_df.columns:
-                    fig = px.scatter(rules_df, x='support', y='confidence',
-                                   hover_data=['antecedents', 'consequents'] if 'antecedents' in rules_df.columns else None,
-                                   title="Suporte vs Confiança das Regras")
-                    st.plotly_chart(fig, use_container_width=True)
-                
-            except Exception as e:
-                st.error(f"Erro ao carregar regras: {e}")
-    else:
-        st.info("Execute o pipeline para gerar regras de associação")
-
-def show_advanced_metrics_enhanced(df, files_status):
-    """Métricas avançadas"""
-    st.header("📊 Métricas Avançadas")
-    
-    # Procurar relatórios de métricas
-    metrics_files = [f for f in files_status['analysis'] 
-                    if 'metric' in f.name.lower() or 'advanced' in f.name.lower()]
-    
-    if metrics_files:
-        for file in metrics_files:
-            try:
-                metrics_df = pd.read_csv(file)
-                st.dataframe(metrics_df, use_container_width=True)
-            except Exception as e:
-                st.error(f"Erro: {e}")
-    else:
-        st.info("Execute o pipeline para gerar métricas avançadas")
-
-def show_prediction_interface_enhanced(df, files_status):
-    """Interface de predição"""
-    st.header("🔮 Predição Interativa")
-    
-    # Verificar se há modelos
-    if not files_status['models']:
-        st.warning("⚠️ Nenhum modelo encontrado para predição")
-        return
-    
-    # Tentar carregar um modelo
-    model = None
-    for model_file in files_status['models']:
-        try:
-            model = joblib.load(model_file)
-            st.success(f"✅ Modelo carregado: {model_file.name}")
-            break
-        except Exception:
-            continue
-    
-    if model is None:
-        st.error("❌ Não foi possível carregar nenhum modelo")
-        return
-    
-    st.info("Interface de predição em desenvolvimento. Valores configurados mas modelo precisa ser adaptado.")
-
-def show_reports_enhanced(files_status):
-    """Relatórios implementados"""
-    st.header("📁 Relatórios Gerados")
-    
-    # Mostrar arquivos de relatório
-    report_files = [f for f in files_status['analysis'] 
-                   if f.suffix in ['.md', '.txt', '.csv']]
-    
-    if report_files:
-        for file in report_files:
-            with st.expander(f"📄 {file.name}"):
-                try:
-                    if file.suffix == '.md':
-                        content = file.read_text(encoding='utf-8')
-                        st.markdown(content)
-                    elif file.suffix == '.csv':
-                        df = pd.read_csv(file)
-                        st.dataframe(df, use_container_width=True)
+                        # Visualizações das regras
+                        show_rules_visualizations(rules_df)
                     else:
-                        content = file.read_text(encoding='utf-8')
-                        st.text(content)
-                except Exception as e:
-                    st.error(f"Erro ao ler arquivo: {e}")
-    else:
-        st.info("Execute o pipeline para gerar relatórios")
+                        st.warning("⚠️ Nenhuma regra encontrada com os parâmetros selecionados")
+                else:
+                    st.error("❌ Erro na preparação dos dados")
+                    
+            except Exception as e:
+                st.error(f"❌ Erro na geração de regras: {e}")
+
+def show_rules_visualizations(rules_df):
+    """Visualizações das regras de associação"""
+    if rules_df.empty:
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Scatter plot: Suporte vs Confiança
+        if 'support' in rules_df.columns and 'confidence' in rules_df.columns:
+            fig = create_modern_scatter_plot(
+                data=rules_df,
+                x='support',
+                y='confidence',
+                color='lift' if 'lift' in rules_df.columns else None,
+                title="📊 Suporte vs Confiança"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Histograma de Lift
+        if 'lift' in rules_df.columns:
+            fig = create_modern_histogram(
+                data=rules_df,
+                column='lift',
+                title="📈 Distribuição de Lift"
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+
+def show_complete_eda_analysis(df, visualizations):
+    """Análise exploratória completa com todos os gráficos"""
+    st.header("📈 Análise Exploratória Completa")
+    
+    # Mostrar todas as visualizações EDA
+    eda_images = visualizations.get('eda', [])
+    
+    if eda_images:
+        st.subheader("📊 Visualizações Pré-computadas")
+        
+        # Organizar por tipo
+        hist_imgs = [img for img in eda_images if 'hist' in img.name.lower()]
+        corr_imgs = [img for img in eda_images if 'corr' in img.name.lower()]
+        dist_imgs = [img for img in eda_images if 'dist' in img.name.lower()]
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Histogramas", "🔗 Correlações", "📈 Distribuições", "🎯 Outros"])
+        
+        with tab1:
+            for i in range(0, len(hist_imgs), 2):
+                col1, col2 = st.columns(2)
+                with col1:
+                    if i < len(hist_imgs):
+                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_column_width=True)
+                with col2:
+                    if i + 1 < len(hist_imgs):
+                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_column_width=True)
+        
+        with tab2:
+            for img in corr_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab3:
+            for img in dist_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+        
+        with tab4:
+            other_imgs = [img for img in eda_images if img not in hist_imgs + corr_imgs + dist_imgs]
+            for img in other_imgs:
+                st.image(str(img), caption=img.name, use_column_width=True)
+    
+    # Análise interativa expandida
+    show_interactive_eda_analysis(df)
+
+def show_interactive_eda_analysis(df):
+    """Análise EDA interativa expandida"""
+    st.subheader("🔧 Análise Interativa Avançada")
+    
+    # Controles expandidos
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        x_var = st.selectbox("🔢 Variável X:", numeric_cols)
+    
+    with col2:
+        y_var = st.selectbox("📊 Variável Y:", ["Nenhuma"] + numeric_cols)
+    
+    with col3:
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        color_var = st.selectbox("🎨 Cor por:", ["Nenhuma"] + categorical_cols)
+    
+    with col4:
+        size_var = st.selectbox("📏 Tamanho por:", ["Nenhuma"] + numeric_cols)
+    
+    # Tipos de gráfico expandidos
+    chart_type = st.selectbox("📊 Tipo de Gráfico:", 
+                            ["Scatter Plot", "Histograma", "Box Plot", "Violin Plot", 
+                             "Heatmap", "Pair Plot", "Distribution Plot"])
+    
+    if st.button("🚀 Gerar Visualização Avançada", type="primary"):
+        show_advanced_eda_visualization(df, x_var, y_var, color_var, size_var, chart_type)
+
+def show_advanced_eda_visualization(df, x_var, y_var, color_var, size_var, chart_type):
+    """Gerar visualização EDA avançada"""
+    try:
+        if chart_type == "Scatter Plot" and y_var != "Nenhuma":
+            fig = create_modern_scatter_plot(
+                data=df,
+                x=x_var,
+                y=y_var,
+                color=color_var if color_var != "Nenhuma" else None,
+                size=size_var if size_var != "Nenhuma" else None,
+                title=f"📊 {x_var} vs {y_var}"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Histograma":
+            fig = create_modern_histogram(
+                data=df,
+                column=x_var,
+                title=f"📊 Distribuição de {x_var}",
+                color_column=color_var if color_var != "Nenhuma" else None
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Box Plot":
+            if color_var != "Nenhuma":
+                fig = px.box(df, y=x_var, x=color_var, title=f"📦 {x_var} por {color_var}")
+            else:
+                fig = px.box(df, y=x_var, title=f"📦 Box Plot de {x_var}")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Violin Plot":
+            if color_var != "Nenhuma":
+                fig = px.violin(df, y=x_var, x=color_var, title=f"🎻 {x_var} por {color_var}")
+            else:
+                fig = px.violin(df, y=x_var, title=f"🎻 Violin Plot de {x_var}")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif chart_type == "Heatmap":
+            fig = create_interactive_correlation_heatmap(df)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Adicionar mais tipos conforme necessário
+        
+    except Exception as e:
+        st.error(f"❌ Erro na visualização: {e}")
 
 if __name__ == "__main__":
     main()
