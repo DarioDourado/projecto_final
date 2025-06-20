@@ -2,12 +2,12 @@
 RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
 ======================================================================
 
-📅 Data: 20/06/2025 02:33
+📅 Data: 20/06/2025 03:32
 📊 Registros: 32,537
 💾 Fonte de Dados: CSV (SQL falhou, usado CSV como fallback)
 
 🎯 CLUSTERING:
-   • DBSCAN: ✅ Executado
+   • DBSCAN: ❌ Não executado
    • K-Means: ✅ Implementado
 
 📋 REGRAS DE ASSOCIAÇÃO:
@@ -24,7 +24,7 @@ RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
    • SQL → CSV: ✅ Funcional
 
 📁 ARQUIVOS EM output/analysis/:
-   • dbscan_results.csv: ✅
+   • dbscan_results.csv: ❌
    • apriori_rules.csv: ✅
    • fp_growth_rules.csv: ✅
    • eclat_rules.csv: ✅
