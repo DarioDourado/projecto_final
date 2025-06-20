@@ -72,41 +72,35 @@ class ClusteringPipeline:
             self.logger.error(f"❌ Erro no clustering: {e}")
             return None
 
-    def _prepare_clustering_data(self, df):
+    def _prepare_clustering_data(self, df: pd.DataFrame) -> np.ndarray:
         """Preparar dados para clustering"""
         try:
             self.logger.info("📊 Preparando dados para clustering...")
             
-            # Selecionar apenas colunas numéricas
+            # Selecionar colunas numéricas
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             
-            # Remover target se existir
-            if 'salary' in numeric_cols:
-                numeric_cols.remove('salary')
-            if 'income' in numeric_cols:
-                numeric_cols.remove('income')
-            
-            self.logger.info(f"📋 Colunas numéricas: {numeric_cols}")
-            
-            if len(numeric_cols) < 2:
-                self.logger.error("❌ Insuficientes variáveis numéricas para clustering")
+            if not numeric_cols:
+                self.logger.error("❌ Nenhuma coluna numérica encontrada")
                 return None
             
             # Preparar dados
             X = df[numeric_cols].copy()
             
-            # Limpar dados
-            X = X.fillna(X.median())
-            X = X.replace([np.inf, -np.inf], np.nan)
-            X = X.fillna(X.median())
+            # Remover linhas com valores ausentes
+            X = X.dropna()
             
-            # Verificar se ainda temos dados válidos
-            if X.empty or X.isnull().all().all():
-                self.logger.error("❌ Todos os dados são inválidos após limpeza")
+            if len(X) == 0:
+                self.logger.error("❌ Nenhuma linha válida após remoção de NaN")
                 return None
             
-            self.logger.info(f"✅ Dados preparados: {X.shape[0]} amostras, {X.shape[1]} features")
-            return X
+            # Normalizar dados
+            from sklearn.preprocessing import StandardScaler
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            
+            self.logger.info(f"📊 Dados preparados: {X_scaled.shape[0]} amostras, {X_scaled.shape[1]} features")
+            return X_scaled
             
         except Exception as e:
             self.logger.error(f"❌ Erro na preparação dos dados: {e}")

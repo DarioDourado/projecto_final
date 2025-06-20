@@ -156,8 +156,6 @@ class HybridPipelineSQL:
             
             # Definir possíveis localizações do arquivo CSV
             csv_paths = [
-                Path("data/raw/4-Carateristicas_salario.csv"),
-                Path("bkp/4-Carateristicas_salario.csv"),
                 Path("4-Carateristicas_salario.csv"),
                 Path("data/4-Carateristicas_salario.csv")
             ]
@@ -610,50 +608,194 @@ class HybridPipelineSQL:
         print("💾 Fallback: SQL → CSV automático")
         print("="*70)
     
-    def run(self):
-        """Executar pipeline completo com fallback"""
-        start_time = datetime.now()
-        
+    def _run_clustering_analysis(self):
+        """Executar análise de clustering"""
         try:
-            self.logger.info("🚀 INICIANDO PIPELINE HÍBRIDO")
-            self.logger.info("=" * 60)
+            self.logger.info("🔍 Iniciando análise de clustering...")
             
-            # 1. Carregar dados (SQL com fallback para CSV)
-            self.load_data()
+            # Fix: Import the correct class name
+            from src.analysis.clustering import SalaryClusteringAnalysis
+            
+            clustering_analyzer = SalaryClusteringAnalysis()
+            
+            # Executar análise completa (DBSCAN + K-Means)
+            self.logger.info("🎯 Executando análise completa de clustering...")
+            clustering_results = clustering_analyzer.run_complete_analysis(self.df)
+            
+            if clustering_results:
+                # Salvar resultados do clustering
+                self._save_clustering_results(clustering_results)
+                
+                # Armazenar nos resultados do pipeline
+                self.results['clustering_results'] = clustering_results
+                self.logger.info(f"✅ Clustering executado com sucesso: {len(clustering_results)} métodos")
+                return True
+            else:
+                self.logger.error("❌ Falha na análise de clustering")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro na análise de clustering: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _save_clustering_results(self, clustering_results):
+        """Salvar resultados do clustering em CSV"""
+        try:
+            output_dir = Path("output/analysis")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Preparar dados para salvar
+            df_results = self.df.copy()
+            
+            # Adicionar labels do clustering
+            if 'labels' in clustering_results:
+                df_results['cluster_label'] = clustering_results['labels']
+                
+            # Adicionar métricas se disponíveis
+            if 'silhouette_score' in clustering_results:
+                df_results['silhouette_score'] = clustering_results['silhouette_score']
+                
+            # Salvar arquivo principal
+            clustering_file = output_dir / "clustering_results.csv"
+            df_results.to_csv(clustering_file, index=False, encoding='utf-8')
+            
+            # Salvar resumo do clustering
+            summary_file = output_dir / "clustering_summary.csv"
+            
+            if 'labels' in clustering_results:
+                labels = clustering_results['labels']
+                unique_labels = list(set(labels))
+                
+                # Criar resumo por cluster
+                summary_data = []
+                for label in unique_labels:
+                    cluster_mask = [l == label for l in labels]
+                    cluster_data = df_results[cluster_mask]
+                    
+                    if len(cluster_data) > 0:
+                        summary_row = {
+                            'cluster_id': label,
+                            'size': len(cluster_data),
+                            'percentage': (len(cluster_data) / len(df_results)) * 100
+                        }
+                        
+                        # Adicionar estatísticas de salário se disponível
+                        if 'salary' in cluster_data.columns:
+                            summary_row.update({
+                                'avg_salary': cluster_data['salary'].mean(),
+                                'min_salary': cluster_data['salary'].min(),
+                                'max_salary': cluster_data['salary'].max()
+                            })
+                        
+                        summary_data.append(summary_row)
+                
+                summary_df = pd.DataFrame(summary_data)
+                summary_df.to_csv(summary_file, index=False, encoding='utf-8')
+                
+                self.logger.info(f"✅ Clustering salvo em: {clustering_file}")
+                self.logger.info(f"✅ Resumo salvo em: {summary_file}")
+                self.logger.info(f"📊 {len(unique_labels)} clusters encontrados")
+                
+            else:
+                self.logger.warning("⚠️ Nenhum label de clustering encontrado")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao salvar clustering: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def run(self) -> bool:
+        """Executar pipeline completo"""
+        try:
+            self.logger.info("🚀 Iniciando pipeline híbrido...")
+            
+            # Carregar dados
+            self.load_data()  # Changed from self._load_data() to self.load_data()
+            
             if self.df is None:
                 self.logger.error("❌ Falha no carregamento de ambas as fontes. Encerrando.")
-                return None
+                return False
             
-            # 2. Machine Learning
-            self.logger.info("\n🤖 VERIFICANDO MODELOS DE MACHINE LEARNING...")
-            ml_results = self.run_ml_pipeline()
+            # Executar clustering
+            self.logger.info("🔍 Executando análise de clustering...")
+            clustering_success = self._run_clustering_analysis()
+            self.logger.info(f"🔍 Clustering resultado: {clustering_success}")
             
-            # 3. Clustering (DBSCAN + K-Means)
-            self.logger.info("\n🎯 VERIFICANDO ANÁLISE DE CLUSTERING...")
-            clustering_results = self.run_clustering_pipeline()
+            # Executar regras de associação se o pipeline estiver disponível
+            if self.association_pipeline:
+                self.logger.info("📋 Executando análise de regras de associação...")
+                association_success = self.run_association_rules_pipeline()
+                self.logger.info(f"📋 Association rules resultado: {association_success}")
             
-            # 4. Association Rules (APRIORI + FP-GROWTH + ECLAT)
-            self.logger.info("\n📋 VERIFICANDO REGRAS DE ASSOCIAÇÃO...")
-            association_results = self.run_association_rules_pipeline()
+            # Executar ML pipeline se disponível
+            self.logger.info("🤖 Executando pipeline ML...")
+            ml_success = self.run_ml_pipeline()
+            self.logger.info(f"🤖 ML resultado: {ml_success}")
             
-            # 5. Salvar resultados
-            self.logger.info("\n💾 SALVANDO RESULTADOS...")
+            # Salvar resultados finais
             self._save_results_as_json()
             
-            # 6. Performance
-            end_time = datetime.now()
-            total_time = (end_time - start_time).total_seconds()
-            self.performance_metrics['total_time'] = total_time
-            
-            # 7. Sumário final
+            # Exibir sumário final
             if self.show_results:
                 self._display_final_summary()
             
-            self.logger.info(f"✅ Pipeline concluído em {total_time:.2f}s")
-            return self.results
+            self.logger.info("✅ Pipeline híbrido concluído com sucesso!")
+            return True
             
         except Exception as e:
             self.logger.error(f"❌ Erro crítico no pipeline: {e}")
             import traceback
             traceback.print_exc()
-            return None
+            return False
+    
+    def run_dbscan(self, df: pd.DataFrame, eps: float = 0.5, min_samples: int = 5) -> Dict[str, Any]:
+        """Executar algoritmo DBSCAN"""
+        try:
+            self.logger.info(f"🎯 Executando DBSCAN (eps={eps}, min_samples={min_samples})")
+            
+            # Preparar dados
+            X = self._prepare_clustering_data(df)
+            
+            if X is None or len(X) == 0:
+                self.logger.error("❌ Dados vazios para clustering")
+                return {}
+            
+            # Executar DBSCAN
+            from sklearn.cluster import DBSCAN
+            
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+            labels = dbscan.fit_predict(X)
+            
+            # Calcular métricas
+            n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+            n_noise = list(labels).count(-1)
+            
+            results = {
+                'algorithm': 'DBSCAN',
+                'labels': labels.tolist(),
+                'n_clusters': n_clusters,
+                'n_noise': n_noise,
+                'eps': eps,
+                'min_samples': min_samples
+            }
+            
+            # Calcular silhouette score se houver clusters válidos
+            if n_clusters > 1:
+                from sklearn.metrics import silhouette_score
+                try:
+                    silhouette_avg = silhouette_score(X, labels)
+                    results['silhouette_score'] = silhouette_avg
+                    self.logger.info(f"📊 Silhouette Score: {silhouette_avg:.3f}")
+                except:
+                    self.logger.warning("⚠️ Não foi possível calcular Silhouette Score")
+            
+            self.logger.info(f"✅ DBSCAN: {n_clusters} clusters, {n_noise} outliers")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro no DBSCAN: {e}")
+            import traceback
+            traceback.print_exc()
+            return {}

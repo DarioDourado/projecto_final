@@ -10,6 +10,14 @@ from typing import List, Dict, Any, Tuple, Set
 import warnings
 warnings.filterwarnings('ignore')
 
+# Check if mlxtend is available
+try:
+    from mlxtend.frequent_patterns import apriori, association_rules
+    from mlxtend.preprocessing import TransactionEncoder
+    MLXTEND_AVAILABLE = True
+except ImportError:
+    MLXTEND_AVAILABLE = False
+
 class AssociationRulesAnalysis:
     """Análise completa de regras de associação com Apriori, FP-Growth e Eclat"""
     
@@ -293,3 +301,223 @@ class AssociationRulesAnalysis:
         self.save_results()
         
         return results
+    
+    def run_apriori(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+        """Executar algoritmo Apriori"""
+        self.logger.info("🔍 Executando APRIORI...")
+        
+        try:
+            if not MLXTEND_AVAILABLE:
+                self.logger.warning("⚠️ MLxtend não disponível - usando implementação básica")
+                return self._run_apriori_basic(transactions, min_support, min_confidence)
+            
+            # Usar MLxtend se disponível
+            from mlxtend.preprocessing import TransactionEncoder
+            from mlxtend.frequent_patterns import apriori, association_rules
+            
+            # Codificar transações
+            te = TransactionEncoder()
+            te_ary = te.fit(transactions).transform(transactions)
+            df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+            
+            # Encontrar itemsets frequentes
+            frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
+            
+            if frequent_itemsets.empty:
+                self.logger.warning(f"⚠️ APRIORI: Nenhum itemset frequente (suporte >= {min_support})")
+                return {'rules': [], 'frequent_itemsets': [], 'status': 'no_patterns'}
+            
+            # Gerar regras
+            rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+            
+            if rules.empty:
+                self.logger.warning(f"⚠️ APRIORI: Nenhuma regra (confiança >= {min_confidence})")
+                return {'rules': [], 'frequent_itemsets': len(frequent_itemsets), 'status': 'no_rules'}
+            
+            # Converter para formato padrão
+            rules_list = []
+            for _, rule in rules.iterrows():
+                rules_list.append({
+                    'antecedents': list(rule['antecedents']),
+                    'consequents': list(rule['consequents']),
+                    'support': float(rule['support']),
+                    'confidence': float(rule['confidence']),
+                    'lift': float(rule['lift']),
+                    'conviction': float(rule.get('conviction', 1.0))
+                })
+            
+            result = {
+                'rules': rules_list,
+                'frequent_itemsets': len(frequent_itemsets),
+                'total_rules': len(rules_list),
+                'status': 'success'
+            }
+            
+            self.apriori_results = result
+            self.logger.info(f"✅ APRIORI: {len(rules_list)} regras encontradas")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro no APRIORI: {e}")
+            return {'rules': [], 'status': 'error', 'error': str(e)}
+    
+    def run_fp_growth(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+        """Executar algoritmo FP-Growth"""
+        self.logger.info("🌳 Executando FP-GROWTH...")
+        
+        try:
+            if not MLXTEND_AVAILABLE:
+                self.logger.warning("⚠️ MLxtend não disponível - usando implementação básica")
+                return self._run_fp_growth_basic(transactions, min_support, min_confidence)
+            
+            # Usar MLxtend se disponível
+            from mlxtend.preprocessing import TransactionEncoder
+            from mlxtend.frequent_patterns import fpgrowth, association_rules
+            
+            # Codificar transações
+            te = TransactionEncoder()
+            te_ary = te.fit(transactions).transform(transactions)
+            df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+            
+            # Encontrar itemsets frequentes com FP-Growth
+            frequent_itemsets = fpgrowth(df_encoded, min_support=min_support, use_colnames=True)
+            
+            if frequent_itemsets.empty:
+                self.logger.warning(f"⚠️ FP-GROWTH: Nenhum itemset frequente (suporte >= {min_support})")
+                return {'rules': [], 'frequent_itemsets': [], 'status': 'no_patterns'}
+            
+            # Gerar regras
+            rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+            
+            if rules.empty:
+                self.logger.warning(f"⚠️ FP-GROWTH: Nenhuma regra (confiança >= {min_confidence})")
+                return {'rules': [], 'frequent_itemsets': len(frequent_itemsets), 'status': 'no_rules'}
+            
+            # Converter para formato padrão
+            rules_list = []
+            for _, rule in rules.iterrows():
+                rules_list.append({
+                    'antecedents': list(rule['antecedents']),
+                    'consequents': list(rule['consequents']),
+                    'support': float(rule['support']),
+                    'confidence': float(rule['confidence']),
+                    'lift': float(rule['lift']),
+                    'conviction': float(rule.get('conviction', 1.0))
+                })
+            
+            result = {
+                'rules': rules_list,
+                'frequent_itemsets': len(frequent_itemsets),
+                'total_rules': len(rules_list),
+                'status': 'success'
+            }
+            
+            self.fp_growth_results = result
+            self.logger.info(f"✅ FP-GROWTH: {len(rules_list)} regras encontradas")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro no FP-GROWTH: {e}")
+            return {'rules': [], 'status': 'error', 'error': str(e)}
+    
+    def run_eclat(self, transactions: List[List[str]], min_support: float = 0.01, min_confidence: float = 0.6) -> Dict[str, Any]:
+        """Executar algoritmo Eclat"""
+        self.logger.info("⚡ Executando ECLAT...")
+        
+        try:
+            # Implementação básica do ECLAT
+            min_support_count = int(min_support * len(transactions))
+            
+            # Encontrar items únicos e suas transações
+            item_transactions = defaultdict(set)
+            for tid, transaction in enumerate(transactions):
+                for item in transaction:
+                    item_transactions[item].add(tid)
+            
+            # Filtrar items frequentes
+            frequent_items = {
+                item: tids for item, tids in item_transactions.items()
+                if len(tids) >= min_support_count
+            }
+            
+            if not frequent_items:
+                self.logger.warning(f"⚠️ ECLAT: Nenhum item frequente (suporte >= {min_support})")
+                return {'rules': [], 'frequent_itemsets': 0, 'status': 'no_patterns'}
+            
+            # Encontrar itemsets frequentes de tamanho 2
+            frequent_itemsets = {1: {frozenset([item]): len(tids) for item, tids in frequent_items.items()}}
+            
+            self._eclat_recursive(frequent_items, frequent_itemsets, min_support_count, 2)
+            
+            # Gerar regras
+            rules = self._generate_rules_eclat(frequent_itemsets, len(transactions), min_confidence)
+            
+            if not rules:
+                self.logger.warning(f"⚠️ ECLAT: Nenhuma regra (confiança >= {min_confidence})")
+                return {'rules': [], 'frequent_itemsets': sum(len(fs) for fs in frequent_itemsets.values()), 'status': 'no_rules'}
+            
+            result = {
+                'rules': rules,
+                'frequent_itemsets': sum(len(fs) for fs in frequent_itemsets.values()),
+                'total_rules': len(rules),
+                'status': 'success'
+            }
+            
+            self.eclat_results = result
+            self.logger.info(f"✅ ECLAT: {len(rules)} regras encontradas")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro no ECLAT: {e}")
+            return {'rules': [], 'status': 'error', 'error': str(e)}
+    
+    def _run_apriori_basic(self, transactions: List[List[str]], min_support: float, min_confidence: float) -> Dict[str, Any]:
+        """Implementação básica do Apriori quando MLxtend não está disponível"""
+        try:
+            min_support_count = int(min_support * len(transactions))
+            
+            # Contar items individuais
+            item_counts = defaultdict(int)
+            for transaction in transactions:
+                for item in transaction:
+                    item_counts[item] += 1
+            
+            # Items frequentes de tamanho 1
+            frequent_1 = {
+                frozenset([item]): count for item, count in item_counts.items()
+                if count >= min_support_count
+            }
+            
+            if not frequent_1:
+                return {'rules': [], 'status': 'no_patterns'}
+            
+            # Gerar itemsets de tamanho 2
+            frequent_2 = {}
+            items = list(frequent_1.keys())
+            
+            for i in range(len(items)):
+                for j in range(i + 1, len(items)):
+                    candidate = items[i] | items[j]
+                    count = sum(1 for t in transactions if candidate.issubset(set(t)))
+                    
+                    if count >= min_support_count:
+                        frequent_2[candidate] = count
+            
+            frequent_itemsets = {1: frequent_1, 2: frequent_2}
+            
+            # Gerar regras
+            rules = self._generate_rules_apriori(frequent_itemsets, len(transactions), min_confidence)
+            
+            return {
+                'rules': rules,
+                'frequent_itemsets': len(frequent_1) + len(frequent_2),
+                'total_rules': len(rules),
+                'status': 'success'
+            }
+            
+        except Exception as e:
+            return {'rules': [], 'status': 'error', 'error': str(e)}
+    
+    def _run_fp_growth_basic(self, transactions: List[List[str]], min_support: float, min_confidence: float) -> Dict[str, Any]:
+        """Implementação básica do FP-Growth quando MLxtend não está disponível"""
+        # Por simplicidade, usar a mesma implementação

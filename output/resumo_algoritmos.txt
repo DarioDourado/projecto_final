@@ -2,7 +2,7 @@
 RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
 ======================================================================
 
-📅 Data: 19/06/2025 19:18
+📅 Data: 20/06/2025 01:44
 📊 Registros: 32,537
 💾 Fonte de Dados: CSV (SQL falhou, usado CSV como fallback)
 
@@ -11,9 +11,9 @@ RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
    • K-Means: ✅ Implementado
 
 📋 REGRAS DE ASSOCIAÇÃO:
-   • APRIORI: ✅ Executado
-   • FP-GROWTH: ✅ Executado
-   • ECLAT: ✅ Executado
+   • APRIORI: ❌ Não executado
+   • FP-GROWTH: ❌ Não executado
+   • ECLAT: ❌ Não executado
 
 🤖 MACHINE LEARNING:
    • Random Forest: ✅ Implementado
@@ -25,8 +25,8 @@ RESUMO EXECUTIVO - PIPELINE HÍBRIDO COM FALLBACK
 
 📁 ARQUIVOS EM output/analysis/:
    • dbscan_results.csv: ✅
-   • apriori_rules.csv: ✅
-   • fp_growth_rules.csv: ✅
-   • eclat_rules.csv: ✅
+   • apriori_rules.csv: ❌
+   • fp_growth_rules.csv: ❌
+   • eclat_rules.csv: ❌
 
 ======================================================================
