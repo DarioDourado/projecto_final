@@ -10,17 +10,32 @@ Estrutura:
 - utils/: Utilitários e i18n
 """
 
-__version__ = "5.0.0"
-__author__ = "Dashboard Team"
-__description__ = "Sistema Modular de Análise Salarial Multilingual"
+# Versão do sistema
+__version__ = "2.0.0"
 
-# Imports principais
-from .auth import AuthenticationSystem
-from .utils import I18nSystem
-from .data import load_data
+# Configurações básicas
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
 
+# Imports essenciais (removendo imports problemáticos)
+try:
+    from .pipelines.hybrid_pipeline import HybridPipelineSQL
+    from .pipelines.hybrid_academic_pipeline import HybridAcademicPipeline
+except ImportError as e:
+    print(f"⚠️ Aviso: Alguns módulos não puderam ser importados: {e}")
+
+# Configurações do sistema
+DEFAULT_CONFIG = {
+    'data_sources': ['sql', 'csv'],
+    'algorithms': ['dbscan', 'apriori', 'fp_growth', 'eclat'],
+    'output_dir': 'output',
+    'log_level': 'INFO'
+}
+
+# Exportar principais classes
 __all__ = [
-    'AuthenticationSystem',
-    'I18nSystem', 
-    'load_data'
+    'HybridPipelineSQL',
+    'HybridAcademicPipeline',
+    'DEFAULT_CONFIG'
 ]

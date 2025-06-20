@@ -152,35 +152,68 @@ class HybridPipelineSQL:
             True se sucesso, False se falhar
         """
         try:
-            from src.data.csv_loader import CSVDataLoader
+            import pandas as pd
             
-            # Validar arquivo primeiro
-            csv_loader = CSVDataLoader()
-            validation = csv_loader.validate_file()
+            # Definir possíveis localizações do arquivo CSV
+            csv_paths = [
+                Path("data/raw/4-Carateristicas_salario.csv"),
+                Path("bkp/4-Carateristicas_salario.csv"),
+                Path("4-Carateristicas_salario.csv"),
+                Path("data/4-Carateristicas_salario.csv")
+            ]
             
-            if not validation['exists']:
-                self.logger.error(f"❌ Arquivo CSV não encontrado: {csv_loader.file_path}")
+            # Procurar arquivo CSV
+            csv_file = None
+            for path in csv_paths:
+                if path.exists():
+                    csv_file = path
+                    self.logger.info(f"📄 Arquivo CSV encontrado: {path}")
+                    break
+            
+            if csv_file is None:
+                self.logger.error("❌ Nenhum arquivo CSV encontrado nas localizações:")
+                for path in csv_paths:
+                    self.logger.error(f"   - {path}")
                 return False
-            
-            if not validation['readable']:
-                self.logger.error(f"❌ Arquivo CSV não legível: {validation.get('error', 'Desconhecido')}")
-                return False
-            
-            self.logger.info(f"✅ Arquivo CSV OK: {validation['size_mb']:.1f}MB, ~{validation['estimated_rows']:,} linhas")
             
             # Carregar dados
-            df = csv_loader.load_salary_data()
+            self.logger.info(f"📊 Carregando dados de {csv_file}...")
+            df = pd.read_csv(csv_file, encoding='utf-8')
             
-            if df is not None and len(df) > 0:
-                self.df = df
-                self.logger.info(f"✅ Dados carregados via CSV: {len(df):,} registros")
-                return True
-            else:
+            if df is None or len(df) == 0:
                 self.logger.error("❌ CSV carregado mas dados vazios")
                 return False
-                
-        except ImportError:
-            self.logger.error("❌ Módulo CSV não disponível")
+            
+            # Limpeza básica dos dados
+            self.logger.info("🧹 Aplicando limpeza básica...")
+            
+            # Remover valores problemáticos
+            df = df.replace(['?', 'Unknown', 'nan'], pd.NA)
+            
+            # Remover duplicatas
+            initial_size = len(df)
+            df = df.drop_duplicates()
+            duplicates_removed = initial_size - len(df)
+            if duplicates_removed > 0:
+                self.logger.info(f"🗑️ Removidas {duplicates_removed} duplicatas")
+            
+            # Remover linhas com muitos valores ausentes
+            missing_threshold = len(df.columns) * 0.5  # 50% dos campos
+            df = df.dropna(thresh=missing_threshold)
+            
+            # Validar se ainda temos dados suficientes
+            if len(df) < 1000:
+                self.logger.warning(f"⚠️ Poucos dados após limpeza: {len(df)} registros")
+            
+            self.df = df
+            self.logger.info(f"✅ Dados carregados via CSV: {len(df):,} registros")
+            return True
+            
+        except ImportError as e:
+            self.logger.error(f"❌ Erro de importação: {e}")
+            return False
+        except FileNotFoundError:
+            self.logger.error("❌ Arquivo CSV não encontrado")
             return False
         except Exception as e:
             self.logger.error(f"❌ Erro no carregamento CSV: {e}")
