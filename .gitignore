@@ -118,6 +118,7 @@ temp/
 *.h5
 *.hdf5
 *.csv
+!4-Caracteristicas_salario.csv
 *.xlsx
 *.json
 data/
