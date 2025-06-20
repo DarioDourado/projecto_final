@@ -1280,12 +1280,12 @@ def show_all_clustering_analysis(df, visualizations):
             with col1:
                 if i < len(clustering_images):
                     img = clustering_images[i]
-                    st.image(str(img), caption=img.name, use_column_width=True)
+                    st.image(str(img), caption=img.name, use_container_width=True)
             
             with col2:
                 if i + 1 < len(clustering_images):
                     img = clustering_images[i + 1]
-                    st.image(str(img), caption=img.name, use_column_width=True)
+                    st.image(str(img), caption=img.name, use_container_width=True)
     
     # Clustering interativo EXPANDIDO
     st.subheader("🔧 Clustering Interativo Avançado")
@@ -1514,21 +1514,21 @@ def show_complete_association_rules_analysis(df, visualizations):
         
         with tab1:
             for img in apriori_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab2:
             for img in fp_growth_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab3:
             for img in eclat_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab4:
             # Mostrar comparações
             comparison_imgs = [img for img in rules_images if 'comparison' in img.name.lower()]
             for img in comparison_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
     
     # Interface interativa para regras de associação
     show_interactive_association_rules(df)
@@ -1638,23 +1638,23 @@ def show_complete_eda_analysis(df, visualizations):
                 col1, col2 = st.columns(2)
                 with col1:
                     if i < len(hist_imgs):
-                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_column_width=True)
+                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_container_width=True)
                 with col2:
                     if i + 1 < len(hist_imgs):
-                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_column_width=True)
+                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_container_width=True)
         
         with tab2:
             for img in corr_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab3:
             for img in dist_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab4:
             other_imgs = [img for img in eda_images if img not in hist_imgs + corr_imgs + dist_imgs]
             for img in other_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
     
     # Análise interativa expandida
     show_interactive_eda_analysis(df)
@@ -1797,9 +1797,9 @@ def main():
             ("🤖 Modelos ML", "models", ["admin", "user"]),
             ("🎯 Clustering", "clustering", ["admin", "user"]),
             ("📋 Regras de Associação", "rules", ["admin", "user"]),
-            ("📊 Métricas Avançadas", "metrics", ["admin", "user"]),
+            #("📊 Métricas Avançadas", "metrics", ["admin", "user"]),
             ("🔮 Predição", "prediction", ["admin", "user"]),
-            ("📁 Relatórios", "reports", ["admin", "user", "guest"]),
+            #("📁 Relatórios", "reports", ["admin", "user", "guest"]),
             ("⚙️ Configurações", "config", ["admin"])
         ]
         
@@ -1877,9 +1877,9 @@ def main():
         "🤖 Modelos ML": ["admin", "user"],
         "🎯 Clustering": ["admin", "user"],
         "📋 Regras de Associação": ["admin", "user"],
-        "📊 Métricas Avançadas": ["admin", "user"],
+        #"📊 Métricas Avançadas": ["admin", "user"],
         "🔮 Predição": ["admin", "user"],
-        "📁 Relatórios": ["admin", "user", "guest"],
+        #"📁 Relatórios": ["admin", "user", "guest"],
         "⚙️ Configurações": ["admin"]
     }
     
@@ -1901,16 +1901,16 @@ def main():
             show_all_clustering_analysis(df, visualizations)  # NOVA FUNÇÃO
         elif current_page == "📋 Regras de Associação":
             show_complete_association_rules_analysis(df, visualizations)  # NOVA FUNÇÃO
-        elif current_page == "📊 Métricas Avançadas":
-            show_advanced_metrics_enhanced(filtered_df, files_status)
+        #elif current_page == "📊 Métricas Avançadas":
+         #   show_advanced_metrics_enhanced(filtered_df, files_status)
         elif current_page == "🔮 Predição":
             # ALTERAR ESTA LINHA:
             # show_prediction_interface_enhanced(filtered_df, files_status)  # Função antiga
             # PARA:
             data_dict = {'original': filtered_df}  # Preparar dados no formato esperado
             show_prediction_page(data_dict)  # Nova função
-        elif current_page == "📁 Relatórios":
-            show_reports_enhanced(files_status)
+        #elif current_page == "📁 Relatórios":
+        #    show_reports_enhanced(files_status)
         elif current_page == "⚙️ Configurações":
             show_admin_config()
         else:
@@ -2224,7 +2224,7 @@ def show_ml_models_enhanced(df, files_status):
         
         if performance_images:
             for img in performance_images:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         else:
             st.info("Execute o pipeline para gerar gráficos de performance")
 
@@ -2245,12 +2245,12 @@ def show_all_clustering_analysis(df, visualizations):
             with col1:
                 if i < len(clustering_images):
                     img = clustering_images[i]
-                    st.image(str(img), caption=img.name, use_column_width=True)
+                    st.image(str(img), caption=img.name, use_container_width=True)
             
             with col2:
                 if i + 1 < len(clustering_images):
                     img = clustering_images[i + 1]
-                    st.image(str(img), caption=img.name, use_column_width=True)
+                    st.image(str(img), caption=img.name, use_container_width=True)
     
     # Clustering interativo EXPANDIDO
     st.subheader("🔧 Clustering Interativo Avançado")
@@ -2479,21 +2479,21 @@ def show_complete_association_rules_analysis(df, visualizations):
         
         with tab1:
             for img in apriori_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab2:
             for img in fp_growth_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab3:
             for img in eclat_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab4:
             # Mostrar comparações
             comparison_imgs = [img for img in rules_images if 'comparison' in img.name.lower()]
             for img in comparison_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
     
     # Interface interativa para regras de associação
     show_interactive_association_rules(df)
@@ -2603,23 +2603,23 @@ def show_complete_eda_analysis(df, visualizations):
                 col1, col2 = st.columns(2)
                 with col1:
                     if i < len(hist_imgs):
-                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_column_width=True)
+                        st.image(str(hist_imgs[i]), caption=hist_imgs[i].name, use_container_width=True)
                 with col2:
                     if i + 1 < len(hist_imgs):
-                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_column_width=True)
+                        st.image(str(hist_imgs[i + 1]), caption=hist_imgs[i + 1].name, use_container_width=True)
         
         with tab2:
             for img in corr_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab3:
             for img in dist_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
         
         with tab4:
             other_imgs = [img for img in eda_images if img not in hist_imgs + corr_imgs + dist_imgs]
             for img in other_imgs:
-                st.image(str(img), caption=img.name, use_column_width=True)
+                st.image(str(img), caption=img.name, use_container_width=True)
     
     # Análise interativa expandida
     show_interactive_eda_analysis(df)
